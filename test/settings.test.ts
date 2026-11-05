@@ -53,6 +53,14 @@ describe("validateSettings", () => {
     ]);
   });
 
+  it("asks for at least one email address that may sign in", () => {
+    const input = settings();
+    input.access.allow = [];
+    expect(problemsOf(input)).toEqual(["access.allow must be a list of one or more email addresses."]);
+    input.access.allow = ["you@example.com", "not an address"];
+    expect(problemsOf(input)).toEqual(["access.allow must be a list of one or more email addresses."]);
+  });
+
   it("rejects a bucket name that R2 does not accept and a team domain without https", () => {
     const input = settings();
     input.history.bucket = "Usage_History";

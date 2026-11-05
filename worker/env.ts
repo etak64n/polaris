@@ -14,8 +14,10 @@ export interface R2Bucket {
 export interface Env {
   HISTORY: R2Bucket;
   AUTH_MODE: string;
-  ACCESS_TEAM_DOMAIN: string;
-  ACCESS_AUD: string;
+  /** Bound only in the "cloudflare-access" mode. */
+  ACCESS_TEAM_DOMAIN?: string;
+  /** The AUD tag of the Access application, which `pnpm stack:deploy` uploads as a secret. */
+  ACCESS_AUD?: string;
   /** The account that polestar watches, from .env. */
   CLOUDFLARE_ACCOUNT_ID: string;
   /** "free" or "paid". */

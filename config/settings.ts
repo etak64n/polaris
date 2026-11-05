@@ -29,8 +29,11 @@ export interface HistorySettings {
 export interface AccessSettings {
   /** Cloudflare Access team domain, such as https://example.cloudflareaccess.com. */
   teamDomain: string;
-  /** Application Audience (AUD) tag of the Access application that protects the domain. */
-  aud: string;
+  /**
+   * Email addresses of the people who may open polestar. `pnpm stack:deploy` gives
+   * the domain an Access application whose only policy allows these addresses.
+   */
+  allow: string[];
 }
 
 /**
@@ -69,7 +72,8 @@ const WORKER_NAME = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 const HOSTNAME = /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z][a-z0-9-]{0,61}[a-z0-9]$/;
 // R2 bucket names: 3 to 63 lowercase letters, digits, and hyphens, starting and ending with a letter or digit.
 const BUCKET = /^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/;
-const NO_WHITESPACE = /^\S+$/;
+// A practical check of an email address: one @, no spaces, and a dot in the domain.
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type Problems = string[];
 type Fields = Record<string, unknown>;
@@ -120,10 +124,23 @@ function readHistory(input: unknown, problems: Problems): HistorySettings | null
 function readAccess(input: unknown, problems: Problems): AccessSettings | null {
   const access = readObject(input, "access", problems);
   if (access === null) return null;
-  checkKeys(access, "access.", ["teamDomain", "aud"], problems);
+  checkKeys(access, "access.", ["teamDomain", "allow"], problems);
   const teamDomain = readOrigin(access, "teamDomain", "access.", problems);
-  const aud = readPattern(access, "aud", "access.", NO_WHITESPACE, "the AUD tag of the Access application", problems);
-  return { teamDomain, aud };
+  const allow = readEmails(access, "allow", "access.", problems);
+  return { teamDomain, allow };
+}
+
+function readEmails(fields: Fields, key: string, prefix: string, problems: Problems): string[] {
+  if (!(key in fields)) {
+    problems.push(`${prefix}${key} is missing.`);
+    return [];
+  }
+  const value = fields[key];
+  if (!Array.isArray(value) || value.length === 0 || !value.every((item) => typeof item === "string" && EMAIL.test(item))) {
+    problems.push(`${prefix}${key} must be a list of one or more email addresses.`);
+    return [];
+  }
+  return value as string[];
 }
 
 function readObject(value: unknown, path: string, problems: Problems): Fields | null {

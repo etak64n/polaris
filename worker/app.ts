@@ -47,16 +47,12 @@ export function createApp(dependencies: AppDependencies) {
     c.set("requestId", crypto.randomUUID());
     const config = readRuntimeConfig(c.env);
     c.set("config", config);
-    if (config.authMode === "local-development") {
+    if (config.auth.mode === "local-development") {
       if (!isLocalhost(new URL(c.req.url))) {
         throw new AccessDeniedError("The local development mode answers only requests to localhost.");
       }
     } else {
-      await verifyAccessToken(
-        c.req.header("Cf-Access-Jwt-Assertion"),
-        config.access,
-        dependencies.keySetFor(config.access.teamDomain),
-      );
+      await verifyAccessToken(c.req.header("Cf-Access-Jwt-Assertion"), config.auth, dependencies.keySetFor(config.auth.teamDomain));
     }
     await next();
   });

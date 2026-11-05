@@ -10,6 +10,8 @@
   },
   "packageManager": "pnpm@12.16.1",
   "scripts": {
+    "stack:deploy": "node stack/cli.ts deploy",
+    "stack:delete": "node stack/cli.ts delete",
     "typecheck": "tsc -p tsconfig.json && tsc -p worker/tsconfig.json && tsc -p tsconfig.node.json",
     "test": "vitest run"
   },

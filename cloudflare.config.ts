@@ -1,9 +1,10 @@
 // Worker configuration that the Cloudflare CLI (cf) reads.
 //
 // The values come from polestar.config.ts, so a deployment does not edit this
-// file. The account comes from CLOUDFLARE_ACCOUNT_ID in .env, which cf reads. `cf dev` runs in the "development" mode: it answers localhost without
+// file. The account comes from CLOUDFLARE_ACCOUNT_ID in .env, which cf reads.
+// `cf dev` runs in the "development" mode: it answers localhost without
 // Cloudflare Access and keeps the history bucket on this machine. `cf build` and
-// `cf deploy` run in the "production" mode.
+// `pnpm stack:deploy`, which runs `cf deploy`, use the "production" mode.
 
 import { bindings, defineConfig, triggers } from "cf/config";
 import polestarConfig from "./polestar.config.ts";
@@ -42,11 +43,16 @@ export default defineConfig(({ mode }) => {
         HISTORY: bindings.r2({ name: settings.history.bucket }),
         // "local-development" lets the Worker answer localhost without an Access token.
         AUTH_MODE: bindings.text(isDevelopment ? "local-development" : "cloudflare-access"),
-        ACCESS_TEAM_DOMAIN: bindings.text(settings.access.teamDomain),
-        ACCESS_AUD: bindings.text(settings.access.aud),
+        ...(isDevelopment
+          ? {}
+          : {
+              ACCESS_TEAM_DOMAIN: bindings.text(settings.access.teamDomain),
+              // The AUD tag of the Access application that `pnpm stack:deploy` creates for the domain.
+              ACCESS_AUD: bindings.secret(),
+            }),
         BILLING_PLAN: bindings.text(settings.billing.plan),
         BILLING_CYCLE_START_DAY: bindings.text(String(settings.billing.cycleStartDay)),
-        // From .env: `cf dev` reads it, and `cf deploy --secrets-file .env` uploads it.
+        // From .env: `cf dev` reads them, and `pnpm stack:deploy` uploads them as secrets.
         CLOUDFLARE_ACCOUNT_ID: bindings.secret(),
         ANALYTICS_API_TOKEN: bindings.secret(),
       },

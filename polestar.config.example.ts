@@ -19,9 +19,11 @@ export default definePolestarConfig({
   history: {
     bucket: "polestar-history",
   },
-  // The Cloudflare Access application that protects the domain
+  // Cloudflare Access, which lets only these people open polestar
   access: {
+    // The team domain of your Zero Trust organization
     teamDomain: "https://example.cloudflareaccess.com",
-    aud: "0000000000000000000000000000000000000000000000000000000000000000",
+    // The email addresses that may sign in
+    allow: ["you@example.com"],
   },
 });

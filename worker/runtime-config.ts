@@ -4,16 +4,16 @@
 import type { PlanType } from "../shared/plan.ts";
 import type { Env } from "./env.ts";
 
-export type AuthMode = "cloudflare-access" | "local-development";
-
 export interface AccessConfig {
   teamDomain: string;
   aud: string;
 }
 
+/** Cloudflare Access checks every request, except under `cf dev`, which answers only localhost. */
+export type AuthConfig = ({ mode: "cloudflare-access" } & AccessConfig) | { mode: "local-development" };
+
 export interface RuntimeConfig {
-  authMode: AuthMode;
-  access: AccessConfig;
+  auth: AuthConfig;
   accountId: string;
   apiToken: string;
   plan: PlanType;
@@ -61,9 +61,12 @@ export function readRuntimeConfig(env: Env): RuntimeConfig {
     problems.push("BILLING_CYCLE_START_DAY must be a whole number from 1 to 31.");
   }
 
+  const auth: AuthConfig =
+    authModeText === "local-development"
+      ? { mode: "local-development" }
+      : { mode: "cloudflare-access", teamDomain: text("ACCESS_TEAM_DOMAIN"), aud: text("ACCESS_AUD") };
   const config: RuntimeConfig = {
-    authMode: authModeText === "local-development" ? "local-development" : "cloudflare-access",
-    access: { teamDomain: text("ACCESS_TEAM_DOMAIN"), aud: text("ACCESS_AUD") },
+    auth,
     accountId,
     apiToken: text("ANALYTICS_API_TOKEN"),
     plan: planText === "paid" ? "paid" : "free",
