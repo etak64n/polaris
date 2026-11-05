@@ -35,6 +35,9 @@ export interface TopQuery {
   durationMs: number;
 }
 
+/** The most databases that a request for top queries can narrow the queries to. */
+export const TOP_QUERY_DATABASES_MAX = 5;
+
 export interface TopQueriesResponse {
   /** First and last UTC date of the queries. */
   from: string;

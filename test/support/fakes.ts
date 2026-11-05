@@ -32,7 +32,7 @@ export function usageOf(date: string, amount: number): DailyUsage {
 
 export class FakeUsageSource implements UsageSource {
   readonly usageCalls: { from: string; to: string }[] = [];
-  readonly queryCalls: { from: string; to: string; order: QueryOrder; limit: number }[] = [];
+  readonly queryCalls: { from: string; to: string; order: QueryOrder; limit: number; databaseIds: readonly string[] }[] = [];
   usage: (date: string) => DailyUsage = (date) => emptyDay(date);
   queries: TopQuery[] = [];
   names: Record<string, string> = {};
@@ -44,8 +44,8 @@ export class FakeUsageSource implements UsageSource {
     return datesBetween(from, to).map((date) => this.usage(date));
   }
 
-  async topQueries(from: string, to: string, order: QueryOrder, limit: number): Promise<TopQuery[]> {
-    this.queryCalls.push({ from, to, order, limit });
+  async topQueries(from: string, to: string, order: QueryOrder, limit: number, databaseIds: readonly string[]): Promise<TopQuery[]> {
+    this.queryCalls.push({ from, to, order, limit, databaseIds });
     if (this.failure !== null) throw this.failure;
     return this.queries;
   }

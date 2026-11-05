@@ -1,6 +1,8 @@
 @import "tailwindcss";
 /* The enter and leave animations of the tooltips. */
 @import "tw-animate-css";
+/* The variants that shadcn/ui components use, such as data-open for an open menu. */
+@import "shadcn/tailwind.css";
 
 /*
   The look of albireo's light theme, in the variables that shadcn/ui components

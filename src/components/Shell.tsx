@@ -49,11 +49,11 @@ export function Shell({ plan, children }: { plan: PlanType | null; children: Rea
           )}
         </div>
       </header>
-      <SheetContent side="left" showCloseButton={false} className="w-72 gap-0 p-0">
+      <SheetContent side="left" showCloseButton={false} className="gap-0 p-0 data-[side=left]:w-[264px]">
         <SheetTitle className="sr-only">Menu</SheetTitle>
-        <div className="flex h-full flex-col gap-4 overflow-y-auto px-2 pb-4 sm:px-3">
-          {/* The same button and name as in the header, so the menu closes from where it opened. */}
-          <div className="-mx-0.5 flex h-14 shrink-0 items-center gap-1.5 sm:-mx-1">
+        <div className="flex h-full flex-col gap-4 overflow-y-auto pb-4">
+          {/* The same button and name as in the header, in the same place, so the menu closes where it opened. */}
+          <div className="flex h-14 shrink-0 items-center gap-1.5 px-2 sm:px-4">
             <SheetClose asChild>
               <Button variant="ghost" size="icon-lg" aria-label="Close the menu">
                 <MenuIcon />
@@ -61,7 +61,7 @@ export function Shell({ plan, children }: { plan: PlanType | null; children: Rea
             </SheetClose>
             <Brand />
           </div>
-          <nav className="grid gap-0.5" aria-label="Pages">
+          <nav className="grid gap-0.5 px-2 sm:px-3" aria-label="Pages">
             {PAGES.map((page) => (
               <MenuLink key={page.to} to={page.to} current={pathname === page.to} icon={page.icon}>
                 {page.label}

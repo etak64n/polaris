@@ -6,5 +6,8 @@ export const SERIES_COLORS = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3
 
 export const OTHER_COLOR = "#a1a1aa";
 
-/** Line of a free daily limit on a chart. */
+/** Line of a limit that stops the usage, such as a daily limit of the Free plan. */
 export const LIMIT_COLOR = "var(--destructive)";
+
+/** Line of usage that is free, past which the usage costs money. */
+export const LINE_COLOR = "var(--muted-foreground)";

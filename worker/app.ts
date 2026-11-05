@@ -3,6 +3,7 @@
 
 import { Hono } from "hono";
 import {
+  TOP_QUERY_DATABASES_MAX,
   USAGE_DAYS_MAX,
   USAGE_DAYS_MIN,
   type ApiErrorBody,
@@ -91,12 +92,13 @@ export function createApp(dependencies: AppDependencies) {
     const dayCount = readWholeNumber(c.req.query("days"), "days", 1, 7);
     if (!TOP_QUERY_DAYS.includes(dayCount)) throw badRequest(`days must be one of ${TOP_QUERY_DAYS.join(", ")}.`);
     const order = readOrder(c.req.query("order"));
+    const databaseIds = readDatabaseIds(c.req.queries("database"));
     const today = utcDate(dependencies.now());
     const from = addDays(today, -(dayCount - 1));
     const queries = await dependencies.cacheFor().get(
-      `top-queries/${config.accountId}/${from}/${today}/${order}`,
+      `top-queries/${config.accountId}/${from}/${today}/${order}/${databaseIds.join(",")}`,
       USAGE_CACHE_SECONDS,
-      () => dependencies.usageSourceFor(config).topQueries(from, today, order, TOP_QUERY_COUNT),
+      () => dependencies.usageSourceFor(config).topQueries(from, today, order, TOP_QUERY_COUNT, databaseIds),
     );
     const body: TopQueriesResponse = { from, to: today, order, queries };
     return c.json(body);
@@ -147,6 +149,17 @@ function readWholeNumber(value: string | undefined, name: string, min: number, m
     throw badRequest(`${name} must be a whole number from ${min} to ${max}.`);
   }
   return number;
+}
+
+// D1 database IDs are UUIDs.
+const DATABASE_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+/** The databases that the top queries come from, sorted, or none for every database. */
+function readDatabaseIds(values: string[] | undefined): string[] {
+  const ids = [...new Set(values ?? [])].sort();
+  if (ids.length > TOP_QUERY_DATABASES_MAX) throw badRequest(`database can be given at most ${TOP_QUERY_DATABASES_MAX} times.`);
+  if (!ids.every((id) => DATABASE_ID.test(id))) throw badRequest("database must be the ID of a D1 database.");
+  return ids;
 }
 
 function readOrder(value: string | undefined): QueryOrder {

@@ -28,8 +28,11 @@ export class AnalyticsError extends Error {
 export interface UsageSource {
   /** The usage of each date from `from` to `to`, both included, oldest first. */
   dailyUsage(from: string, to: string): Promise<DailyUsage[]>;
-  /** The D1 queries that read or wrote the most rows from `from` to `to`, both included. */
-  topQueries(from: string, to: string, order: QueryOrder, limit: number): Promise<TopQuery[]>;
+  /**
+   * The D1 queries that read or wrote the most rows from `from` to `to`, both included,
+   * in the given databases, or in every database when none is given.
+   */
+  topQueries(from: string, to: string, order: QueryOrder, limit: number, databaseIds: readonly string[]): Promise<TopQuery[]>;
   /** D1 database names by database ID. */
   databaseNames(): Promise<Record<string, string>>;
 }
@@ -86,11 +89,11 @@ query PolestarUsage($accountTag: string!, $from: Date!, $to: Date!, $start: Time
   }
 }`;
 
-const TOP_QUERIES_QUERY = (order: QueryOrder, limit: number): string => `
-query PolestarTopQueries($accountTag: string!, $start: Time!, $end: Time!) {
+const TOP_QUERIES_QUERY = (order: QueryOrder, limit: number, byDatabase: boolean): string => `
+query PolestarTopQueries($accountTag: string!, $start: Time!, $end: Time!${byDatabase ? ", $databaseIds: [string!]" : ""}) {
   viewer {
     accounts(filter: { accountTag: $accountTag }) {
-      queries: d1QueriesAdaptiveGroups(limit: ${limit}, filter: { datetimeHour_geq: $start, datetimeHour_lt: $end }, orderBy: [sum_${order}_DESC]) {
+      queries: d1QueriesAdaptiveGroups(limit: ${limit}, filter: { datetimeHour_geq: $start, datetimeHour_lt: $end${byDatabase ? ", databaseId_in: $databaseIds" : ""} }, orderBy: [sum_${order}_DESC]) {
         count
         sum { rowsRead rowsWritten queryDurationMs }
         dimensions { query databaseId }
@@ -169,10 +172,12 @@ export class CloudflareAnalytics implements UsageSource {
     return [...first, ...second];
   }
 
-  async topQueries(from: string, to: string, order: QueryOrder, limit: number): Promise<TopQuery[]> {
-    const account = await this.#graphql<{ queries: TopQueryRow[] }>(TOP_QUERIES_QUERY(order, limit), {
+  async topQueries(from: string, to: string, order: QueryOrder, limit: number, databaseIds: readonly string[]): Promise<TopQuery[]> {
+    const byDatabase = databaseIds.length > 0;
+    const account = await this.#graphql<{ queries: TopQueryRow[] }>(TOP_QUERIES_QUERY(order, limit, byDatabase), {
       start: startOf(from),
       end: startOf(addDays(to, 1)),
+      ...(byDatabase ? { databaseIds: [...databaseIds] } : {}),
     });
     return account.queries
       .filter((row) => row.dimensions.query !== "")
@@ -201,7 +206,7 @@ export class CloudflareAnalytics implements UsageSource {
     }
   }
 
-  async #graphql<T>(query: string, variables: Record<string, string>): Promise<T> {
+  async #graphql<T>(query: string, variables: Record<string, string | string[]>): Promise<T> {
     const body = await this.#request(`${API}/graphql`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

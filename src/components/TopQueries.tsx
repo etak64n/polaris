@@ -1,4 +1,5 @@
-// The D1 queries that read or wrote the most rows, across every database of the account.
+// The D1 queries that read or wrote the most rows, in the picked databases, or across
+// every database of the account when none is picked.
 
 import { useEffect, useState } from "react";
 import type { QueryOrder, TopQueriesResponse } from "../../shared/api.ts";
@@ -8,7 +9,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatCount } from "@/lib/format.ts";
-import type { Series } from "@/lib/series.ts";
 
 const ORDERS: { value: QueryOrder; label: string }[] = [
   { value: "rowsRead", label: "Rows read" },
@@ -19,7 +19,16 @@ const PERIODS = [
   { value: 7, label: "7 days" },
 ];
 
-export function TopQueries({ databaseName, seriesOf }: { databaseName: (id: string) => string; seriesOf: (key: string) => Series }) {
+export function TopQueries({
+  databaseName,
+  colorOf,
+  databaseIds,
+}: {
+  databaseName: (id: string) => string;
+  /** The color of a database in the charts, or null when the charts show it in no color of its own. */
+  colorOf: (id: string) => string | null;
+  databaseIds: string[];
+}) {
   const [order, setOrder] = useState<QueryOrder>("rowsRead");
   const [days, setDays] = useState(7);
   const [result, setResult] = useState<TopQueriesResponse | null>(null);
@@ -29,13 +38,13 @@ export function TopQueries({ databaseName, seriesOf }: { databaseName: (id: stri
     const controller = new AbortController();
     setResult(null);
     setError(null);
-    fetchTopQueries(days, order, controller.signal)
+    fetchTopQueries(days, order, databaseIds, controller.signal)
       .then(setResult)
       .catch((reason: unknown) => {
         if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : String(reason));
       });
     return () => controller.abort();
-  }, [days, order]);
+  }, [days, order, databaseIds]);
 
   return (
     <div className="grid gap-2">
@@ -80,20 +89,20 @@ export function TopQueries({ databaseName, seriesOf }: { databaseName: (id: stri
       {error !== null && <p className="error-box">{error}</p>}
       {error === null && result === null && <Skeleton className="h-32" />}
       {result !== null && result.queries.length > 0 && (
-        <Table className="min-w-[640px]">
+        <Table className="min-w-[720px] table-fixed">
           <TableHeader>
             <TableRow>
               <TableHead>Query</TableHead>
-              <TableHead>Database</TableHead>
-              <TableHead className="text-right">Runs</TableHead>
-              <TableHead className="text-right">Rows read</TableHead>
-              <TableHead className="text-right">Rows written</TableHead>
+              <TableHead className="w-44">Database</TableHead>
+              <TableHead className="w-20 text-right">Runs</TableHead>
+              <TableHead className="w-32 text-right">Rows read</TableHead>
+              <TableHead className="w-32 text-right">Rows written</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {result.queries.map((query) => (
               <TableRow key={`${query.databaseId}/${query.query}`} className="align-top">
-                <TableCell className="max-w-0 whitespace-normal">
+                <TableCell className="whitespace-normal">
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <code tabIndex={0} className="line-clamp-2 font-mono text-xs break-all text-heading">{query.query}</code>
@@ -102,9 +111,9 @@ export function TopQueries({ databaseName, seriesOf }: { databaseName: (id: stri
                   </Tooltip>
                 </TableCell>
                 <TableCell>
-                  <span className="flex items-center gap-1.5 whitespace-nowrap">
-                    <span aria-hidden="true" className="size-2.5 shrink-0" style={{ backgroundColor: seriesOf(query.databaseId).color }} />
-                    {databaseName(query.databaseId)}
+                  <span className="flex min-w-0 items-center gap-1.5" title={query.databaseId}>
+                    <span aria-hidden="true" className="size-2.5 shrink-0" style={{ backgroundColor: colorOf(query.databaseId) ?? "transparent" }} />
+                    <span className="truncate">{databaseName(query.databaseId)}</span>
                   </span>
                 </TableCell>
                 <TableCell className="numeric text-right">{formatCount(query.runs)}</TableCell>

@@ -16,6 +16,11 @@ export const d1Values: ResourceValues = (day) =>
 export const r2Values: ResourceValues = (day) =>
   day.r2.map((item) => ({ key: item.bucketName, values: [item.classA, item.classB, item.storageBytes] }));
 
+/** The name of an R2 bucket. Operations on the whole account, such as listing the buckets, have none. */
+export function bucketLabel(name: string): string {
+  return name === "" ? "(no bucket)" : name;
+}
+
 export interface ResourceTotals {
   key: string;
   /** Each value added up over the days. */

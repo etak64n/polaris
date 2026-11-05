@@ -130,13 +130,23 @@ describe("CloudflareAnalytics.topQueries", () => {
         ],
       }),
     );
-    expect(await analytics.topQueries("2026-10-30", "2026-11-05", "rowsWritten", 20)).toEqual([
+    expect(await analytics.topQueries("2026-10-30", "2026-11-05", "rowsWritten", 20, [])).toEqual([
       { databaseId: "db-1", query: "INSERT INTO t VALUES (?)", runs: 3, rowsRead: 30, rowsWritten: 6, durationMs: 1.5 },
     ]);
     const body = JSON.parse(String(calls[0]?.init.body)) as { query: string; variables: unknown };
     expect(body.query).toContain("orderBy: [sum_rowsWritten_DESC]");
     expect(body.query).toContain("limit: 20");
+    expect(body.query).not.toContain("databaseId_in");
     expect(body.variables).toEqual({ accountTag: ACCOUNT, start: "2026-10-30T00:00:00Z", end: "2026-11-06T00:00:00Z" });
+  });
+
+  it("narrows the queries to the given databases", async () => {
+    const { analytics, calls } = analyticsAnswering(() => graphql({ queries: [] }));
+    await analytics.topQueries("2026-11-05", "2026-11-05", "rowsRead", 20, ["db-1", "db-2"]);
+    const body = JSON.parse(String(calls[0]?.init.body)) as { query: string; variables: Record<string, unknown> };
+    expect(body.query).toContain("$databaseIds: [string!]");
+    expect(body.query).toContain("databaseId_in: $databaseIds");
+    expect(body.variables["databaseIds"]).toEqual(["db-1", "db-2"]);
   });
 });
 

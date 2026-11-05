@@ -1,5 +1,5 @@
-// A daily stacked bar chart of one metric, one color per resource. On the Free
-// plan, a dashed line marks the daily limit when the bars come near it.
+// A daily stacked bar chart of one metric, one color per resource. A dashed line
+// marks the free usage, and the value axis always reaches up to it.
 
 import { Bar, BarChart, CartesianGrid, ReferenceLine, XAxis, YAxis } from "recharts";
 import {
@@ -11,7 +11,8 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import { formatCompact, formatDate } from "@/lib/format.ts";
-import { LIMIT_COLOR } from "@/lib/palette.ts";
+import type { FreeLine } from "@/lib/free.ts";
+import { LIMIT_COLOR, LINE_COLOR } from "@/lib/palette.ts";
 import type { ChartRow, Series } from "@/lib/series.ts";
 
 export function UsageChart({
@@ -19,26 +20,33 @@ export function UsageChart({
   rows,
   series,
   format,
-  limit = null,
+  tickFormat = formatCompact,
+  line,
 }: {
   /** Names the chart for screen readers. The panel around it shows the same name. */
   label: string;
   rows: ChartRow[];
   series: Series[];
-  /** Formats a value for the tooltip. */
+  /** Formats a value for the tooltip and the axis, such as a count or a size. */
   format: (value: number) => string;
-  /** The daily limit of the Free plan, or null. */
-  limit?: number | null;
+  /** Formats the ticks of the value axis. Counts use short numbers such as 1.2M. */
+  tickFormat?: (value: number) => string;
+  /** The free usage, or null when the metric has none. */
+  line: FreeLine | null;
 }) {
   const config: ChartConfig = Object.fromEntries(series.map((item) => [item.chartKey, { label: item.label, color: item.color }]));
   const dense = rows.length > 60;
+  // The label of the line goes on the side with more room: under a line in the upper
+  // half of the chart, where the legend is above it, and over a line in the lower half.
+  const highest = Math.max(0, ...rows.map((row) => series.reduce((total, item) => total + Number(row[item.chartKey] ?? 0), 0)));
+  const labelBelow = line !== null && line.value > Math.max(highest, line.value) / 2;
   return (
     <figure aria-label={label} className="min-w-0">
       <ChartContainer config={config} className="aspect-auto h-52 w-full">
-        <BarChart data={rows} margin={{ top: 6, right: 4, bottom: 0, left: 0 }} barCategoryGap={dense ? 1 : "18%"} accessibilityLayer>
+        <BarChart data={rows} margin={{ top: 18, right: 4, bottom: 0, left: 0 }} barCategoryGap={dense ? 1 : "18%"} accessibilityLayer>
           <CartesianGrid vertical={false} />
           <XAxis dataKey="date" tickFormatter={(date: string) => formatDate(date)} tickLine={false} axisLine={false} minTickGap={28} fontSize={11} />
-          <YAxis tickFormatter={(value: number) => formatCompact(value)} tickLine={false} axisLine={false} width={44} allowDecimals={false} fontSize={11} />
+          <YAxis tickFormatter={(value: number) => (value === 0 ? "0" : tickFormat(value))} tickLine={false} axisLine={false} width={52} fontSize={11} />
           <ChartTooltip
             cursor={false}
             content={(props) => (
@@ -60,7 +68,14 @@ export function UsageChart({
               />
             )}
           />
-          {series.length > 1 && <ChartLegend verticalAlign="top" content={<ChartLegendContent className="flex-wrap justify-start pt-0 pb-2" />} />}
+          {series.length > 1 && (
+            <ChartLegend
+              verticalAlign="top"
+              // In the order of the series, which puts "Other" last.
+              itemSorter={(item) => series.findIndex((entry) => entry.chartKey === item.dataKey)}
+              content={<ChartLegendContent className="flex-wrap justify-start pt-0 pb-2" />}
+            />
+          )}
           {series.map((item) => (
             <Bar
               key={item.chartKey}
@@ -73,12 +88,14 @@ export function UsageChart({
               isAnimationActive={false}
             />
           ))}
-          {limit !== null && (
+          {line !== null && (
             <ReferenceLine
-              y={limit}
-              stroke={LIMIT_COLOR}
+              y={line.value}
+              // Usage far under the line still shows where the line is.
+              ifOverflow="extendDomain"
+              stroke={line.limit ? LIMIT_COLOR : LINE_COLOR}
               strokeDasharray="4 3"
-              label={{ value: `Free limit ${formatCompact(limit)}`, position: "insideTopRight", fill: LIMIT_COLOR, fontSize: 11 }}
+              label={{ value: line.label, position: labelBelow ? "insideTopLeft" : "insideBottomLeft", fill: line.limit ? LIMIT_COLOR : LINE_COLOR, fontSize: 11 }}
             />
           )}
         </BarChart>

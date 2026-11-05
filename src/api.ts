@@ -31,6 +31,9 @@ export function fetchUsage(days: number, signal: AbortSignal): Promise<UsageResp
   return getJson(`/api/usage?days=${days}`, signal);
 }
 
-export function fetchTopQueries(days: number, order: QueryOrder, signal: AbortSignal): Promise<TopQueriesResponse> {
-  return getJson(`/api/d1/top-queries?days=${days}&order=${order}`, signal);
+/** The queries of the given databases, or of every database when none is given. */
+export function fetchTopQueries(days: number, order: QueryOrder, databaseIds: readonly string[], signal: AbortSignal): Promise<TopQueriesResponse> {
+  const params = new URLSearchParams({ days: String(days), order });
+  for (const id of databaseIds) params.append("database", id);
+  return getJson(`/api/d1/top-queries?${params}`, signal);
 }

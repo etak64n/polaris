@@ -29,13 +29,18 @@ export function formatBytes(bytes: number): string {
     value /= 1000;
     unit += 1;
   }
-  return `${value >= 100 || unit === 0 ? Math.round(value) : value.toFixed(1)} ${units[unit]}`;
+  return `${value >= 100 || unit === 0 ? Math.round(value) : Number(value.toFixed(1))} ${units[unit]}`;
 }
 
-/** CPU time, in milliseconds below a second and in seconds above. */
+const oneDecimal = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 });
+
+/** CPU time in the largest unit that keeps it above 1: ms, s, min, or h. */
 export function formatDuration(milliseconds: number): string {
   if (milliseconds < 1000) return `${whole.format(milliseconds)} ms`;
-  return `${compact.format(milliseconds / 1000)} s`;
+  const seconds = milliseconds / 1000;
+  if (seconds < 60) return `${oneDecimal.format(seconds)} s`;
+  if (seconds < 3600) return `${oneDecimal.format(seconds / 60)} min`;
+  return `${oneDecimal.format(seconds / 3600)} h`;
 }
 
 /** A UTC date written as YYYY-MM-DD, shown as YYYY/MM/DD. */

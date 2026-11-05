@@ -129,12 +129,27 @@ describe("GET /api/d1/top-queries", () => {
     expect(response.status).toBe(200);
     const body = (await response.json()) as TopQueriesResponse;
     expect(body).toEqual({ from: "2026-10-30", to: "2026-11-05", order: "rowsWritten", queries: source.queries });
-    expect(source.queryCalls).toEqual([{ from: "2026-10-30", to: "2026-11-05", order: "rowsWritten", limit: 20 }]);
+    expect(source.queryCalls).toEqual([{ from: "2026-10-30", to: "2026-11-05", order: "rowsWritten", limit: 20, databaseIds: [] }]);
+  });
+
+  it("narrows the queries to the given databases", async () => {
+    const first = "11111111-2222-3333-4444-555555555555";
+    const second = "00000000-aaaa-bbbb-cccc-dddddddddddd";
+    const response = await get(`/api/d1/top-queries?days=1&order=rowsRead&database=${first}&database=${second}&database=${first}`);
+    expect(response.status).toBe(200);
+    expect(source.queryCalls[0]?.databaseIds).toEqual([second, first]);
   });
 
   it("accepts only the offered periods and orders", async () => {
     expect((await get("/api/d1/top-queries?days=3&order=rowsRead")).status).toBe(400);
     expect((await get("/api/d1/top-queries?days=1")).status).toBe(400);
+  });
+
+  it("refuses a database that is not a D1 database ID, and more databases than the most", async () => {
+    expect((await get("/api/d1/top-queries?days=1&order=rowsRead&database=blog")).status).toBe(400);
+    const ids = Array.from({ length: 6 }, (_, index) => `database=0000000${index}-0000-0000-0000-000000000000`).join("&");
+    expect((await get(`/api/d1/top-queries?days=1&order=rowsRead&${ids}`)).status).toBe(400);
+    expect(source.queryCalls).toHaveLength(0);
   });
 });
 
