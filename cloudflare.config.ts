@@ -48,7 +48,7 @@ export default defineConfig(({ mode }) => {
         ACCOUNT_ID: bindings.text(settings.accountId),
         BILLING_PLAN: bindings.text(settings.billing.plan),
         BILLING_CYCLE_START_DAY: bindings.text(String(settings.billing.cycleStartDay)),
-        // Secret: .env for `cf dev`, and `cf deploy --secrets-file` for production.
+        // Secret: `cf dev` reads it from .env, and `npm run deploy` uploads .env with the Worker.
         ANALYTICS_API_TOKEN: bindings.secret(),
       },
     },

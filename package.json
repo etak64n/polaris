@@ -11,7 +11,7 @@
   "scripts": {
     "dev": "cf dev",
     "build": "cf build",
-    "deploy": "cf deploy",
+    "deploy": "cf deploy --secrets-file .env",
     "typecheck": "tsc -p tsconfig.json && tsc -p worker/tsconfig.json && tsc -p tsconfig.node.json",
     "test": "vitest run"
   },
