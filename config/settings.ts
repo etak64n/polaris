@@ -33,9 +33,11 @@ export interface AccessSettings {
   aud: string;
 }
 
+/**
+ * The account is not a setting here: cf and the Worker read it from CLOUDFLARE_ACCOUNT_ID
+ * in .env, next to the API token of the same account.
+ */
 export interface PolestarSettings {
-  /** Cloudflare account that polestar watches, and that owns its Worker, domain, and bucket. */
-  accountId: string;
   /** Name of the Worker. */
   workerName: string;
   /** Hostname that serves polestar. Its zone must be in the same Cloudflare account. */
@@ -63,7 +65,6 @@ export class SettingsError extends Error {
   }
 }
 
-const ACCOUNT_ID = /^[0-9a-f]{32}$/;
 const WORKER_NAME = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 const HOSTNAME = /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z][a-z0-9-]{0,61}[a-z0-9]$/;
 // R2 bucket names: 3 to 63 lowercase letters, digits, and hyphens, starting and ending with a letter or digit.
@@ -78,9 +79,8 @@ export function validateSettings(input: unknown): PolestarSettings {
   const problems: Problems = [];
   const root = readObject(input, "settings", problems);
   if (root === null) throw new SettingsError(problems);
-  checkKeys(root, "", ["accountId", "workerName", "domain", "billing", "history", "access"], problems);
+  checkKeys(root, "", ["workerName", "domain", "billing", "history", "access"], problems);
 
-  const accountId = readPattern(root, "accountId", "", ACCOUNT_ID, "a 32-character lowercase hexadecimal account ID", problems);
   const workerName = readPattern(root, "workerName", "", WORKER_NAME, "lowercase letters, digits, and hyphens (at most 63 characters)", problems);
   const domain = readPattern(root, "domain", "", HOSTNAME, "a lowercase hostname without a scheme or path", problems);
   const billing = readBilling(root["billing"], problems);
@@ -90,7 +90,7 @@ export function validateSettings(input: unknown): PolestarSettings {
   if (problems.length > 0 || billing === null || history === null || access === null) {
     throw new SettingsError(problems);
   }
-  return { accountId, workerName, domain, billing, history, access };
+  return { workerName, domain, billing, history, access };
 }
 
 function readBilling(input: unknown, problems: Problems): BillingSettings | null {

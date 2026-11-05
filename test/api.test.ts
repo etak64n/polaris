@@ -30,7 +30,7 @@ function env(overrides: Partial<Env> = {}): Env {
     AUTH_MODE: "cloudflare-access",
     ACCESS_TEAM_DOMAIN: TEAM_DOMAIN,
     ACCESS_AUD: AUD,
-    ACCOUNT_ID: ACCOUNT,
+    CLOUDFLARE_ACCOUNT_ID: ACCOUNT,
     BILLING_PLAN: "free",
     BILLING_CYCLE_START_DAY: "1",
     ANALYTICS_API_TOKEN: "token",

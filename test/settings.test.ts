@@ -34,10 +34,10 @@ describe("validateSettings", () => {
   });
 
   it("lists every problem at once, in the order of the settings", () => {
-    const input = { ...settings(), accountId: "ABC", billing: { plan: "pro", cycleStartDay: 0 }, extra: true };
+    const input = { ...settings(), workerName: "Polestar!", billing: { plan: "pro", cycleStartDay: 0 }, extra: true };
     expect(problemsOf(input)).toEqual([
       "extra is not a setting that polestar reads.",
-      "accountId must be a 32-character lowercase hexadecimal account ID.",
+      "workerName must be lowercase letters, digits, and hyphens (at most 63 characters).",
       'billing.plan must be "free" or "paid".',
       "billing.cycleStartDay must be a whole number from 1 to 31.",
     ]);
@@ -45,7 +45,6 @@ describe("validateSettings", () => {
 
   it("reports missing settings instead of using defaults", () => {
     expect(problemsOf({})).toEqual([
-      "accountId is missing.",
       "workerName is missing.",
       "domain is missing.",
       "billing is missing.",

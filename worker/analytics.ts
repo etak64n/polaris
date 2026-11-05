@@ -212,7 +212,7 @@ export class CloudflareAnalytics implements UsageSource {
     }
     const account = data?.viewer?.accounts?.[0];
     if (account === undefined) {
-      throw new AnalyticsError("The Cloudflare GraphQL API returned no data for the account. Check ACCOUNT_ID and the token.");
+      throw new AnalyticsError("The Cloudflare GraphQL API returned no data for the account. Check CLOUDFLARE_ACCOUNT_ID and the token.");
     }
     return account;
   }

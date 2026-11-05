@@ -1,15 +1,12 @@
 // Settings of this polestar deployment.
 //
 // Copy this file to polestar.config.ts and replace every value. Git ignores
-// polestar.config.ts. The API token is a secret, so it goes in .env instead:
+// polestar.config.ts. The account and the API token go in .env instead:
 // see .env.example.
 
 import { definePolestarConfig } from "./config/settings.ts";
 
 export default definePolestarConfig({
-  // Cloudflare account that polestar watches. The Worker, the domain, and the
-  // history bucket belong to this account too. `cf accounts list` shows its ID.
-  accountId: "0123456789abcdef0123456789abcdef",
   workerName: "polestar",
   domain: "usage.example.com",
   billing: {

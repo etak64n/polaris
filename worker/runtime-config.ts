@@ -49,8 +49,10 @@ export function readRuntimeConfig(env: Env): RuntimeConfig {
   if (authModeText !== "" && authModeText !== "cloudflare-access" && authModeText !== "local-development") {
     problems.push('AUTH_MODE must be "cloudflare-access" or "local-development".');
   }
-  const accountId = text("ACCOUNT_ID");
-  if (accountId !== "" && !ACCOUNT_ID.test(accountId)) problems.push("ACCOUNT_ID must be a 32-character account ID.");
+  const accountId = text("CLOUDFLARE_ACCOUNT_ID");
+  if (accountId !== "" && !ACCOUNT_ID.test(accountId)) {
+    problems.push("CLOUDFLARE_ACCOUNT_ID must be the 32-character ID of an account.");
+  }
   const planText = text("BILLING_PLAN");
   if (planText !== "" && planText !== "free" && planText !== "paid") problems.push('BILLING_PLAN must be "free" or "paid".');
   const dayText = text("BILLING_CYCLE_START_DAY");

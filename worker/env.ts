@@ -16,7 +16,8 @@ export interface Env {
   AUTH_MODE: string;
   ACCESS_TEAM_DOMAIN: string;
   ACCESS_AUD: string;
-  ACCOUNT_ID: string;
+  /** The account that polestar watches, from .env. */
+  CLOUDFLARE_ACCOUNT_ID: string;
   /** "free" or "paid". */
   BILLING_PLAN: string;
   BILLING_CYCLE_START_DAY: string;

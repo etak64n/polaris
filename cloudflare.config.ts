@@ -1,7 +1,7 @@
 // Worker configuration that the Cloudflare CLI (cf) reads.
 //
 // The values come from polestar.config.ts, so a deployment does not edit this
-// file. `cf dev` runs in the "development" mode: it answers localhost without
+// file. The account comes from CLOUDFLARE_ACCOUNT_ID in .env, which cf reads. `cf dev` runs in the "development" mode: it answers localhost without
 // Cloudflare Access and keeps the history bucket on this machine. `cf build` and
 // `cf deploy` run in the "production" mode.
 
@@ -23,7 +23,6 @@ export default defineConfig(({ mode }) => {
   const isDevelopment = mode === "development";
 
   return {
-    accountId: settings.accountId,
     worker: {
       name: settings.workerName,
       entrypoint: "./worker/index.ts",
@@ -45,10 +44,10 @@ export default defineConfig(({ mode }) => {
         AUTH_MODE: bindings.text(isDevelopment ? "local-development" : "cloudflare-access"),
         ACCESS_TEAM_DOMAIN: bindings.text(settings.access.teamDomain),
         ACCESS_AUD: bindings.text(settings.access.aud),
-        ACCOUNT_ID: bindings.text(settings.accountId),
         BILLING_PLAN: bindings.text(settings.billing.plan),
         BILLING_CYCLE_START_DAY: bindings.text(String(settings.billing.cycleStartDay)),
-        // Secret: `cf dev` reads it from .env, and `cf deploy --secrets-file .env` uploads it.
+        // From .env: `cf dev` reads it, and `cf deploy --secrets-file .env` uploads it.
+        CLOUDFLARE_ACCOUNT_ID: bindings.secret(),
         ANALYTICS_API_TOKEN: bindings.secret(),
       },
     },
