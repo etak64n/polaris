@@ -1,6 +1,13 @@
-import { cn } from "../../lib/utils.ts";
+import { cn } from "cn"
 
-/** A gray block that holds the place of content while it loads, so the page does not jump. */
-export function Skeleton({ className }: { className?: string }) {
-  return <div aria-hidden="true" className={cn("animate-pulse bg-raised", className)} />;
+function Skeleton({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="skeleton"
+      className={cn("animate-pulse rounded-md bg-muted", className)}
+      {...props}
+    />
+  )
 }
+
+export { Skeleton }

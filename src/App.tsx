@@ -2,12 +2,12 @@
 
 import { lazy, Suspense, useEffect, useState } from "react";
 import { USAGE_DAYS_MIN, type UsageResponse } from "../shared/api.ts";
-import { fetchUsage } from "./api.ts";
-import { Segmented } from "./components/ui/segmented.tsx";
-import { Skeleton } from "./components/ui/skeleton.tsx";
+import { fetchUsage } from "@/api.ts";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 // The charts are the largest part of the app, so they load while the usage loads.
-const Dashboard = lazy(() => import("./Dashboard.tsx"));
+const Dashboard = lazy(() => import("@/Dashboard.tsx"));
 
 const RANGES = [
   { value: 30, label: "30 days" },
@@ -33,18 +33,40 @@ export function App() {
   }, [range]);
 
   return (
-    <div className="mx-auto grid max-w-[1200px] gap-4 px-4 py-4">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="flex items-center gap-2 text-base font-bold text-heading">
-          <img src="/favicon.svg" alt="" className="size-6" />
-          polestar
-        </h1>
-        <div className="flex items-center gap-3">
-          {usage !== null && <span className="text-xs font-bold text-muted">{usage.plan === "paid" ? "Workers Paid" : "Workers Free"}</span>}
-          <Segmented label="Range" options={RANGES} value={range} onChange={setRange} />
+    <>
+      <header className="sticky top-0 z-20 border-b bg-card">
+        <div className="mx-auto flex h-14 max-w-[1280px] items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
+          <h1 className="flex min-w-0 items-center gap-2">
+            <img src="/favicon.svg" alt="" className="size-7 shrink-0" />
+            <span className="truncate text-lg font-bold tracking-tight text-heading">polestar</span>
+          </h1>
+          <div className="flex shrink-0 items-center gap-3">
+            {usage !== null && (
+              <span className="hidden text-xs font-bold text-muted-foreground sm:inline">
+                {usage.plan === "paid" ? "Workers Paid" : "Workers Free"}
+              </span>
+            )}
+            <ToggleGroup
+              type="single"
+              variant="outline"
+              size="sm"
+              spacing={0}
+              aria-label="Range"
+              value={String(range)}
+              onValueChange={(value) => {
+                if (value !== "") setRange(Number(value));
+              }}
+            >
+              {RANGES.map((option) => (
+                <ToggleGroupItem key={option.value} value={String(option.value)}>
+                  {option.label}
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
+          </div>
         </div>
       </header>
-      <main id="main" className="grid gap-4">
+      <main id="main" className="mx-auto grid max-w-[1280px] gap-6 px-4 py-6 sm:px-6 lg:px-8">
         {error !== null && <p className="error-box break-words">{error}</p>}
         {usage === null ? (
           error === null && <LoadingPanels />
@@ -54,16 +76,16 @@ export function App() {
           </Suspense>
         )}
       </main>
-    </div>
+    </>
   );
 }
 
 function LoadingPanels() {
   return (
     <>
-      <Skeleton className="h-48 rounded-ui" />
-      <Skeleton className="h-64 rounded-ui" />
-      <Skeleton className="h-64 rounded-ui" />
+      <Skeleton className="h-48" />
+      <Skeleton className="h-64" />
+      <Skeleton className="h-64" />
     </>
   );
 }

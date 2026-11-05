@@ -16,7 +16,9 @@
     "allowImportingTsExtensions": true,
     "isolatedModules": true,
     "noEmit": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    // shadcn/ui components import the app as "@/…".
+    "paths": { "@/*": ["./src/*"] }
   },
   "include": ["src", "shared"]
 }

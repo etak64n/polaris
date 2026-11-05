@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import { cloudflare } from "@cloudflare/vite-plugin";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
@@ -7,4 +8,6 @@ import { defineConfig } from "vite";
 // Workers runtime during `cf dev`, and builds it with the browser app.
 export default defineConfig({
   plugins: [react(), tailwindcss(), cloudflare()],
+  // shadcn/ui components import the app as "@/…".
+  resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
 });

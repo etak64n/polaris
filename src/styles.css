@@ -1,51 +1,112 @@
 @import "tailwindcss";
+/* The enter and leave animations of the tooltips. */
+@import "tw-animate-css";
 
 /*
-  Colors and shapes of the app. Panels are white on a soft gray page, with one
-  accent color and one corner radius for every element.
+  The look of albireo's light theme, in the variables that shadcn/ui components
+  read: white panels on a soft gray page, black for actions, a little gold for
+  focus, square corners everywhere, and no gradients.
 */
-@theme {
-  --color-page: #f6f7f5;
-  --color-panel: #ffffff;
-  --color-raised: #eef2ef;
-  --color-heading: #191d1b;
-  --color-body: #2a302d;
-  --color-muted: #68706b;
-  --color-line: #d9dfda;
-  --color-accent: #087f8c;
-  --color-accent-strong: #056672;
-  --color-good: #1f8a4c;
-  --color-warn: #b86916;
-  --color-warn-bg: #fff1d9;
-  --color-danger: #b83d35;
-  --color-danger-bg: #ffe5e2;
-  --radius-ui: 8px;
-  --shadow-panel: 0 16px 40px rgba(25, 29, 27, 0.08);
-  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+:root {
+  color-scheme: light;
+  --radius: 0px;
+  --background: #f5f5f6;
+  --foreground: #222226;
+  --heading: #111113;
+  --card: #ffffff;
+  --card-foreground: #222226;
+  --popover: #ffffff;
+  --popover-foreground: #222226;
+  --primary: #18181b;
+  --primary-foreground: #ffffff;
+  --secondary: #f0f0f2;
+  --secondary-foreground: #18181b;
+  --muted: #f0f0f2;
+  --muted-foreground: #6b6b74;
+  --accent: #f0f0f2;
+  --accent-foreground: #18181b;
+  --destructive: #dc2626;
+  --warning: #b45309;
+  --border: #e4e4e7;
+  --input: #e4e4e7;
+  --ring: #b8862f;
+  /* Series colors of the charts, in a fixed order that stays apart for color-blind readers. */
+  --chart-1: #2a78d6;
+  --chart-2: #eb6834;
+  --chart-3: #1baf7a;
+  --chart-4: #eda100;
+  --chart-5: #e87ba4;
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.05), 0 6px 18px rgb(0 0 0 / 0.06);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-heading: var(--heading);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-warning: var(--warning);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  /* One corner radius for every component. */
+  --radius-sm: var(--radius);
+  --radius-md: var(--radius);
+  --radius-lg: var(--radius);
+  --radius-xl: var(--radius);
+  --radius-2xl: var(--radius);
+  --shadow-card: var(--shadow-card);
+  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
 }
 
 @layer base {
-  html {
-    color-scheme: light;
+  * {
+    @apply border-border;
   }
 
   body {
-    @apply bg-page font-sans text-[13px] text-body antialiased;
+    @apply min-h-screen bg-background font-sans text-foreground antialiased;
+    font-size: 14px;
+    line-height: 1.6;
   }
 
   :focus-visible {
-    @apply outline-2 outline-offset-2 outline-accent;
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+}
+
+/* Decoration stops for people who ask for less motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
 
 @layer components {
-  .panel {
-    @apply rounded-ui border border-line bg-panel shadow-panel;
-  }
-
   .error-box {
-    @apply rounded-ui border border-danger/30 bg-danger-bg px-3 py-2 font-bold text-danger;
+    @apply border border-destructive/40 bg-destructive/10 px-3 py-2 text-[13px] font-bold text-destructive;
   }
 
   /* Numbers line up in columns. */

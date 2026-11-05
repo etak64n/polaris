@@ -7,13 +7,14 @@ import type { UsageResponse } from "../shared/api.ts";
 import { dailyLimitStatus, estimateCost } from "../shared/cost.ts";
 import { FREE_DAILY_LIMITS, GB } from "../shared/pricing.ts";
 import type { DailyUsage } from "../shared/usage.ts";
-import { CostSummary } from "./components/CostSummary.tsx";
-import { DailyLimits } from "./components/DailyLimits.tsx";
-import { ResourceTable } from "./components/ResourceTable.tsx";
-import { TopQueries } from "./components/TopQueries.tsx";
-import { UsageChart } from "./components/UsageChart.tsx";
-import { formatBytes, formatCount, formatDuration } from "./lib/format.ts";
-import { chartRows, productColors, type ResourceValues } from "./lib/series.ts";
+import { CostSummary } from "@/components/CostSummary.tsx";
+import { DailyLimits } from "@/components/DailyLimits.tsx";
+import { ResourceTable } from "@/components/ResourceTable.tsx";
+import { TopQueries } from "@/components/TopQueries.tsx";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { UsageChart } from "@/components/UsageChart.tsx";
+import { formatBytes, formatCount, formatDuration } from "@/lib/format.ts";
+import { chartRows, productColors, type ResourceValues } from "@/lib/series.ts";
 
 // The values of each resource in a day, in the order that the charts of the product use them.
 const workerValues: ResourceValues = (day) => day.workers.map((item) => ({ key: item.scriptName, values: [item.requests, item.cpuTimeMs] }));
@@ -128,10 +129,14 @@ export default function Dashboard({ usage, range }: { usage: UsageResponse; rang
 
 function Panel({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="panel grid gap-4 p-4" aria-label={title}>
-      <h2 className="text-sm font-bold text-heading">{title}</h2>
-      {children}
-    </section>
+    <Card className="shadow-card" aria-label={title} role="region">
+      <CardHeader>
+        <CardTitle>
+          <h2 className="text-xl font-bold text-heading">{title}</h2>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="grid gap-6">{children}</CardContent>
+    </Card>
   );
 }
 

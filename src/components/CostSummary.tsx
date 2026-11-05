@@ -3,67 +3,67 @@
 
 import type { CostEstimate, CostLine } from "../../shared/cost.ts";
 import { FREE_D1_STORAGE_BYTES, FREE_DAILY_LIMITS, GB } from "../../shared/pricing.ts";
-import { formatCount, formatDate, formatDuration, formatMoney } from "../lib/format.ts";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { formatCount, formatDate, formatDuration, formatMoney } from "@/lib/format.ts";
+import { cn } from "cn";
 
 export function CostSummary({ estimate, paidEstimate }: { estimate: CostEstimate; paidEstimate: CostEstimate | null }) {
   const { period } = estimate;
   return (
     <div className="grid gap-4">
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap items-end gap-3">
         <Tile label="This cycle so far" value={formatMoney(estimate.total)} />
         <Tile label="Projected" value={estimate.projectedTotal === null ? "—" : formatMoney(estimate.projectedTotal)} />
         {paidEstimate !== null && (
           <Tile label="On Workers Paid" value={formatMoney(paidEstimate.projectedTotal ?? paidEstimate.total)} muted />
         )}
-        <div className="ml-auto self-end text-xs text-muted">
+        <div className="ml-auto text-xs text-muted-foreground">
           {formatDate(period.start)} – {formatDate(period.end)}
         </div>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[640px] text-left">
-          <thead className="text-xs text-muted">
-            <tr className="border-b border-line">
-              <th scope="col" className="py-1.5 pr-3 font-bold">Product</th>
-              <th scope="col" className="py-1.5 pr-3 font-bold">Item</th>
-              <th scope="col" className="py-1.5 pr-3 text-right font-bold">Used</th>
-              <th scope="col" className="py-1.5 pr-3 text-right font-bold">Included</th>
-              <th scope="col" className="py-1.5 pr-3 text-right font-bold">Cost</th>
-              <th scope="col" className="py-1.5 text-right font-bold">Projected</th>
-            </tr>
-          </thead>
-          <tbody>
-            {estimate.subscription > 0 && (
-              <tr className="border-b border-line/70">
-                <td className="py-1.5 pr-3 font-bold text-heading">Workers</td>
-                <td className="py-1.5 pr-3">Paid plan</td>
-                <td className="py-1.5 pr-3" />
-                <td className="py-1.5 pr-3" />
-                <td className="numeric py-1.5 pr-3 text-right">{formatMoney(estimate.subscription)}</td>
-                <td className="numeric py-1.5 text-right">{formatMoney(estimate.subscription)}</td>
-              </tr>
-            )}
-            {estimate.lines.map((line) => (
-              <tr key={`${line.product}/${line.item}`} className="border-b border-line/70 last:border-0">
-                <td className="py-1.5 pr-3 font-bold text-heading">{line.product}</td>
-                <td className="py-1.5 pr-3">{line.item}</td>
-                <td className="numeric py-1.5 pr-3 text-right">{formatUsed(line)}</td>
-                <td className="numeric py-1.5 pr-3 text-right text-muted">{formatIncluded(line)}</td>
-                <td className="numeric py-1.5 pr-3 text-right font-bold text-heading">{formatMoney(line.cost)}</td>
-                <td className="numeric py-1.5 text-right">{line.projectedCost === null ? "—" : formatMoney(line.projectedCost)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <Table className="min-w-[640px]">
+        <TableHeader>
+          <TableRow>
+            <TableHead>Product</TableHead>
+            <TableHead>Item</TableHead>
+            <TableHead className="text-right">Used</TableHead>
+            <TableHead className="text-right">Included</TableHead>
+            <TableHead className="text-right">Cost</TableHead>
+            <TableHead className="text-right">Projected</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {estimate.subscription > 0 && (
+            <TableRow>
+              <TableCell className="font-bold text-heading">Workers</TableCell>
+              <TableCell>Paid plan</TableCell>
+              <TableCell />
+              <TableCell />
+              <TableCell className="numeric text-right font-bold text-heading">{formatMoney(estimate.subscription)}</TableCell>
+              <TableCell className="numeric text-right">{formatMoney(estimate.subscription)}</TableCell>
+            </TableRow>
+          )}
+          {estimate.lines.map((line) => (
+            <TableRow key={`${line.product}/${line.item}`}>
+              <TableCell className="font-bold text-heading">{line.product}</TableCell>
+              <TableCell>{line.item}</TableCell>
+              <TableCell className="numeric text-right">{formatAmount(line, line.used)}</TableCell>
+              <TableCell className="numeric text-right text-muted-foreground">{formatIncluded(line)}</TableCell>
+              <TableCell className="numeric text-right font-bold text-heading">{formatMoney(line.cost)}</TableCell>
+              <TableCell className="numeric text-right">{line.projectedCost === null ? "—" : formatMoney(line.projectedCost)}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
     </div>
   );
 }
 
 function Tile({ label, value, muted = false }: { label: string; value: string; muted?: boolean }) {
   return (
-    <div className="grid min-w-36 gap-0.5 rounded-ui border border-line px-3 py-2">
-      <span className="text-xs text-muted">{label}</span>
-      <span className={`numeric text-xl font-bold ${muted ? "text-muted" : "text-heading"}`}>{value}</span>
+    <div className="grid min-w-36 gap-0.5 border px-3 py-2">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <span className={cn("numeric text-xl font-bold", muted ? "text-muted-foreground" : "text-heading")}>{value}</span>
     </div>
   );
 }
@@ -77,10 +77,6 @@ function formatAmount(line: CostLine, amount: number): string {
     default:
       return formatCount(amount);
   }
-}
-
-function formatUsed(line: CostLine): string {
-  return formatAmount(line, line.used);
 }
 
 // On the Free plan, Workers and D1 have daily limits instead of included usage.

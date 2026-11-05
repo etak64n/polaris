@@ -7,10 +7,13 @@
 import type { DailyUsage } from "../../shared/usage.ts";
 import { OTHER_COLOR, SERIES_COLORS } from "./palette.ts";
 
-export const OTHER_KEY = "__other";
+export const OTHER_KEY = "other";
 
 export interface Series {
+  /** The resource, such as a Worker name or a D1 database ID. */
   key: string;
+  /** A short key for the chart data and its CSS variables, s0 to s4 or "other". */
+  chartKey: string;
   label: string;
   color: string;
 }
@@ -54,9 +57,9 @@ export function productColors(days: DailyUsage[], resources: ResourceValues, lab
 
   const colored = new Map<string, Series>();
   ranked.slice(0, SERIES_COLORS.length).forEach((key, index) => {
-    colored.set(key, { key, label: labelOf(key), color: SERIES_COLORS[index] ?? OTHER_COLOR });
+    colored.set(key, { key, chartKey: `s${index}`, label: labelOf(key), color: SERIES_COLORS[index] ?? OTHER_COLOR });
   });
-  const other: Series = { key: OTHER_KEY, label: "Other", color: OTHER_COLOR };
+  const other: Series = { key: OTHER_KEY, chartKey: OTHER_KEY, label: "Other", color: OTHER_COLOR };
   const series = [...colored.values()];
   if (ranked.length > SERIES_COLORS.length) series.push(other);
   return { series, seriesOf: (key) => colored.get(key) ?? other };
@@ -74,10 +77,10 @@ export function chartRows(
 ): ChartRow[] {
   return days.map((day) => {
     const row: ChartRow = { date: day.date };
-    for (const series of colors.series) row[series.key] = 0;
+    for (const series of colors.series) row[series.chartKey] = 0;
     for (const { key, values } of resources(day)) {
       const series = colors.seriesOf(key);
-      row[series.key] = (row[series.key] as number) + (values[metricIndex] ?? 0) / scale;
+      row[series.chartKey] = (row[series.chartKey] as number) + (values[metricIndex] ?? 0) / scale;
     }
     return row;
   });
