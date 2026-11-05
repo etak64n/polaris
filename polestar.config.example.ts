@@ -8,7 +8,7 @@ import { definePolestarConfig } from "./config/settings.ts";
 
 export default definePolestarConfig({
   // Cloudflare account that polestar watches. The Worker, the domain, and the
-  // history bucket belong to this account too.
+  // history bucket belong to this account too. `cf accounts list` shows its ID.
   accountId: "0123456789abcdef0123456789abcdef",
   workerName: "polestar",
   domain: "usage.example.com",
