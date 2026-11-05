@@ -1,0 +1,57 @@
+// Stand-ins for the history bucket and for Cloudflare analytics.
+
+import type { QueryOrder, TopQuery } from "../../shared/api.ts";
+import { datesBetween } from "../../shared/dates.ts";
+import { emptyDay, type DailyUsage } from "../../shared/usage.ts";
+import type { UsageSource } from "../../worker/analytics.ts";
+import type { R2Bucket, R2ObjectBody } from "../../worker/env.ts";
+
+export class MemoryBucket implements R2Bucket {
+  readonly objects = new Map<string, string>();
+
+  async get(key: string): Promise<R2ObjectBody | null> {
+    const value = this.objects.get(key);
+    return value === undefined ? null : { text: async () => value };
+  }
+
+  async put(key: string, value: string): Promise<unknown> {
+    this.objects.set(key, value);
+    return {};
+  }
+}
+
+/** Usage of one Worker, one database, and one bucket, with the same numbers for every resource. */
+export function usageOf(date: string, amount: number): DailyUsage {
+  return {
+    date,
+    workers: [{ scriptName: "api", requests: amount, cpuTimeMs: amount / 10 }],
+    d1: [{ databaseId: "db-1", rowsRead: amount * 10, rowsWritten: amount, storageBytes: 1_000_000 }],
+    r2: [{ bucketName: "files", classA: amount, classB: amount * 2, storageBytes: 2_000_000 }],
+  };
+}
+
+export class FakeUsageSource implements UsageSource {
+  readonly usageCalls: { from: string; to: string }[] = [];
+  readonly queryCalls: { from: string; to: string; order: QueryOrder; limit: number }[] = [];
+  usage: (date: string) => DailyUsage = (date) => emptyDay(date);
+  queries: TopQuery[] = [];
+  names: Record<string, string> = {};
+  failure: Error | null = null;
+
+  async dailyUsage(from: string, to: string): Promise<DailyUsage[]> {
+    this.usageCalls.push({ from, to });
+    if (this.failure !== null) throw this.failure;
+    return datesBetween(from, to).map((date) => this.usage(date));
+  }
+
+  async topQueries(from: string, to: string, order: QueryOrder, limit: number): Promise<TopQuery[]> {
+    this.queryCalls.push({ from, to, order, limit });
+    if (this.failure !== null) throw this.failure;
+    return this.queries;
+  }
+
+  async databaseNames(): Promise<Record<string, string>> {
+    if (this.failure !== null) throw this.failure;
+    return this.names;
+  }
+}

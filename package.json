@@ -1,0 +1,42 @@
+{
+  "name": "polestar",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A dashboard on Cloudflare Workers that shows the usage and the cost of Workers, D1, and R2 in your Cloudflare account.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": "^22.23.0 || ^24.22.0 || ^26.12.0"
+  },
+  "scripts": {
+    "dev": "cf dev",
+    "build": "cf build",
+    "deploy": "cf deploy",
+    "typecheck": "tsc -p tsconfig.json && tsc -p worker/tsconfig.json && tsc -p tsconfig.node.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "hono": "^4.13.16",
+    "jose": "^6.2.15",
+    "lucide-react": "^1.68.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "recharts": "^3.10.1",
+    "tailwind-merge": "^3.7.0"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "2.0.0-beta.v.11",
+    "@tailwindcss/vite": "^4.3.4",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.2.1",
+    "cf": "1.0.0-beta.27",
+    "tailwindcss": "^4.3.4",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5",
+    "vitest": "^5.1.0"
+  }
+}

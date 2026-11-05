@@ -1,0 +1,25 @@
+// Bindings that cloudflare.config.ts gives the Worker, and the part of the R2
+// API that polestar uses. Declaring this subset here lets the tests run the
+// same code against a bucket in memory.
+
+export interface R2ObjectBody {
+  text(): Promise<string>;
+}
+
+export interface R2Bucket {
+  get(key: string): Promise<R2ObjectBody | null>;
+  put(key: string, value: string, options?: { httpMetadata?: { contentType?: string } }): Promise<unknown>;
+}
+
+export interface Env {
+  HISTORY: R2Bucket;
+  AUTH_MODE: string;
+  ACCESS_TEAM_DOMAIN: string;
+  ACCESS_AUD: string;
+  ACCOUNT_ID: string;
+  /** "free" or "paid". */
+  BILLING_PLAN: string;
+  BILLING_CYCLE_START_DAY: string;
+  /** API token with Account Analytics Read and D1 Read on the account. */
+  ANALYTICS_API_TOKEN: string;
+}

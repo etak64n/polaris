@@ -1,0 +1,36 @@
+// Calls the polestar API and turns its errors into messages for the screen.
+
+import type { ApiErrorBody, QueryOrder, TopQueriesResponse, UsageResponse } from "../shared/api.ts";
+
+export class ApiError extends Error {
+  readonly status: number;
+
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+  }
+}
+
+async function getJson<T>(path: string, signal: AbortSignal): Promise<T> {
+  const response = await fetch(path, { signal, headers: { Accept: "application/json" } });
+  if (!response.ok) {
+    let message = `The request failed with status ${response.status}.`;
+    try {
+      const body = (await response.json()) as Partial<ApiErrorBody>;
+      if (typeof body.error?.message === "string") message = body.error.message;
+    } catch {
+      // The response had no JSON body, such as a page from Cloudflare Access.
+    }
+    throw new ApiError(response.status, message);
+  }
+  return (await response.json()) as T;
+}
+
+export function fetchUsage(days: number, signal: AbortSignal): Promise<UsageResponse> {
+  return getJson(`/api/usage?days=${days}`, signal);
+}
+
+export function fetchTopQueries(days: number, order: QueryOrder, signal: AbortSignal): Promise<TopQueriesResponse> {
+  return getJson(`/api/d1/top-queries?days=${days}&order=${order}`, signal);
+}
