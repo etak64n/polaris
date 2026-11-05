@@ -1,8 +1,8 @@
 // Settings of this polestar deployment.
 //
 // Copy this file to polestar.config.ts and replace every value. Git ignores
-// polestar.config.ts. The API token is a secret, so it does not go here:
-// see secrets.example.
+// polestar.config.ts. The API token is a secret, so it goes in .env instead:
+// see .env.example.
 
 import { definePolestarConfig } from "./config/settings.ts";
 
