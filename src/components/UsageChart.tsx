@@ -15,13 +15,14 @@ import { LIMIT_COLOR } from "@/lib/palette.ts";
 import type { ChartRow, Series } from "@/lib/series.ts";
 
 export function UsageChart({
-  title,
+  label,
   rows,
   series,
   format,
   limit = null,
 }: {
-  title: string;
+  /** Names the chart for screen readers. The panel around it shows the same name. */
+  label: string;
   rows: ChartRow[];
   series: Series[];
   /** Formats a value for the tooltip. */
@@ -32,8 +33,7 @@ export function UsageChart({
   const config: ChartConfig = Object.fromEntries(series.map((item) => [item.chartKey, { label: item.label, color: item.color }]));
   const dense = rows.length > 60;
   return (
-    <figure className="grid min-w-0 gap-2">
-      <figcaption className="font-bold text-heading">{title}</figcaption>
+    <figure aria-label={label} className="min-w-0">
       <ChartContainer config={config} className="aspect-auto h-52 w-full">
         <BarChart data={rows} margin={{ top: 6, right: 4, bottom: 0, left: 0 }} barCategoryGap={dense ? 1 : "18%"} accessibilityLayer>
           <CartesianGrid vertical={false} />

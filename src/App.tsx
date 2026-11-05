@@ -1,29 +1,35 @@
-// The page: the header with the range, and the dashboard of the usage of that range.
+// The app: loads the usage of the range, and shows the page that the URL names.
 
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 import { USAGE_DAYS_MIN, type UsageResponse } from "../shared/api.ts";
 import { fetchUsage } from "@/api.ts";
+import { Shell } from "@/components/Shell.tsx";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { NotFoundPage } from "@/pages/NotFoundPage.tsx";
+import { OverviewPage } from "@/pages/OverviewPage.tsx";
+import { matchRoute, usePathname, type Route } from "@/router.tsx";
 
-// The charts are the largest part of the app, so they load while the usage loads.
-const Dashboard = lazy(() => import("@/Dashboard.tsx"));
+// The pages with charts load after the first paint, because the charts are large.
+const WorkersPage = lazy(() => import("@/pages/WorkersPage.tsx"));
+const D1Page = lazy(() => import("@/pages/D1Page.tsx"));
+const R2Page = lazy(() => import("@/pages/R2Page.tsx"));
 
-const RANGES = [
-  { value: 30, label: "30 days" },
-  { value: 90, label: "90 days" },
-  { value: 365, label: "1 year" },
-];
+const TITLES: Record<Route, string> = { overview: "Overview", workers: "Workers", d1: "D1", r2: "R2", "not-found": "Not found" };
 
 export function App() {
+  const route = matchRoute(usePathname());
   const [range, setRange] = useState(30);
   const [usage, setUsage] = useState<UsageResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    document.title = `${TITLES[route]} - polestar`;
+  }, [route]);
+
+  useEffect(() => {
     const controller = new AbortController();
     setError(null);
-    // The response always covers the whole billing cycle, which the estimate needs.
+    // The response always covers the whole billing cycle, which the cost estimate needs.
     fetchUsage(Math.max(range, USAGE_DAYS_MIN), controller.signal)
       .then(setUsage)
       .catch((reason: unknown) => {
@@ -32,58 +38,33 @@ export function App() {
     return () => controller.abort();
   }, [range]);
 
+  let page: ReactNode;
+  if (route === "not-found") page = <NotFoundPage />;
+  else if (usage === null) page = error === null ? <LoadingPanels /> : null;
+  else if (route === "overview") page = <OverviewPage usage={usage} />;
+  else {
+    const props = { usage, range, onRangeChange: setRange };
+    page = (
+      <Suspense fallback={<LoadingPanels />}>
+        {route === "workers" && <WorkersPage {...props} />}
+        {route === "d1" && <D1Page {...props} />}
+        {route === "r2" && <R2Page {...props} />}
+      </Suspense>
+    );
+  }
+
   return (
-    <>
-      <header className="sticky top-0 z-20 border-b bg-card">
-        <div className="mx-auto flex h-14 max-w-[1280px] items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
-          <h1 className="flex min-w-0 items-center gap-2">
-            <img src="/favicon.svg" alt="" className="size-7 shrink-0" />
-            <span className="truncate text-lg font-bold tracking-tight text-heading">polestar</span>
-          </h1>
-          <div className="flex shrink-0 items-center gap-3">
-            {usage !== null && (
-              <span className="hidden text-xs font-bold text-muted-foreground sm:inline">
-                {usage.plan === "paid" ? "Workers Paid" : "Workers Free"}
-              </span>
-            )}
-            <ToggleGroup
-              type="single"
-              variant="outline"
-              size="sm"
-              spacing={0}
-              aria-label="Range"
-              value={String(range)}
-              onValueChange={(value) => {
-                if (value !== "") setRange(Number(value));
-              }}
-            >
-              {RANGES.map((option) => (
-                <ToggleGroupItem key={option.value} value={String(option.value)}>
-                  {option.label}
-                </ToggleGroupItem>
-              ))}
-            </ToggleGroup>
-          </div>
-        </div>
-      </header>
-      <main id="main" className="mx-auto grid max-w-[1280px] gap-6 px-4 py-6 sm:px-6 lg:px-8">
-        {error !== null && <p className="error-box break-words">{error}</p>}
-        {usage === null ? (
-          error === null && <LoadingPanels />
-        ) : (
-          <Suspense fallback={<LoadingPanels />}>
-            <Dashboard usage={usage} range={range} />
-          </Suspense>
-        )}
-      </main>
-    </>
+    <Shell plan={usage?.plan ?? null}>
+      {error !== null && <p className="error-box break-words">{error}</p>}
+      {page}
+    </Shell>
   );
 }
 
 function LoadingPanels() {
   return (
     <>
-      <Skeleton className="h-48" />
+      <Skeleton className="h-10 w-48" />
       <Skeleton className="h-64" />
       <Skeleton className="h-64" />
     </>

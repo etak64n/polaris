@@ -74,10 +74,26 @@ describe("CloudflareAnalytics.dailyUsage", () => {
     ]);
   });
 
-  it("refuses a dataset that reached the row limit, rather than show part of it", async () => {
+  it("asks for each half of the range again when a dataset reaches the row limit", async () => {
+    const row = (date: string) => ({ sum: { requests: 1, cpuTimeUs: 1000 }, dimensions: { date, scriptName: "api" } });
+    const { analytics, calls } = analyticsAnswering((_url, init) => {
+      const { from, to } = (JSON.parse(String(init.body)) as { variables: { from: string; to: string } }).variables;
+      // The whole range is too many rows; each half fits in one answer.
+      if (from !== to) return graphql({ ...EMPTY, workers: Array.from({ length: ROW_LIMIT }, () => row(from)) });
+      return graphql({ ...EMPTY, workers: [row(from)] });
+    });
+    const days = await analytics.dailyUsage("2026-11-01", "2026-11-02");
+    expect(days.map((day) => [day.date, day.workers[0]?.requests])).toEqual([
+      ["2026-11-01", 1],
+      ["2026-11-02", 1],
+    ]);
+    expect(calls).toHaveLength(3);
+  });
+
+  it("refuses a single day that reaches the row limit, rather than show part of it", async () => {
     const row = { sum: { requests: 1, cpuTimeUs: 1 }, dimensions: { date: "2026-11-01", scriptName: "api" } };
     const { analytics } = analyticsAnswering(() => graphql({ ...EMPTY, workers: Array.from({ length: ROW_LIMIT }, () => row) }));
-    await expect(analytics.dailyUsage("2026-11-01", "2026-11-01")).rejects.toThrow(/10000 rows of workers/);
+    await expect(analytics.dailyUsage("2026-11-01", "2026-11-01")).rejects.toThrow(/10000 rows of workers for 2026-11-01 alone/);
   });
 
   it("passes on the errors of the GraphQL API", async () => {

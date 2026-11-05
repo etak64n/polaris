@@ -9,7 +9,7 @@ import { emptyDay, type D1Usage, type DailyUsage, type R2Usage, type WorkerUsage
 
 const API = "https://api.cloudflare.com/client/v4";
 
-/** The most rows that one dataset returns. polestar refuses to show a range that reaches it, rather than show part of it. */
+/** The most rows that one dataset returns. A range that reaches it is asked for again in halves. */
 export const ROW_LIMIT = 10_000;
 
 /** The longest range that one usage query covers. Analytics keep about 31 days of D1 and R2 usage. */
@@ -154,14 +154,19 @@ export class CloudflareAnalytics implements UsageSource {
       start: startOf(from),
       end: startOf(addDays(to, 1)),
     });
-    for (const [name, rows] of Object.entries(account)) {
-      if (rows.length >= ROW_LIMIT) {
-        throw new AnalyticsError(
-          `Cloudflare returned ${ROW_LIMIT} rows of ${name} for ${from} to ${to}, its most for one query, so the usage may be incomplete.`,
-        );
-      }
+    const full = Object.entries(account).find(([, rows]) => rows.length >= ROW_LIMIT);
+    if (full === undefined) return buildDays(dates, account);
+    // A dataset reached the most rows that one query returns, so part of it is missing.
+    // Each half of the range has fewer rows, so ask for the halves instead.
+    if (dates.length === 1) {
+      throw new AnalyticsError(
+        `Cloudflare returned ${ROW_LIMIT} rows of ${full[0]} for ${from} alone, its most for one query, so the usage of that day is incomplete.`,
+      );
     }
-    return buildDays(dates, account);
+    const middle = addDays(from, Math.floor(dates.length / 2) - 1);
+    const first = await this.dailyUsage(from, middle);
+    const second = await this.dailyUsage(addDays(middle, 1), to);
+    return [...first, ...second];
   }
 
   async topQueries(from: string, to: string, order: QueryOrder, limit: number): Promise<TopQuery[]> {

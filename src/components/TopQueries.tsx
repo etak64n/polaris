@@ -39,8 +39,7 @@ export function TopQueries({ databaseName, seriesOf }: { databaseName: (id: stri
 
   return (
     <div className="grid gap-2">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="font-bold text-heading">Top queries</h3>
+      <div className="flex flex-wrap items-center justify-end gap-2">
         <div className="flex flex-wrap gap-2">
           <ToggleGroup
             type="single"
