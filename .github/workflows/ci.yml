@@ -16,22 +16,25 @@ jobs:
     env:
       CF_SEND_TELEMETRY: "false"
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v5
+      # Installs the pnpm version that "packageManager" in package.json names.
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
-          cache: npm
+          cache: pnpm
 
-      - run: npm ci
+      - run: pnpm install --frozen-lockfile
 
       # CI has no deployment of its own, so it checks the code with the example settings.
       - name: Use the example settings
         run: cp polestar.config.example.ts polestar.config.ts
 
-      - run: npm run typecheck
+      - run: pnpm typecheck
 
-      - run: npm test
+      - run: pnpm test
 
       - name: Build
-        run: npx cf build
+        run: pnpm exec cf build
