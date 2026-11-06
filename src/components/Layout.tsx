@@ -44,16 +44,28 @@ export function Card({ title, figure, note, children }: { title: string; figure?
 }
 
 /**
- * A figure in the manner of the Stripe Dashboard: the name, and the value large under
- * it. "muted" is a figure to compare with, and "critical" a figure that needs action.
+ * A figure in the manner of the Stripe Dashboard: the name, the value large under it,
+ * and a note such as the span of the figure. "muted" is a figure to compare with, and
+ * "critical" a figure that needs action.
  */
-export function Figure({ label, value, tone = "default" }: { label: string; value: string; tone?: "default" | "muted" | "critical" }) {
+export function Figure({
+  label,
+  value,
+  note,
+  tone = "default",
+}: {
+  label: string;
+  value: string;
+  note?: string;
+  tone?: "default" | "muted" | "critical";
+}) {
   const color = tone === "muted" ? "text-subdued" : tone === "critical" ? "text-destructive" : "text-foreground";
   return (
     <div className="grid gap-0.5">
       <span className="text-sm font-semibold text-heading">{label}</span>
       {/* Plain strings: cn would drop text-figure, which it takes for a color, next to the text color. */}
       <span className={`numeric text-figure font-bold ${color}`}>{value}</span>
+      {note !== undefined && <span className="text-xs text-subdued">{note}</span>}
     </div>
   );
 }

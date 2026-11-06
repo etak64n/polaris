@@ -1,6 +1,6 @@
 // The limits of the Workers Free plan, and the share of each that the usage leaves:
-// the daily limits against the busiest day of the last days, the sizes and the number
-// of D1 databases now, and the monthly free amounts of R2 projected to the end of the
+// the daily limits against the usage of today, the sizes and the number of D1
+// databases now, and the monthly free amounts of R2 projected to the end of the
 // billing cycle.
 //
 // Past a limit of the Free plan, the usage stops instead of costing money: Workers
@@ -31,26 +31,22 @@ export interface FreeLimit {
   product: "Workers" | "D1" | "KV" | "R2";
   /** What the limit counts, such as "Rows read". */
   item: string;
-  /** The usage that the limit compares with: of the busiest day, now, or projected for the cycle. */
+  /** The usage that the limit compares with: of today, now, or projected for the cycle. */
   used: number;
   limit: number;
   unit: "count" | "bytes" | "GB-month";
-  /** The busiest day, for a daily limit. Null without any usage. */
-  date: string | null;
-  /** The usage of today, for a daily limit. */
-  today: number | null;
   /** The share of the limit that the usage leaves: 1 − used ÷ limit. Below zero past the limit. */
   left: number;
 }
 
 export interface FreeLimits {
-  /** The limits per day, against the busiest UTC day of the days. They reset at 00:00 UTC. */
+  /** The limits per day, against the usage of today, the UTC day that ends the days. They reset at 00:00 UTC. */
   daily: FreeLimit[];
   /** The limits on sizes and counts, against the usage now. */
   sizes: FreeLimit[];
   /** The free amounts of R2 per month, against the usage projected to the end of the cycle. */
   monthly: FreeLimit[];
-  /** Requests that a limit stopped during the days: the CPU time, the subrequests, or the daily requests. */
+  /** Requests that a limit stopped during all the days: the CPU time, the subrequests, or the daily requests. */
   stopped: number;
 }
 
@@ -63,19 +59,19 @@ export function freeLimits(days: DailyUsage[], databases: number, r2Lines: CostL
   const latest = days.at(-1);
   const byLeft = (a: FreeLimit, b: FreeLimit): number => a.left - b.left;
   const daily = [
-    busiest(days, "workers-requests", "Workers", "Requests", FREE_DAILY_LIMITS.workerRequests, (day) =>
+    ofToday(latest, "workers-requests", "Workers", "Requests", FREE_DAILY_LIMITS.workerRequests, (day) =>
       sum(day.workers.map((worker) => worker.requests)),
     ),
-    busiest(days, "d1-rows-read", "D1", "Rows read", FREE_DAILY_LIMITS.d1RowsRead, (day) =>
+    ofToday(latest, "d1-rows-read", "D1", "Rows read", FREE_DAILY_LIMITS.d1RowsRead, (day) =>
       sum(day.d1.map((database) => database.rowsRead)),
     ),
-    busiest(days, "d1-rows-written", "D1", "Rows written", FREE_DAILY_LIMITS.d1RowsWritten, (day) =>
+    ofToday(latest, "d1-rows-written", "D1", "Rows written", FREE_DAILY_LIMITS.d1RowsWritten, (day) =>
       sum(day.d1.map((database) => database.rowsWritten)),
     ),
-    busiest(days, "kv-reads", "KV", "Reads", FREE_KV_DAILY_LIMITS.reads, (day) => day.kv.reads),
-    busiest(days, "kv-writes", "KV", "Writes", FREE_KV_DAILY_LIMITS.writes, (day) => day.kv.writes),
-    busiest(days, "kv-deletes", "KV", "Deletes", FREE_KV_DAILY_LIMITS.deletes, (day) => day.kv.deletes),
-    busiest(days, "kv-lists", "KV", "Lists", FREE_KV_DAILY_LIMITS.lists, (day) => day.kv.lists),
+    ofToday(latest, "kv-reads", "KV", "Reads", FREE_KV_DAILY_LIMITS.reads, (day) => day.kv.reads),
+    ofToday(latest, "kv-writes", "KV", "Writes", FREE_KV_DAILY_LIMITS.writes, (day) => day.kv.writes),
+    ofToday(latest, "kv-deletes", "KV", "Deletes", FREE_KV_DAILY_LIMITS.deletes, (day) => day.kv.deletes),
+    ofToday(latest, "kv-lists", "KV", "Lists", FREE_KV_DAILY_LIMITS.lists, (day) => day.kv.lists),
   ];
   const sizes = (latest?.d1 ?? []).map((database) => database.storageBytes);
   const now = [
@@ -94,8 +90,6 @@ export function freeLimits(days: DailyUsage[], databases: number, r2Lines: CostL
       used,
       limit: line.included,
       unit: line.unit === "GB-month" ? "GB-month" : "count",
-      date: null,
-      today: null,
       left: 1 - used / line.included,
     });
   }
@@ -107,25 +101,20 @@ export function freeLimits(days: DailyUsage[], databases: number, r2Lines: CostL
   };
 }
 
-function busiest(days: DailyUsage[], id: string, product: FreeLimit["product"], item: string, limit: number, of: (day: DailyUsage) => number): FreeLimit {
-  let used = 0;
-  let date: string | null = null;
-  for (const day of days) {
-    const value = of(day);
-    if (date === null || value > used) {
-      used = value;
-      date = day.date;
-    }
-  }
-  const latest = days.at(-1);
-  const today = latest === undefined ? null : of(latest);
-  // Without any usage, no day is the busiest.
-  if (used === 0) date = null;
-  return { id, product, item, used, limit, unit: "count", date, today, left: 1 - used / limit };
+function ofToday(
+  today: DailyUsage | undefined,
+  id: string,
+  product: FreeLimit["product"],
+  item: string,
+  limit: number,
+  of: (day: DailyUsage) => number,
+): FreeLimit {
+  const used = today === undefined ? 0 : of(today);
+  return { id, product, item, used, limit, unit: "count", left: 1 - used / limit };
 }
 
 function current(id: string, product: FreeLimit["product"], item: string, used: number, limit: number, unit: FreeLimit["unit"]): FreeLimit {
-  return { id, product, item, used, limit, unit, date: null, today: null, left: 1 - used / limit };
+  return { id, product, item, used, limit, unit, left: 1 - used / limit };
 }
 
 function sum(values: number[]): number {
