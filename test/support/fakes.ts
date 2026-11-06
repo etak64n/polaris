@@ -1,6 +1,7 @@
 // Stand-ins for the history bucket and for Cloudflare analytics.
 
 import type { QueryOrder, TopQuery } from "../../shared/api.ts";
+import type { MetricProduct, MetricRange, MetricsResponse } from "../../shared/metrics.ts";
 import { datesBetween } from "../../shared/dates.ts";
 import { emptyDay, type DailyUsage } from "../../shared/usage.ts";
 import type { UsageSource } from "../../worker/analytics.ts";
@@ -33,6 +34,7 @@ export function usageOf(date: string, amount: number): DailyUsage {
 export class FakeUsageSource implements UsageSource {
   readonly usageCalls: { from: string; to: string }[] = [];
   readonly queryCalls: { from: string; to: string; order: QueryOrder; limit: number; databaseIds: readonly string[] }[] = [];
+  readonly metricCalls: { product: MetricProduct; range: MetricRange; picked: readonly string[]; now: Date }[] = [];
   usage: (date: string) => DailyUsage = (date) => emptyDay(date);
   queries: TopQuery[] = [];
   names: Record<string, string> = {};
@@ -48,6 +50,12 @@ export class FakeUsageSource implements UsageSource {
     this.queryCalls.push({ from, to, order, limit, databaseIds });
     if (this.failure !== null) throw this.failure;
     return this.queries;
+  }
+
+  async metrics(product: MetricProduct, range: MetricRange, picked: readonly string[], now: Date): Promise<Omit<MetricsResponse, "names">> {
+    this.metricCalls.push({ product, range, picked, now });
+    if (this.failure !== null) throw this.failure;
+    return { product, range, period: "5m", times: [], resources: [], shown: [...picked], sums: {}, quantiles: {}, gauges: {} };
   }
 
   async databaseNames(): Promise<Record<string, string>> {

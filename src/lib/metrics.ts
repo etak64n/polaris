@@ -1,0 +1,52 @@
+// Labels of the periods and the times on the metric charts. A day is a UTC date,
+// as Cloudflare analytics count days in UTC; shorter periods show the local time.
+
+import type { MetricRange, Period, Statistic } from "../../shared/metrics.ts";
+import type { ChartSeries } from "@/components/MetricChart.tsx";
+import { formatDate } from "./format.ts";
+import type { ProductColors } from "./series.ts";
+
+export const PERIOD_LABELS: Record<Period, string> = { "1m": "1 min", "5m": "5 min", "15m": "15 min", "1h": "1 hour", "1d": "1 day" };
+
+function twoDigits(value: number): string {
+  return String(value).padStart(2, "0");
+}
+
+function localDate(time: Date): string {
+  return `${time.getFullYear()}/${twoDigits(time.getMonth() + 1)}/${twoDigits(time.getDate())}`;
+}
+
+function localClock(time: Date): string {
+  return `${twoDigits(time.getHours())}:${twoDigits(time.getMinutes())}`;
+}
+
+/** A tick on the time axis: the clock within a day, the date for longer ranges. */
+export function timeTick(iso: string, period: Period, range: MetricRange): string {
+  if (period === "1d") return formatDate(iso.slice(0, 10));
+  const time = new Date(iso);
+  return range === "1h" || range === "3h" || range === "12h" || range === "1d" ? localClock(time) : localDate(time);
+}
+
+/** The time of a point in a tooltip, such as 2026/11/06 10:35. */
+export function timeLabel(iso: string, period: Period): string {
+  if (period === "1d") return formatDate(iso.slice(0, 10));
+  const time = new Date(iso);
+  return `${localDate(time)} ${localClock(time)}`;
+}
+
+/** The series of a sum or a gauge, one per shown resource and "Other", in the colors of the resources. */
+export function resourceSeries(values: Record<string, (number | null)[]> | undefined, colors: ProductColors): ChartSeries[] {
+  return colors.series.flatMap((item) => {
+    const series = values?.[item.key];
+    return series === undefined ? [] : [{ chartKey: item.chartKey, label: item.label, color: item.color, values: series }];
+  });
+}
+
+/** The p99 and p50 lines of a quantile, in ink rather than the colors of the resources. */
+export function statisticSeries(values: Record<Statistic, (number | null)[]> | undefined): ChartSeries[] {
+  if (values === undefined) return [];
+  return [
+    { chartKey: "p99", label: "p99", color: "var(--foreground)", values: values.p99 },
+    { chartKey: "p50", label: "p50", color: "var(--muted-foreground)", values: values.p50 },
+  ];
+}

@@ -12,6 +12,14 @@ import {
   type UsageResponse,
 } from "../shared/api.ts";
 import { addDays, datesBetween, monthOf, utcDate } from "../shared/dates.ts";
+import {
+  MAX_PICKED_RESOURCES,
+  METRIC_RANGES,
+  RANGE_SPECS,
+  type MetricProduct,
+  type MetricRange,
+  type MetricsResponse,
+} from "../shared/metrics.ts";
 import { emptyDay, type DailyUsage } from "../shared/usage.ts";
 import { AccessDeniedError, isLocalhost, verifyAccessToken, type KeySetProvider } from "./access.ts";
 import { AnalyticsError, MAX_QUERY_DAYS, type UsageSource } from "./analytics.ts";
@@ -35,6 +43,8 @@ export const LIVE_DAYS = MAX_QUERY_DAYS;
 
 const USAGE_CACHE_SECONDS = 300;
 const NAMES_CACHE_SECONDS = 3600;
+/** Metrics with one-minute periods change every minute; the others are kept for five minutes. */
+const METRICS_CACHE_SECONDS = { short: 60, long: 300 };
 const TOP_QUERY_COUNT = 20;
 const TOP_QUERY_DAYS = [1, 7];
 
@@ -80,6 +90,29 @@ export function createApp(dependencies: AppDependencies) {
       liveFrom,
       databaseNames,
     };
+    return c.json(body);
+  });
+
+  app.get("/api/metrics", async (c) => {
+    const config = c.get("config");
+    const product = readProduct(c.req.query("product"));
+    const range = readRange(c.req.query("range"));
+    const picked = readPicked(product, c.req.queries("resource"));
+    const now = dependencies.now();
+    const source = dependencies.usageSourceFor(config);
+    const cache = dependencies.cacheFor();
+    const seconds = RANGE_SPECS[range].period === "1m" ? METRICS_CACHE_SECONDS.short : METRICS_CACHE_SECONDS.long;
+    // One key per cache lifetime, so a cached answer never outlives its periods.
+    const slot = Math.floor(now.getTime() / (seconds * 1000));
+    const [metrics, names] = await Promise.all([
+      cache.get(`metrics/${config.accountId}/${product}/${range}/${picked.join(",")}/${slot}`, seconds, () =>
+        source.metrics(product, range, picked, now),
+      ),
+      product === "d1"
+        ? cache.get(`d1-names/${config.accountId}`, NAMES_CACHE_SECONDS, () => source.databaseNames())
+        : Promise.resolve<Record<string, string>>({}),
+    ]);
+    const body: MetricsResponse = { ...metrics, names };
     return c.json(body);
   });
 
@@ -156,6 +189,32 @@ function readDatabaseIds(values: string[] | undefined): string[] {
   if (ids.length > TOP_QUERY_DATABASES_MAX) throw badRequest(`database can be given at most ${TOP_QUERY_DATABASES_MAX} times.`);
   if (!ids.every((id) => DATABASE_ID.test(id))) throw badRequest("database must be the ID of a D1 database.");
   return ids;
+}
+
+function readProduct(value: string | undefined): MetricProduct {
+  if (value === "workers" || value === "d1" || value === "r2") return value;
+  throw badRequest('product must be "workers", "d1", or "r2".');
+}
+
+function readRange(value: string | undefined): MetricRange {
+  const range = METRIC_RANGES.find((item) => item === value);
+  if (range === undefined) throw badRequest(`range must be one of ${METRIC_RANGES.join(", ")}.`);
+  return range;
+}
+
+// The forms of the resources of each product. R2 operations on the whole account have no bucket name.
+const RESOURCE_KEY: Record<MetricProduct, RegExp> = {
+  workers: /^[A-Za-z0-9_-]{1,63}$/,
+  d1: DATABASE_ID,
+  r2: /^(?:|[a-z0-9][a-z0-9-]{1,61}[a-z0-9])$/,
+};
+
+/** The picked resources, without repeats, in the order given. */
+function readPicked(product: MetricProduct, values: string[] | undefined): string[] {
+  const picked = [...new Set(values ?? [])];
+  if (picked.length > MAX_PICKED_RESOURCES) throw badRequest(`resource can be given at most ${MAX_PICKED_RESOURCES} times.`);
+  if (!picked.every((key) => RESOURCE_KEY[product].test(key))) throw badRequest(`resource must name a resource of ${product}.`);
+  return picked;
 }
 
 function readOrder(value: string | undefined): QueryOrder {

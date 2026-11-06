@@ -1,5 +1,6 @@
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { TopQueriesResponse, UsageResponse } from "../shared/api.ts";
+import type { MetricsResponse } from "../shared/metrics.ts";
 import { AnalyticsError } from "../worker/analytics.ts";
 import { createApp } from "../worker/app.ts";
 import { noCache } from "../worker/cache.ts";
@@ -150,6 +151,32 @@ describe("GET /api/d1/top-queries", () => {
     const ids = Array.from({ length: 6 }, (_, index) => `database=0000000${index}-0000-0000-0000-000000000000`).join("&");
     expect((await get(`/api/d1/top-queries?days=1&order=rowsRead&${ids}`)).status).toBe(400);
     expect(source.queryCalls).toHaveLength(0);
+  });
+});
+
+describe("GET /api/metrics", () => {
+  it("returns the metrics of the product with the names of the D1 databases", async () => {
+    const database = "11111111-2222-3333-4444-555555555555";
+    source.names = { [database]: "notes" };
+    const response = await get(`/api/metrics?product=d1&range=1d&resource=${database}`);
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as MetricsResponse;
+    expect(body).toMatchObject({ product: "d1", range: "1d", shown: [database], names: { [database]: "notes" } });
+    expect(source.metricCalls).toEqual([{ product: "d1", range: "1d", picked: [database], now: NOW }]);
+  });
+
+  it("names no databases for the other products", async () => {
+    const body = (await (await get("/api/metrics?product=workers&range=1h")).json()) as MetricsResponse;
+    expect(body.names).toEqual({});
+  });
+
+  it("refuses an unknown product, range, or resource, and more resources than the most", async () => {
+    expect((await get("/api/metrics?product=kv&range=1d")).status).toBe(400);
+    expect((await get("/api/metrics?product=workers&range=2d")).status).toBe(400);
+    expect((await get("/api/metrics?product=d1&range=1d&resource=blog")).status).toBe(400);
+    const six = Array.from({ length: 6 }, (_, index) => `resource=worker-${index}`).join("&");
+    expect((await get(`/api/metrics?product=workers&range=1d&${six}`)).status).toBe(400);
+    expect(source.metricCalls).toHaveLength(0);
   });
 });
 

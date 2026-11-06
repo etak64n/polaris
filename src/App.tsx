@@ -1,7 +1,9 @@
-// The app: loads the usage of the range, and shows the page that the URL names.
+// The app: loads the usage of the billing cycle, and shows the page that the URL names.
+// The product pages load their own metrics for the time range that they share.
 
 import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 import { USAGE_DAYS_MIN, type UsageResponse } from "../shared/api.ts";
+import type { MetricRange } from "../shared/metrics.ts";
 import { fetchUsage } from "@/api.ts";
 import { Shell } from "@/components/Shell.tsx";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -18,7 +20,7 @@ const TITLES: Record<Route, string> = { overview: "Overview", workers: "Workers"
 
 export function App() {
   const route = matchRoute(usePathname());
-  const [range, setRange] = useState(30);
+  const [range, setRange] = useState<MetricRange>("1d");
   const [usage, setUsage] = useState<UsageResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,14 +31,14 @@ export function App() {
   useEffect(() => {
     const controller = new AbortController();
     setError(null);
-    // The response always covers the whole billing cycle, which the cost estimate needs.
-    fetchUsage(Math.max(range, USAGE_DAYS_MIN), controller.signal)
+    // The billing cycle, which the cost estimate and the free lines need.
+    fetchUsage(USAGE_DAYS_MIN, controller.signal)
       .then(setUsage)
       .catch((reason: unknown) => {
         if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : String(reason));
       });
     return () => controller.abort();
-  }, [range]);
+  }, []);
 
   let page: ReactNode;
   if (route === "not-found") page = <NotFoundPage />;
