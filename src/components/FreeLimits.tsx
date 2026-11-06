@@ -103,10 +103,33 @@ function Note({ children }: { children: string }) {
   return <span className="text-xs text-subdued">{children}</span>;
 }
 
-/** The share left, red once the limit is reached and amber when little is left. */
+/**
+ * The share left, as a gauge and its percentage. The gauge empties as the usage nears
+ * the limit, like a fuel gauge. Little left turns it amber, and a reached limit leaves
+ * it empty with the percentage in red.
+ */
 function LeftCell({ limit }: { limit: FreeLimit }) {
-  const color = limit.left <= 0 ? "text-destructive" : limit.left < LOW ? "text-warning" : "text-strong";
-  return <TableCell className={`numeric text-right font-semibold ${color}`}>{`${Math.max(0, Math.floor(limit.left * 100))}%`}</TableCell>;
+  const percent = Math.floor(Math.min(1, Math.max(0, limit.left)) * 100);
+  const reached = limit.left <= 0;
+  const low = !reached && limit.left < LOW;
+  const text = reached ? "text-destructive" : low ? "text-warning" : "text-strong";
+  return (
+    <TableCell>
+      <div className="flex items-center justify-end gap-3">
+        <div
+          role="meter"
+          aria-label={`${limit.product} ${limit.item} left`}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={percent}
+          className="h-2 w-full max-w-32 overflow-hidden rounded-sm bg-hairline"
+        >
+          <div className={`h-full ${low ? "bg-warning" : "bg-[var(--ds-series-muted)]"}`} style={{ width: `${percent}%` }} />
+        </div>
+        <span className={`numeric w-11 shrink-0 text-right font-semibold ${text}`}>{`${percent}%`}</span>
+      </div>
+    </TableCell>
+  );
 }
 
 function formatAmount(limit: FreeLimit, value: number): string {
