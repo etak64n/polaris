@@ -48,7 +48,6 @@ describe("validateSettings", () => {
       "workerName is missing.",
       "domain is missing.",
       "billing is missing.",
-      "history is missing.",
       "access is missing.",
     ]);
   });
@@ -61,13 +60,9 @@ describe("validateSettings", () => {
     expect(problemsOf(input)).toEqual(["access.allow must be a list of one or more email addresses."]);
   });
 
-  it("rejects a bucket name that R2 does not accept and a team domain without https", () => {
+  it("rejects a team domain without https", () => {
     const input = settings();
-    input.history.bucket = "Usage_History";
     input.access.teamDomain = "http://example.cloudflareaccess.com";
-    expect(problemsOf(input)).toEqual([
-      "history.bucket must be an R2 bucket name of 3 to 63 lowercase letters, digits, and hyphens.",
-      "access.teamDomain must be an https:// origin.",
-    ]);
+    expect(problemsOf(input)).toEqual(["access.teamDomain must be an https:// origin."]);
   });
 });

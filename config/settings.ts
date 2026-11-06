@@ -21,11 +21,6 @@ export interface BillingSettings {
   cycleStartDay: number;
 }
 
-export interface HistorySettings {
-  /** R2 bucket that keeps the daily usage after Cloudflare analytics stop holding it. */
-  bucket: string;
-}
-
 export interface AccessSettings {
   /** Cloudflare Access team domain, such as https://example.cloudflareaccess.com. */
   teamDomain: string;
@@ -46,7 +41,6 @@ export interface PolarisSettings {
   /** Hostname that serves polaris. Its zone must be in the same Cloudflare account. */
   domain: string;
   billing: BillingSettings;
-  history: HistorySettings;
   access: AccessSettings;
 }
 
@@ -70,8 +64,6 @@ export class SettingsError extends Error {
 
 const WORKER_NAME = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 const HOSTNAME = /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z][a-z0-9-]{0,61}[a-z0-9]$/;
-// R2 bucket names: 3 to 63 lowercase letters, digits, and hyphens, starting and ending with a letter or digit.
-const BUCKET = /^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/;
 // A practical check of an email address: one @, no spaces, and a dot in the domain.
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -83,18 +75,17 @@ export function validateSettings(input: unknown): PolarisSettings {
   const problems: Problems = [];
   const root = readObject(input, "settings", problems);
   if (root === null) throw new SettingsError(problems);
-  checkKeys(root, "", ["workerName", "domain", "billing", "history", "access"], problems);
+  checkKeys(root, "", ["workerName", "domain", "billing", "access"], problems);
 
   const workerName = readPattern(root, "workerName", "", WORKER_NAME, "lowercase letters, digits, and hyphens (at most 63 characters)", problems);
   const domain = readPattern(root, "domain", "", HOSTNAME, "a lowercase hostname without a scheme or path", problems);
   const billing = readBilling(root["billing"], problems);
-  const history = readHistory(root["history"], problems);
   const access = readAccess(root["access"], problems);
 
-  if (problems.length > 0 || billing === null || history === null || access === null) {
+  if (problems.length > 0 || billing === null || access === null) {
     throw new SettingsError(problems);
   }
-  return { workerName, domain, billing, history, access };
+  return { workerName, domain, billing, access };
 }
 
 function readBilling(input: unknown, problems: Problems): BillingSettings | null {
@@ -111,14 +102,6 @@ function readBilling(input: unknown, problems: Problems): BillingSettings | null
   }
   if ((plan !== "free" && plan !== "paid") || typeof day !== "number") return null;
   return { plan, cycleStartDay: day };
-}
-
-function readHistory(input: unknown, problems: Problems): HistorySettings | null {
-  const history = readObject(input, "history", problems);
-  if (history === null) return null;
-  checkKeys(history, "history.", ["bucket"], problems);
-  const bucket = readPattern(history, "bucket", "history.", BUCKET, "an R2 bucket name of 3 to 63 lowercase letters, digits, and hyphens", problems);
-  return { bucket };
 }
 
 function readAccess(input: unknown, problems: Problems): AccessSettings | null {

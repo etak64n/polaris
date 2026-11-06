@@ -1,25 +1,10 @@
-// Stand-ins for the history bucket and for Cloudflare analytics.
+// A stand-in for Cloudflare analytics.
 
 import type { QueryOrder, TopQuery } from "../../shared/api.ts";
 import type { MetricProduct, MetricRange, MetricsResponse } from "../../shared/metrics.ts";
 import { datesBetween } from "../../shared/dates.ts";
 import { emptyDay, type DailyUsage } from "../../shared/usage.ts";
 import type { UsageSource } from "../../worker/analytics.ts";
-import type { R2Bucket, R2ObjectBody } from "../../worker/env.ts";
-
-export class MemoryBucket implements R2Bucket {
-  readonly objects = new Map<string, string>();
-
-  async get(key: string): Promise<R2ObjectBody | null> {
-    const value = this.objects.get(key);
-    return value === undefined ? null : { text: async () => value };
-  }
-
-  async put(key: string, value: string): Promise<unknown> {
-    this.objects.set(key, value);
-    return {};
-  }
-}
 
 /** Usage of one Worker, one database, and one bucket, with the same numbers for every resource. */
 export function usageOf(date: string, amount: number): DailyUsage {

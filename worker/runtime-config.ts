@@ -30,7 +30,7 @@ export class ConfigurationError extends Error {
   }
 }
 
-type TextBinding = Exclude<keyof Env, "HISTORY">;
+type TextBinding = keyof Env;
 
 const ACCOUNT_ID = /^[0-9a-f]{32}$/;
 
@@ -72,8 +72,6 @@ export function readRuntimeConfig(env: Env): RuntimeConfig {
     plan: planText === "paid" ? "paid" : "free",
     cycleStartDay: day,
   };
-  const history: unknown = env.HISTORY;
-  if (history === undefined || history === null) problems.push("HISTORY is not bound to an R2 bucket.");
   if (problems.length > 0) throw new ConfigurationError(problems);
   return config;
 }

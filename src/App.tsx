@@ -2,7 +2,7 @@
 // The product pages load their own metrics for the time range that they share.
 
 import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
-import { USAGE_DAYS_MIN, type UsageResponse } from "../shared/api.ts";
+import type { UsageResponse } from "../shared/api.ts";
 import type { MetricRange } from "../shared/metrics.ts";
 import { fetchUsage } from "@/api.ts";
 import { Shell } from "@/components/Shell.tsx";
@@ -32,7 +32,7 @@ export function App() {
     const controller = new AbortController();
     setError(null);
     // The billing cycle, which the cost estimate and the free lines need.
-    fetchUsage(USAGE_DAYS_MIN, controller.signal)
+    fetchUsage(controller.signal)
       .then(setUsage)
       .catch((reason: unknown) => {
         if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : String(reason));

@@ -3,10 +3,8 @@
 import type { PlanType } from "./plan.ts";
 import type { DailyUsage } from "./usage.ts";
 
-/** The fewest days that /api/usage returns: always the whole current billing cycle. */
-export const USAGE_DAYS_MIN = 31;
-/** The most days that /api/usage returns. */
-export const USAGE_DAYS_MAX = 400;
+/** The days that /api/usage returns: today and the days before it, which cover the current billing cycle. */
+export const USAGE_DAYS = 31;
 
 export interface UsageResponse {
   plan: PlanType;
@@ -14,10 +12,8 @@ export interface UsageResponse {
   cycleStartDay: number;
   /** Today in UTC. Its usage is still growing. */
   today: string;
-  /** Every date of the range, oldest first. A day without usage has no resources. */
+  /** The last USAGE_DAYS dates, oldest first. A day without usage has no resources. */
   days: DailyUsage[];
-  /** The first date that comes from Cloudflare analytics. Older dates come from the history bucket. */
-  liveFrom: string;
   /** D1 database names by database ID. Deleted databases have no name. */
   databaseNames: Record<string, string>;
 }

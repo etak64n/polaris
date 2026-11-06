@@ -12,13 +12,13 @@ import { CfError, type Cf } from "./cf.ts";
 /** The tag that marks the resources of a stack. Its value is the name of the stack, the Worker name. */
 export const STACK_TAG = "polaris.stack";
 
-export type ResourceType = "worker" | "access_application" | "r2_bucket";
+export type ResourceType = "worker" | "access_application";
 
 export interface StackResource {
   type: ResourceType;
-  /** The ID that Resource Tagging uses: the Worker ID, the Access application ID, or the bucket name. */
+  /** The ID that Resource Tagging uses: the Worker ID or the Access application ID. */
   id: string;
-  /** What people know the resource by: the Worker name, the domain, or the bucket name. */
+  /** What people know the resource by: the Worker name or the name of the Access application. */
   name: string;
 }
 
@@ -45,10 +45,8 @@ export interface DeployOptions {
 /** Creates or updates the resources of the stack, deploys the Worker, and returns the resources. */
 export function deployStack({ settings, secrets, cf, log, writeSecretsFile }: DeployOptions): StackResource[] {
   const stack = settings.workerName;
-  const bucket = settings.history.bucket;
 
   // Find what exists, and stop before any change if part of it belongs to another stack.
-  const bucketExists = bucketNames(cf).includes(bucket);
   const existingApp = accessApplications(cf).find((app) => app.domain === settings.domain) ?? null;
   const existingWorker = findWorker(cf, stack);
   const tagsOf = new Map<string, Record<string, string>>();
@@ -60,7 +58,6 @@ export function deployStack({ settings, secrets, cf, log, writeSecretsFile }: De
     }
     tagsOf.set(key(resource), tags);
   };
-  if (bucketExists) claim({ type: "r2_bucket", id: bucket, name: bucket });
   if (existingApp !== null) claim({ type: "access_application", id: existingApp.id, name: settings.workerName });
   if (existingWorker !== null) claim({ type: "worker", id: existingWorker.id, name: stack });
 
@@ -69,11 +66,6 @@ export function deployStack({ settings, secrets, cf, log, writeSecretsFile }: De
     writeTags(cf, resource, { ...(tagsOf.get(key(resource)) ?? {}), [STACK_TAG]: stack });
     resources.push(resource);
   };
-
-  // The bucket of the daily history.
-  if (!bucketExists) cf.json(["r2", "buckets", "create", "--name", bucket]);
-  mark({ type: "r2_bucket", id: bucket, name: bucket });
-  log(`R2 bucket ${bucket}: ${bucketExists ? "kept" : "created"}`);
 
   // The Access application of the domain, whose only policy allows the people in the settings.
   const body = JSON.stringify(accessApplicationBody(settings));
@@ -115,11 +107,11 @@ export function stackResources(cf: Cf, stack: string): { resources: StackResourc
     const id = text(item, "id") ?? text(item, "resource_id");
     if (type === undefined || id === undefined) continue;
     const name = text(item, "name") ?? id;
-    if (type === "worker" || type === "access_application" || type === "r2_bucket") resources.push({ type, id, name });
+    if (type === "worker" || type === "access_application") resources.push({ type, id, name });
     else others.push(`${type} ${name}`);
   }
-  // Stop serving first, then remove who may sign in, then the data.
-  const order: ResourceType[] = ["worker", "access_application", "r2_bucket"];
+  // Stop serving first, then remove who may sign in.
+  const order: ResourceType[] = ["worker", "access_application"];
   resources.sort((a, b) => order.indexOf(a.type) - order.indexOf(b.type));
   return { resources, others };
 }
@@ -128,19 +120,17 @@ export interface DeleteOptions {
   cf: Cf;
   log: (line: string) => void;
   resources: StackResource[];
-  /** Waits between tries of deleting a bucket whose objects R2 is still deleting. */
-  wait?: (milliseconds: number) => void;
 }
 
 /**
  * Deletes the resources of a stack, which the person has confirmed, so cf asks
- * nothing more (--force). A bucket is emptied first, as R2 deletes only empty buckets.
+ * nothing more (--force).
  *
  * Cloudflare keeps the tags of a resource after the resource is gone, so each tag
  * is removed too. A resource that is already gone counts as deleted, so a delete
  * that stopped halfway can run again.
  */
-export function deleteStack({ cf, log, resources, wait = sleep }: DeleteOptions): void {
+export function deleteStack({ cf, log, resources }: DeleteOptions): void {
   for (const resource of resources) {
     const existed = unlessGone(() => {
       switch (resource.type) {
@@ -149,10 +139,6 @@ export function deleteStack({ cf, log, resources, wait = sleep }: DeleteOptions)
           break;
         case "access_application":
           cf.json(["zero-trust", "access", "applications", "delete", resource.id, "--force"]);
-          break;
-        case "r2_bucket":
-          emptyBucket(cf, resource.id);
-          deleteBucket(cf, resource.id, wait);
           break;
       }
     });
@@ -178,8 +164,6 @@ export function describe(resource: StackResource): string {
       return `Worker ${resource.name}`;
     case "access_application":
       return `Access application ${resource.name}`;
-    case "r2_bucket":
-      return `R2 bucket ${resource.name}`;
   }
 }
 
@@ -197,12 +181,6 @@ export function accessApplicationBody(settings: PolarisSettings) {
       },
     ],
   };
-}
-
-function bucketNames(cf: Cf): string[] {
-  const raw = cf.json(["r2", "buckets", "list"]);
-  const buckets = isRecord(raw) ? raw["buckets"] : raw;
-  return list(buckets).flatMap((item) => text(item, "name") ?? []);
 }
 
 function accessApplications(cf: Cf): { id: string; domain: string }[] {
@@ -247,38 +225,6 @@ function readOwnTags(cf: Cf, resource: StackResource): Record<string, string> {
 /** Sets the tags of a resource. Cloudflare replaces all of them, so `tags` holds the ones to keep too. */
 function writeTags(cf: Cf, resource: StackResource, tags: Record<string, string>): void {
   cf.json(["tags", "account-resources", "update", "--body", JSON.stringify({ resource_type: resource.type, resource_id: resource.id, tags })]);
-}
-
-function emptyBucket(cf: Cf, bucket: string): void {
-  let previous = "";
-  for (;;) {
-    const keys = list(cf.json(["r2", "objects", "list", "--bucket-name", bucket, "--per-page", "1000"])).flatMap((item) => text(item, "key") ?? []);
-    if (keys.length === 0) return;
-    const page = keys.join("\n");
-    if (page === previous) throw new Error(`R2 did not delete the objects of the bucket ${bucket}, such as ${keys[0]}.`);
-    previous = page;
-    cf.json(["r2", "objects", "bulk-delete", "--bucket-name", bucket, "--body", JSON.stringify(keys), "--force"]);
-  }
-}
-
-// R2 can take a moment to see a bucket as empty after its objects are deleted.
-const BUCKET_DELETE_TRIES = 5;
-const BUCKET_DELETE_WAIT_MS = 2000;
-
-function deleteBucket(cf: Cf, bucket: string, wait: (milliseconds: number) => void): void {
-  for (let attempt = 1; ; attempt += 1) {
-    try {
-      cf.json(["r2", "buckets", "delete", bucket, "--force"]);
-      return;
-    } catch (error) {
-      if (!(error instanceof CfError) || error.status !== 409 || attempt === BUCKET_DELETE_TRIES) throw error;
-      wait(BUCKET_DELETE_WAIT_MS);
-    }
-  }
-}
-
-function sleep(milliseconds: number): void {
-  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, milliseconds);
 }
 
 function key(resource: StackResource): string {

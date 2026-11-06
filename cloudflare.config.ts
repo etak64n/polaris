@@ -3,18 +3,12 @@
 // The values come from polaris.config.ts, so a deployment does not edit this
 // file. The account comes from CLOUDFLARE_ACCOUNT_ID in .env, which cf reads.
 // `cf dev` runs in the "development" mode: it answers localhost without
-// Cloudflare Access and keeps the history bucket on this machine. `cf build` and
-// `pnpm stack:deploy`, which runs `cf deploy`, use the "production" mode.
+// Cloudflare Access. `cf build` and `pnpm stack:deploy`, which runs `cf deploy`,
+// use the "production" mode.
 
-import { bindings, defineConfig, triggers } from "cf/config";
+import { bindings, defineConfig } from "cf/config";
 import polarisConfig from "./polaris.config.ts";
 import { validateSettings } from "./config/settings.ts";
-
-/**
- * When the Worker records the daily usage: 01:00 UTC every day. Analytics count
- * a day in UTC, and an hour after midnight they hold the whole previous day.
- */
-const HISTORY_SCHEDULE = "0 1 * * *";
 
 export default defineConfig(({ mode }) => {
   const settings = validateSettings(polarisConfig);
@@ -37,10 +31,7 @@ export default defineConfig(({ mode }) => {
         notFoundHandling: "single-page-application",
         runWorkerFirst: ["/api/*"],
       },
-      triggers: [triggers.scheduled({ schedule: HISTORY_SCHEDULE })],
       env: {
-        // `cf dev` keeps a bucket of this name on this machine, so development never writes the real history.
-        HISTORY: bindings.r2({ name: settings.history.bucket }),
         // "local-development" lets the Worker answer localhost without an Access token.
         AUTH_MODE: bindings.text(isDevelopment ? "local-development" : "cloudflare-access"),
         ...(isDevelopment

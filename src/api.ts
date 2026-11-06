@@ -28,8 +28,9 @@ async function getJson<T>(path: string, signal: AbortSignal): Promise<T> {
   return (await response.json()) as T;
 }
 
-export function fetchUsage(days: number, signal: AbortSignal): Promise<UsageResponse> {
-  return getJson(`/api/usage?days=${days}`, signal);
+/** The usage of the last days, which cover the current billing cycle. */
+export function fetchUsage(signal: AbortSignal): Promise<UsageResponse> {
+  return getJson("/api/usage", signal);
 }
 
 /** The metrics of a product over a range, with series for the picked resources or the five largest. */

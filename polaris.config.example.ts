@@ -15,10 +15,6 @@ export default definePolarisConfig({
     // The day of the month on which the billing cycle starts, as the invoices show it
     cycleStartDay: 1,
   },
-  // R2 bucket that keeps the daily usage after Cloudflare analytics stop holding it (about 31 days)
-  history: {
-    bucket: "polaris-history",
-  },
   // Cloudflare Access, which lets only these people open polaris
   access: {
     // The team domain of your Zero Trust organization

@@ -1,18 +1,6 @@
-// Bindings that cloudflare.config.ts gives the Worker, and the part of the R2
-// API that polaris uses. Declaring this subset here lets the tests run the
-// same code against a bucket in memory.
-
-export interface R2ObjectBody {
-  text(): Promise<string>;
-}
-
-export interface R2Bucket {
-  get(key: string): Promise<R2ObjectBody | null>;
-  put(key: string, value: string, options?: { httpMetadata?: { contentType?: string } }): Promise<unknown>;
-}
+// Bindings that cloudflare.config.ts gives the Worker.
 
 export interface Env {
-  HISTORY: R2Bucket;
   AUTH_MODE: string;
   /** Bound only in the "cloudflare-access" mode. */
   ACCESS_TEAM_DOMAIN?: string;
