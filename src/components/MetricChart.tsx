@@ -4,7 +4,8 @@
 //
 // The charts of a page form a group (lib/chart-group.ts): pointing at a time shows
 // that time in every chart, and dragging across a chart zooms every chart into the
-// times under the drag. The legend above a chart hides and shows its series.
+// times under the drag. The resources share one legend on the page, which hides and
+// shows them in every chart; a chart of statistics has its own legend.
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Period } from "../../shared/metrics.ts";
@@ -12,7 +13,7 @@ import type { ChartGroup } from "@/lib/chart-group.ts";
 import { canvasColor, designValue, echarts, type ChartOption, type EChartsType, type LineSeries } from "@/lib/echarts.ts";
 import { formatCompact } from "@/lib/format.ts";
 import type { FreeLine } from "@/lib/free.ts";
-import { axisEndLabel, timeLabel } from "@/lib/metrics.ts";
+import { axisEndLabel, periodLabel } from "@/lib/metrics.ts";
 import { cn } from "cn";
 
 export interface ChartSeries {
@@ -50,6 +51,7 @@ export function MetricChart({
   tickFormat = formatCompact,
   line = null,
   group,
+  hidden: hiddenByPage,
 }: {
   /** Names the chart for screen readers. The card around it shows the same name. */
   label: string;
@@ -65,11 +67,14 @@ export function MetricChart({
   /** The free usage, or null when the metric has none at this period. */
   line?: FreeLine | null;
   group: ChartGroup;
+  /** The series that the legend of the page hides. Without it, the chart shows its own legend. */
+  hidden?: ReadonlySet<string>;
 }) {
   const container = useRef<HTMLDivElement>(null);
   const cursorTaken = useRef(false);
   const [chart, setChart] = useState<EChartsType | null>(null);
-  const [hidden, setHidden] = useState<ReadonlySet<string>>(() => new Set());
+  const [hiddenHere, setHiddenHere] = useState<ReadonlySet<string>>(() => new Set());
+  const hidden = hiddenByPage ?? hiddenHere;
   const [zoom, setZoom] = useState<[number, number] | null>(null);
 
   useEffect(() => {
@@ -115,7 +120,7 @@ export function MetricChart({
   function toggle(key: string) {
     // A hidden series leaves the chart, so it can no longer clear the fading of the others.
     chart?.dispatchAction({ type: "downplay" });
-    setHidden((current) => {
+    setHiddenHere((current) => {
       const next = new Set(current);
       if (!next.delete(key)) next.add(key);
       return next;
@@ -130,7 +135,7 @@ export function MetricChart({
 
   return (
     <figure aria-label={label} className="grid min-w-0 gap-2">
-      {series.length > 1 && (
+      {hiddenByPage === undefined && series.length > 1 && (
         <ul className="flex flex-wrap gap-x-4 gap-y-1" aria-label={`Series of ${label}`}>
           {series.map((item) => {
             const shown = !hidden.has(item.key);
@@ -352,7 +357,7 @@ function tooltipHtml(
   if (rows.length === 0) return "";
   return (
     `<div class="min-w-44 rounded-sm bg-popover p-2 text-xs text-foreground shadow-tooltip">` +
-    `<div class="text-sm font-semibold text-heading">${escapeHtml(timeLabel(new Date(time).toISOString(), period))}</div>` +
+    `<div class="text-sm font-semibold text-heading">${escapeHtml(periodLabel(new Date(time).toISOString(), period))}</div>` +
     `<div class="mt-1.5 grid gap-1 border-t border-hairline pt-1.5">${rows.join("")}</div>` +
     `</div>`
   );

@@ -13,6 +13,8 @@ export interface ChartGroup {
   resetZoom(): void;
   /** A chart reports here that the charts zoomed in or out. */
   setZoomed(zoomed: boolean): void;
+  /** Brings out a resource in every chart of the group, or none with null. */
+  highlight(key: string | null): void;
 }
 
 export function useChartGroup(): { group: ChartGroup; zoomed: boolean } {
@@ -35,6 +37,12 @@ export function useChartGroup(): { group: ChartGroup; zoomed: boolean } {
         setZoomed(false);
       },
       setZoomed,
+      highlight(key) {
+        // ECharts passes the highlight of one chart on to the others in the group.
+        const [first] = charts;
+        first?.dispatchAction({ type: "downplay" });
+        if (key !== null) first?.dispatchAction({ type: "highlight", seriesId: key });
+      },
     };
   }, [id]);
 

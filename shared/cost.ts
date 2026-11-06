@@ -6,16 +6,7 @@
 
 import { billingPeriod, type BillingPeriod } from "./dates.ts";
 import type { PlanType } from "./plan.ts";
-import {
-  FREE_DAILY_LIMITS,
-  GB,
-  PAID_PRICES,
-  PAID_SUBSCRIPTION,
-  R2_PRICES,
-  type CountPrice,
-  type DailyLimitMetric,
-  type StoragePrice,
-} from "./pricing.ts";
+import { GB, PAID_PRICES, PAID_SUBSCRIPTION, R2_PRICES, type CountPrice, type StoragePrice } from "./pricing.ts";
 import { totalsOf, type DailyUsage, type Metric } from "./usage.ts";
 
 export type Product = "Workers" | "D1" | "R2";
@@ -77,23 +68,6 @@ export function estimateCost(days: DailyUsage[], plan: PlanType, cycleStartDay: 
     ? subscription + sum(projected as number[])
     : null;
   return { plan, period, completeDays: complete.length, subscription, lines, total, projectedTotal };
-}
-
-export interface DailyLimitStatus {
-  metric: DailyLimitMetric;
-  used: number;
-  limit: number;
-  /** Used divided by the limit. 1 or more means the limit was reached. */
-  ratio: number;
-}
-
-/** How much of each daily limit of the Free plan a day used. */
-export function dailyLimitStatus(day: DailyUsage): DailyLimitStatus[] {
-  const totals = totalsOf(day);
-  return (Object.keys(FREE_DAILY_LIMITS) as DailyLimitMetric[]).map((metric) => {
-    const limit = FREE_DAILY_LIMITS[metric];
-    return { metric, used: totals[metric], limit, ratio: totals[metric] / limit };
-  });
 }
 
 class CycleUsage {
