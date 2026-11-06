@@ -1,9 +1,8 @@
 // Picks the resources that the charts and the table of a page show, up to one per
 // color. With none picked, the page shows every resource.
 
-import { ChevronsUpDown } from "lucide-react";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { PillButton } from "@/components/FilterPill.tsx";
 import { Command, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { MAX_PICKED, OTHER_KEY, type ProductColors } from "@/lib/series.ts";
@@ -15,7 +14,7 @@ export function ResourcePicker({
   picked,
   onChange,
 }: {
-  /** The resources of the page, such as "Workers" or "databases". */
+  /** The resources of the page, such as "Workers" or "Databases". */
   plural: string;
   colors: ProductColors;
   labelOf: (key: string) => string;
@@ -27,8 +26,7 @@ export function ResourcePicker({
   const resources = [...colors.ranked, ...picked.filter((key) => !colors.ranked.includes(key))];
   const full = picked.length >= MAX_PICKED;
   const [onlyPicked] = picked;
-  const summary =
-    onlyPicked === undefined ? `All ${plural}` : picked.length === 1 ? labelOf(onlyPicked) : `${picked.length} ${plural}`;
+  const summary = onlyPicked === undefined ? "All" : picked.length === 1 ? labelOf(onlyPicked) : `${picked.length} picked`;
 
   function toggle(key: string) {
     onChange(picked.includes(key) ? picked.filter((item) => item !== key) : [...picked, key]);
@@ -37,12 +35,9 @@ export function ResourcePicker({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" role="combobox" aria-expanded={open} className="max-w-64 justify-between gap-2">
-          <span className="truncate">{summary}</span>
-          <ChevronsUpDown aria-hidden="true" className="opacity-50" />
-        </Button>
+        <PillButton label={plural} value={summary} role="combobox" aria-expanded={open} className="max-w-72" />
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-72 p-0">
+      <PopoverContent align="start" className="w-72 p-1">
         <Command>
           <CommandInput placeholder="Search" aria-label={`Search ${plural}`} />
           <CommandList>

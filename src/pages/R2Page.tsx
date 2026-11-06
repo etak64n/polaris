@@ -26,7 +26,7 @@ export default function R2Page(props: DashboardProps) {
       {...props}
       product="r2"
       title="R2"
-      plural="buckets"
+      plural="Buckets"
       nameHeader="Bucket"
       tableTitle="By bucket"
       labelOf={labelOf}

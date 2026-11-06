@@ -4,19 +4,19 @@
 import { useEffect, useState } from "react";
 import type { QueryOrder, TopQueriesResponse } from "../../shared/api.ts";
 import { fetchTopQueries } from "@/api.ts";
+import { SelectPill } from "@/components/FilterPill.tsx";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatCount } from "@/lib/format.ts";
 
-const ORDERS: { value: QueryOrder; label: string }[] = [
+const ORDERS: readonly { value: QueryOrder; label: string }[] = [
   { value: "rowsRead", label: "Rows read" },
   { value: "rowsWritten", label: "Rows written" },
 ];
-const PERIODS = [
-  { value: 1, label: "Today" },
-  { value: 7, label: "7 days" },
+const PERIODS: readonly { value: "1" | "7"; label: string }[] = [
+  { value: "1", label: "Today" },
+  { value: "7", label: "Last 7 days" },
 ];
 
 export function TopQueries({
@@ -55,43 +55,9 @@ export function TopQueries({
 
   return (
     <div className="grid gap-2">
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        <div className="flex flex-wrap gap-2">
-          <ToggleGroup
-            type="single"
-            variant="outline"
-            size="sm"
-            spacing={0}
-            aria-label="Sort queries by"
-            value={order}
-            onValueChange={(value) => {
-              if (value === "rowsRead" || value === "rowsWritten") setOrder(value);
-            }}
-          >
-            {ORDERS.map((option) => (
-              <ToggleGroupItem key={option.value} value={option.value}>
-                {option.label}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
-          <ToggleGroup
-            type="single"
-            variant="outline"
-            size="sm"
-            spacing={0}
-            aria-label="Queries of"
-            value={String(days)}
-            onValueChange={(value) => {
-              if (value !== "") setDays(Number(value));
-            }}
-          >
-            {PERIODS.map((option) => (
-              <ToggleGroupItem key={option.value} value={String(option.value)}>
-                {option.label}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
-        </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <SelectPill label="Sort by" value={order} options={ORDERS} onChange={setOrder} />
+        <SelectPill label="Date range" value={days === 1 ? "1" : "7"} options={PERIODS} onChange={(value) => setDays(Number(value))} />
       </div>
       {error !== null && <p className="error-box">{error}</p>}
       {error === null && result === null && <Skeleton className="h-32" />}

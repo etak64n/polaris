@@ -4,22 +4,17 @@
 import type { CostEstimate, CostLine } from "../../shared/cost.ts";
 import { FREE_D1_STORAGE_BYTES, FREE_DAILY_LIMITS, GB } from "../../shared/pricing.ts";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { formatCount, formatDate, formatDuration, formatMoney } from "@/lib/format.ts";
-import { cn } from "cn";
+import { formatCount, formatDuration, formatMoney } from "@/lib/format.ts";
 
 export function CostSummary({ estimate, paidEstimate }: { estimate: CostEstimate; paidEstimate: CostEstimate | null }) {
-  const { period } = estimate;
   return (
-    <div className="grid gap-4">
-      <div className="flex flex-wrap items-end gap-3">
-        <Tile label="This cycle so far" value={formatMoney(estimate.total)} />
-        <Tile label="Projected" value={estimate.projectedTotal === null ? "—" : formatMoney(estimate.projectedTotal)} />
+    <div className="grid gap-6">
+      <div className="flex flex-wrap gap-x-12 gap-y-4">
+        <Figure label="This cycle so far" value={formatMoney(estimate.total)} />
+        <Figure label="Projected" value={estimate.projectedTotal === null ? "—" : formatMoney(estimate.projectedTotal)} />
         {paidEstimate !== null && (
-          <Tile label="On Workers Paid" value={formatMoney(paidEstimate.projectedTotal ?? paidEstimate.total)} muted />
+          <Figure label="On Workers Paid" value={formatMoney(paidEstimate.projectedTotal ?? paidEstimate.total)} muted />
         )}
-        <div className="ml-auto text-xs text-muted-foreground">
-          {formatDate(period.start)} – {formatDate(period.end)}
-        </div>
       </div>
       <Table className="min-w-[640px]">
         <TableHeader>
@@ -35,21 +30,21 @@ export function CostSummary({ estimate, paidEstimate }: { estimate: CostEstimate
         <TableBody>
           {estimate.subscription > 0 && (
             <TableRow>
-              <TableCell className="font-bold text-heading">Workers</TableCell>
+              <TableCell className="font-semibold">Workers</TableCell>
               <TableCell>Paid plan</TableCell>
               <TableCell />
               <TableCell />
-              <TableCell className="numeric text-right font-bold text-heading">{formatMoney(estimate.subscription)}</TableCell>
+              <TableCell className="numeric text-right font-semibold">{formatMoney(estimate.subscription)}</TableCell>
               <TableCell className="numeric text-right">{formatMoney(estimate.subscription)}</TableCell>
             </TableRow>
           )}
           {estimate.lines.map((line) => (
             <TableRow key={`${line.product}/${line.item}`}>
-              <TableCell className="font-bold text-heading">{line.product}</TableCell>
+              <TableCell className="font-semibold">{line.product}</TableCell>
               <TableCell>{line.item}</TableCell>
               <TableCell className="numeric text-right">{formatAmount(line, line.used)}</TableCell>
-              <TableCell className="numeric text-right text-muted-foreground">{formatIncluded(line)}</TableCell>
-              <TableCell className="numeric text-right font-bold text-heading">{formatMoney(line.cost)}</TableCell>
+              <TableCell className="numeric text-right text-subdued">{formatIncluded(line)}</TableCell>
+              <TableCell className="numeric text-right font-semibold">{formatMoney(line.cost)}</TableCell>
               <TableCell className="numeric text-right">{line.projectedCost === null ? "—" : formatMoney(line.projectedCost)}</TableCell>
             </TableRow>
           ))}
@@ -59,11 +54,13 @@ export function CostSummary({ estimate, paidEstimate }: { estimate: CostEstimate
   );
 }
 
-function Tile({ label, value, muted = false }: { label: string; value: string; muted?: boolean }) {
+/** A figure: the name, and the value large under it. */
+function Figure({ label, value, muted = false }: { label: string; value: string; muted?: boolean }) {
   return (
-    <div className="grid min-w-36 gap-0.5 border px-3 py-2">
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <span className={cn("numeric text-xl font-bold", muted ? "text-muted-foreground" : "text-heading")}>{value}</span>
+    <div className="grid gap-0.5">
+      <span className="text-sm font-semibold text-heading">{label}</span>
+      {/* Plain strings: cn would drop text-figure, which it takes for a color, next to the text color. */}
+      <span className={`numeric text-figure font-bold ${muted ? "text-subdued" : "text-foreground"}`}>{value}</span>
     </div>
   );
 }

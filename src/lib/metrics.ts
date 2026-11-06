@@ -1,9 +1,10 @@
 // Labels of the periods and the times on the metric charts. A day is a UTC date,
 // as Cloudflare analytics count days in UTC; shorter periods show the local time.
 
-import type { MetricRange, Period, Statistic } from "../../shared/metrics.ts";
+import type { Period, Statistic } from "../../shared/metrics.ts";
 import type { ChartSeries } from "@/components/MetricChart.tsx";
 import { formatDate } from "./format.ts";
+import { INK_COLOR, MUTED_COLOR } from "./palette.ts";
 import type { ProductColors } from "./series.ts";
 
 export const PERIOD_LABELS: Record<Period, string> = { "1m": "1 min", "5m": "5 min", "15m": "15 min", "1h": "1 hour", "1d": "1 day" };
@@ -20,11 +21,19 @@ function localClock(time: Date): string {
   return `${twoDigits(time.getHours())}:${twoDigits(time.getMinutes())}`;
 }
 
-/** A tick on the time axis: the clock within a day, the date for longer ranges. */
-export function timeTick(iso: string, period: Period, range: MetricRange): string {
+const HOUR_MS = 3_600_000;
+
+/**
+ * A label at an end of the time axis, which shows only its two ends: the clock for
+ * a span of a few hours, the date and the clock for a span of a day or two, and
+ * the date for longer spans.
+ */
+export function axisEndLabel(iso: string, period: Period, spanMs: number): string {
   if (period === "1d") return formatDate(iso.slice(0, 10));
   const time = new Date(iso);
-  return range === "1h" || range === "3h" || range === "12h" || range === "1d" ? localClock(time) : localDate(time);
+  if (spanMs <= 6 * HOUR_MS) return localClock(time);
+  if (spanMs <= 48 * HOUR_MS) return `${localDate(time)} ${localClock(time)}`;
+  return localDate(time);
 }
 
 /** The time of a point in a tooltip, such as 2026/11/06 10:35. */
@@ -38,7 +47,7 @@ export function timeLabel(iso: string, period: Period): string {
 export function resourceSeries(values: Record<string, (number | null)[]> | undefined, colors: ProductColors): ChartSeries[] {
   return colors.series.flatMap((item) => {
     const series = values?.[item.key];
-    return series === undefined ? [] : [{ chartKey: item.chartKey, label: item.label, color: item.color, values: series }];
+    return series === undefined ? [] : [{ key: item.key, label: item.label, color: item.color, values: series }];
   });
 }
 
@@ -46,7 +55,7 @@ export function resourceSeries(values: Record<string, (number | null)[]> | undef
 export function statisticSeries(values: Record<Statistic, (number | null)[]> | undefined): ChartSeries[] {
   if (values === undefined) return [];
   return [
-    { chartKey: "p99", label: "p99", color: "var(--foreground)", values: values.p99 },
-    { chartKey: "p50", label: "p50", color: "var(--muted-foreground)", values: values.p50 },
+    { key: "p99", label: "p99", color: INK_COLOR, values: values.p99 },
+    { key: "p50", label: "p50", color: MUTED_COLOR, values: values.p50 },
   ];
 }

@@ -3,42 +3,41 @@
 @import "tw-animate-css";
 /* The variants that shadcn/ui components use, such as data-open for an open menu. */
 @import "shadcn/tailwind.css";
+/* The values of the design: colors, type, corners, and shadows. */
+@import "./tokens.css";
 
 /*
-  The look of albireo's light theme, in the variables that shadcn/ui components
-  read: white panels on a soft gray page, black for actions, a little gold for
-  focus, square corners everywhere, and no gradients.
+  The variables that shadcn/ui components read, mapped onto the design tokens:
+  a white page, gray-blue text, and one indigo accent for what is active.
 */
 :root {
   color-scheme: light;
-  --radius: 0px;
-  --background: #f5f5f6;
-  --foreground: #222226;
-  --heading: #111113;
-  --card: #ffffff;
-  --card-foreground: #222226;
-  --popover: #ffffff;
-  --popover-foreground: #222226;
-  --primary: #18181b;
-  --primary-foreground: #ffffff;
-  --secondary: #f0f0f2;
-  --secondary-foreground: #18181b;
-  --muted: #f0f0f2;
-  --muted-foreground: #6b6b74;
-  --accent: #f0f0f2;
-  --accent-foreground: #18181b;
-  --destructive: #dc2626;
-  --warning: #b45309;
-  --border: #e4e4e7;
-  --input: #e4e4e7;
-  --ring: #b8862f;
-  /* Series colors of the charts, in a fixed order that stays apart for color-blind readers. */
-  --chart-1: #2a78d6;
-  --chart-2: #eb6834;
-  --chart-3: #1baf7a;
-  --chart-4: #eda100;
-  --chart-5: #e87ba4;
-  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.05), 0 6px 18px rgb(0 0 0 / 0.06);
+  --radius: var(--ds-radius-sm);
+  --background: var(--ds-surface);
+  --foreground: var(--ds-text);
+  --heading: var(--ds-text-heading);
+  --card: var(--ds-surface);
+  --card-foreground: var(--ds-text);
+  --popover: var(--ds-surface);
+  --popover-foreground: var(--ds-text);
+  --primary: var(--ds-accent);
+  --primary-foreground: var(--ds-on-accent);
+  --secondary: var(--ds-surface-subdued);
+  --secondary-foreground: var(--ds-text-strong);
+  --muted: var(--ds-surface-subdued);
+  --muted-foreground: var(--ds-text-subdued);
+  --accent: var(--ds-surface-hover);
+  --accent-foreground: var(--ds-text-strong);
+  --destructive: var(--ds-critical);
+  --warning: var(--ds-attention);
+  --border: var(--ds-border);
+  --input: var(--ds-border);
+  --ring: var(--ds-focus-ring);
+  --chart-1: var(--ds-series-1);
+  --chart-2: var(--ds-series-2);
+  --chart-3: var(--ds-series-3);
+  --chart-4: var(--ds-series-4);
+  --chart-5: var(--ds-series-5);
 }
 
 @theme inline {
@@ -67,15 +66,35 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
-  /* One corner radius for every component. */
-  --radius-sm: var(--radius);
-  --radius-md: var(--radius);
-  --radius-lg: var(--radius);
-  --radius-xl: var(--radius);
-  --radius-2xl: var(--radius);
-  --shadow-card: var(--shadow-card);
-  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  /* Roles of the design that shadcn/ui has no name for. */
+  --color-strong: var(--ds-text-strong);
+  --color-control: var(--ds-text-control);
+  --color-label: var(--ds-text-label);
+  --color-subdued: var(--ds-text-subdued);
+  --color-positive: var(--ds-positive);
+  --color-surface-subdued: var(--ds-surface-subdued);
+  --color-surface-hover: var(--ds-surface-hover);
+  --color-accent-subtle: var(--ds-accent-subtle);
+  --color-hairline: var(--ds-hairline);
+  /*
+    shadcn/ui rounds controls with lg, small controls with md, and cards with xl,
+    which all take the corner of a control. sm rounds menu items and tooltips, and
+    2xl rounds the tray that holds the charts.
+  */
+  --radius-sm: var(--ds-radius-xs);
+  --radius-md: var(--ds-radius-sm);
+  --radius-lg: var(--ds-radius-sm);
+  --radius-xl: var(--ds-radius-sm);
+  --radius-2xl: var(--ds-radius-lg);
+  --shadow-tooltip: var(--ds-shadow-tooltip);
+  --shadow-popover: var(--ds-shadow-popover);
+  --font-sans: var(--ds-font);
+  --font-mono: var(--ds-font-mono);
+  /* Page and section headings, and large figures. 14px and 12px are text-sm and text-xs. */
+  --text-display: var(--ds-text-xl);
+  --text-display--line-height: var(--ds-text-xl-leading);
+  --text-figure: var(--ds-text-lg);
+  --text-figure--line-height: var(--ds-text-lg-leading);
 }
 
 @layer base {
@@ -85,13 +104,16 @@
 
   body {
     @apply min-h-screen bg-background font-sans text-foreground antialiased;
-    font-size: 14px;
-    line-height: 1.6;
+    font-size: var(--ds-text-sm);
+    line-height: var(--ds-text-sm-leading);
+    /* Japanese text breaks lines by its own rules. */
+    line-break: strict;
   }
 
+  /* Keyboard focus: a light blue ring of 4px around the part. */
   :focus-visible {
-    outline: 2px solid var(--ring);
-    outline-offset: 2px;
+    outline: 4px solid var(--ring);
+    outline-offset: 0;
   }
 }
 
@@ -108,7 +130,7 @@
 
 @layer components {
   .error-box {
-    @apply border border-destructive/40 bg-destructive/10 px-3 py-2 text-[13px] font-bold text-destructive;
+    @apply rounded-md bg-destructive/10 px-3 py-2 text-sm font-semibold text-destructive;
   }
 
   /* Numbers line up in columns. */

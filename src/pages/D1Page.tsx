@@ -3,7 +3,7 @@
 
 import type { MetricsResponse } from "../../shared/metrics.ts";
 import { MetricsDashboard, type ChartDefinition, type ColumnDefinition, type DashboardProps } from "@/components/MetricsDashboard.tsx";
-import { Panel } from "@/components/Panel.tsx";
+import { Section } from "@/components/Layout.tsx";
 import { TopQueries } from "@/components/TopQueries.tsx";
 import { formatBytes, formatCount, formatDuration } from "@/lib/format.ts";
 
@@ -32,7 +32,7 @@ export default function D1Page(props: DashboardProps) {
       {...props}
       product="d1"
       title="D1"
-      plural="databases"
+      plural="Databases"
       nameHeader="Database"
       tableTitle="By database"
       labelOf={labelOf}
@@ -41,9 +41,9 @@ export default function D1Page(props: DashboardProps) {
       initialSort="read"
     >
       {({ colors, picked, label, refreshCount }) => (
-        <Panel title="Top queries">
+        <Section title="Top queries">
           <TopQueries databaseName={label} colorOf={(id) => colors.seriesOf(id)?.color ?? null} databaseIds={picked} refreshCount={refreshCount} />
-        </Panel>
+        </Section>
       )}
     </MetricsDashboard>
   );
