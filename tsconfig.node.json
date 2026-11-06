@@ -19,8 +19,8 @@
   },
   "include": [
     "cloudflare.config.ts",
-    "polestar.config.ts",
-    "polestar.config.example.ts",
+    "polaris.config.ts",
+    "polaris.config.example.ts",
     "vite.config.ts",
     "vitest.config.ts",
     "config",

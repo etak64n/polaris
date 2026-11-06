@@ -1,4 +1,4 @@
-// Calls the polestar API and turns its errors into messages for the screen.
+// Calls the polaris API and turns its errors into messages for the screen.
 
 import type { ApiErrorBody, QueryOrder, TopQueriesResponse, UsageResponse } from "../shared/api.ts";
 import type { MetricProduct, MetricRange, MetricsResponse } from "../shared/metrics.ts";

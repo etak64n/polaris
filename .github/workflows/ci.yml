@@ -1,4 +1,4 @@
-# Type-checks, tests, and builds polestar on every push to main and every pull request.
+# Type-checks, tests, and builds polaris on every push to main and every pull request.
 name: CI
 
 on:
@@ -30,7 +30,7 @@ jobs:
 
       # CI has no deployment of its own, so it checks the code with the example settings.
       - name: Use the example settings
-        run: cp polestar.config.example.ts polestar.config.ts
+        run: cp polaris.config.example.ts polaris.config.ts
 
       - run: pnpm typecheck
 

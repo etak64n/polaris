@@ -1,4 +1,4 @@
-// Usage of one UTC day, by resource. polestar keeps days in this shape in the
+// Usage of one UTC day, by resource. polaris keeps days in this shape in the
 // history bucket and sends them to the browser in the same shape.
 
 export interface WorkerUsage {

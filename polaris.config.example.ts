@@ -1,13 +1,13 @@
-// Settings of this polestar deployment.
+// Settings of this polaris deployment.
 //
-// Copy this file to polestar.config.ts and replace every value. Git ignores
-// polestar.config.ts. The account and the API token go in .env instead:
+// Copy this file to polaris.config.ts and replace every value. Git ignores
+// polaris.config.ts. The account and the API token go in .env instead:
 // see .env.example.
 
-import { definePolestarConfig } from "./config/settings.ts";
+import { definePolarisConfig } from "./config/settings.ts";
 
-export default definePolestarConfig({
-  workerName: "polestar",
+export default definePolarisConfig({
+  workerName: "polaris",
   domain: "usage.example.com",
   billing: {
     // "free" or "paid": the Workers plan of the account
@@ -17,9 +17,9 @@ export default definePolestarConfig({
   },
   // R2 bucket that keeps the daily usage after Cloudflare analytics stop holding it (about 31 days)
   history: {
-    bucket: "polestar-history",
+    bucket: "polaris-history",
   },
-  // Cloudflare Access, which lets only these people open polestar
+  // Cloudflare Access, which lets only these people open polaris
   access: {
     // The team domain of your Zero Trust organization
     teamDomain: "https://example.cloudflareaccess.com",

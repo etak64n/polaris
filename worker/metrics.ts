@@ -87,7 +87,7 @@ function productQuery(product: MetricProduct, field: string, gaugeField: string,
   const filter = "datetime_geq: $start, datetime_lt: $end";
   const pickedVariable = picked ? ", $picked: [string!]" : "";
   const gaugeVariable = usesGaugeStart(product) ? ", $gaugeStart: Time!" : "";
-  const head = `query PolestarMetrics($accountTag: string!, $start: Time!, $end: Time!${gaugeVariable}${pickedVariable}) {
+  const head = `query PolarisMetrics($accountTag: string!, $start: Time!, $end: Time!${gaugeVariable}${pickedVariable}) {
   viewer {
     accounts(filter: { accountTag: $accountTag }) {`;
   const tail = `

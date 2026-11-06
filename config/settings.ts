@@ -1,8 +1,8 @@
-// Settings of one polestar deployment.
+// Settings of one polaris deployment.
 //
-// Each deployment writes its settings in polestar.config.ts. cloudflare.config.ts
+// Each deployment writes its settings in polaris.config.ts. cloudflare.config.ts
 // validates them with validateSettings() and turns them into the Worker
-// configuration. Every field is required: polestar has no default values, so a
+// configuration. Every field is required: polaris has no default values, so a
 // deployment behaves exactly as its settings say.
 //
 // Node.js loads this file directly when the Cloudflare CLI reads
@@ -11,7 +11,7 @@
 export type PlanType = "free" | "paid";
 
 export interface BillingSettings {
-  /** The Workers plan of the account. It decides the limits and the prices that polestar applies. */
+  /** The Workers plan of the account. It decides the limits and the prices that polaris applies. */
   plan: PlanType;
   /**
    * The day of the month on which the billing cycle of the account starts (1 to 31),
@@ -30,7 +30,7 @@ export interface AccessSettings {
   /** Cloudflare Access team domain, such as https://example.cloudflareaccess.com. */
   teamDomain: string;
   /**
-   * Email addresses of the people who may open polestar. `pnpm stack:deploy` gives
+   * Email addresses of the people who may open polaris. `pnpm stack:deploy` gives
    * the domain an Access application whose only policy allows these addresses.
    */
   allow: string[];
@@ -40,10 +40,10 @@ export interface AccessSettings {
  * The account is not a setting here: cf and the Worker read it from CLOUDFLARE_ACCOUNT_ID
  * in .env, next to the API token of the same account.
  */
-export interface PolestarSettings {
+export interface PolarisSettings {
   /** Name of the Worker. */
   workerName: string;
-  /** Hostname that serves polestar. Its zone must be in the same Cloudflare account. */
+  /** Hostname that serves polaris. Its zone must be in the same Cloudflare account. */
   domain: string;
   billing: BillingSettings;
   history: HistorySettings;
@@ -51,17 +51,17 @@ export interface PolestarSettings {
 }
 
 /** Declares the settings of a deployment with type checking. */
-export function definePolestarConfig(settings: PolestarSettings): PolestarSettings {
+export function definePolarisConfig(settings: PolarisSettings): PolarisSettings {
   return settings;
 }
 
-/** Thrown when polestar.config.ts is incomplete or has invalid values. */
+/** Thrown when polaris.config.ts is incomplete or has invalid values. */
 export class SettingsError extends Error {
   readonly problems: string[];
 
   constructor(problems: string[]) {
     super(
-      `polestar.config.ts has ${problems.length} problem(s):\n${problems.map((problem) => `  - ${problem}`).join("\n")}`,
+      `polaris.config.ts has ${problems.length} problem(s):\n${problems.map((problem) => `  - ${problem}`).join("\n")}`,
     );
     this.name = "SettingsError";
     this.problems = problems;
@@ -79,7 +79,7 @@ type Problems = string[];
 type Fields = Record<string, unknown>;
 
 /** Checks the settings and returns them with the team domain normalized to its origin. */
-export function validateSettings(input: unknown): PolestarSettings {
+export function validateSettings(input: unknown): PolarisSettings {
   const problems: Problems = [];
   const root = readObject(input, "settings", problems);
   if (root === null) throw new SettingsError(problems);
@@ -188,9 +188,9 @@ function readOrigin(fields: Fields, key: string, prefix: string, problems: Probl
   return url.origin;
 }
 
-// Reports keys that polestar does not read, which are usually misspelled settings.
+// Reports keys that polaris does not read, which are usually misspelled settings.
 function checkKeys(fields: Fields, prefix: string, allowed: readonly string[], problems: Problems): void {
   for (const key of Object.keys(fields)) {
-    if (!allowed.includes(key)) problems.push(`${prefix}${key} is not a setting that polestar reads.`);
+    if (!allowed.includes(key)) problems.push(`${prefix}${key} is not a setting that polaris reads.`);
   }
 }

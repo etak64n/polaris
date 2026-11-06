@@ -51,7 +51,7 @@ export const PAID_PRICES = {
 
 /**
  * R2 prices of the Standard storage class. R2 bills the same way on both Workers
- * plans, with a monthly free tier. polestar prices every bucket as Standard storage.
+ * plans, with a monthly free tier. polaris prices every bucket as Standard storage.
  */
 export const R2_PRICES = {
   classA: { included: 1_000_000, perMillion: 4.5 },

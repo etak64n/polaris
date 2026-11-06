@@ -4,7 +4,7 @@ dist/
 .wrangler/
 
 # Settings and secrets of each deployment
-polestar.config.ts
+polaris.config.ts
 .env
 .env.*
 !.env.example

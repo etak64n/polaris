@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { SettingsError, validateSettings, type PolestarSettings } from "../config/settings.ts";
-import example from "../polestar.config.example.ts";
+import { SettingsError, validateSettings, type PolarisSettings } from "../config/settings.ts";
+import example from "../polaris.config.example.ts";
 
-function settings(): PolestarSettings {
+function settings(): PolarisSettings {
   return structuredClone(example);
 }
 
@@ -34,9 +34,9 @@ describe("validateSettings", () => {
   });
 
   it("lists every problem at once, in the order of the settings", () => {
-    const input = { ...settings(), workerName: "Polestar!", billing: { plan: "pro", cycleStartDay: 0 }, extra: true };
+    const input = { ...settings(), workerName: "Polaris!", billing: { plan: "pro", cycleStartDay: 0 }, extra: true };
     expect(problemsOf(input)).toEqual([
-      "extra is not a setting that polestar reads.",
+      "extra is not a setting that polaris reads.",
       "workerName must be lowercase letters, digits, and hyphens (at most 63 characters).",
       'billing.plan must be "free" or "paid".',
       "billing.cycleStartDay must be a whole number from 1 to 31.",

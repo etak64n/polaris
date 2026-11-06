@@ -66,7 +66,7 @@ export function r2Class(actionType: string): "A" | "B" | "free" {
 }
 
 const USAGE_QUERY = `
-query PolestarUsage($accountTag: string!, $from: Date!, $to: Date!, $start: Time!, $end: Time!) {
+query PolarisUsage($accountTag: string!, $from: Date!, $to: Date!, $start: Time!, $end: Time!) {
   viewer {
     accounts(filter: { accountTag: $accountTag }) {
       workers: workersInvocationsAdaptive(limit: ${ROW_LIMIT}, filter: { datetime_geq: $start, datetime_lt: $end }) {
@@ -94,7 +94,7 @@ query PolestarUsage($accountTag: string!, $from: Date!, $to: Date!, $start: Time
 }`;
 
 const TOP_QUERIES_QUERY = (order: QueryOrder, limit: number, byDatabase: boolean): string => `
-query PolestarTopQueries($accountTag: string!, $start: Time!, $end: Time!${byDatabase ? ", $databaseIds: [string!]" : ""}) {
+query PolarisTopQueries($accountTag: string!, $start: Time!, $end: Time!${byDatabase ? ", $databaseIds: [string!]" : ""}) {
   viewer {
     accounts(filter: { accountTag: $accountTag }) {
       queries: d1QueriesAdaptiveGroups(limit: ${limit}, filter: { datetimeHour_geq: $start, datetimeHour_lt: $end${byDatabase ? ", databaseId_in: $databaseIds" : ""} }, orderBy: [sum_${order}_DESC]) {
