@@ -66,10 +66,10 @@ export function App() {
 
 function LoadingPanels() {
   return (
-    <>
-      <Skeleton className="h-10 w-48" />
-      <Skeleton className="h-64" />
-      <Skeleton className="h-64" />
-    </>
+    <div className="grid gap-4">
+      <Skeleton className="h-9 w-48" />
+      <Skeleton className="h-6 w-80 rounded-full" />
+      <Skeleton className="h-80 rounded-2xl" />
+    </div>
   );
 }

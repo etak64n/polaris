@@ -16,8 +16,6 @@ export const MAX_PICKED = Math.min(MAX_PICKED_RESOURCES, SERIES_COLORS.length);
 export interface Series {
   /** The resource, such as a Worker name or a D1 database ID, or OTHER_KEY. */
   key: string;
-  /** A short key for the chart data and its CSS variables, such as s0 or "other". */
-  chartKey: string;
   label: string;
   color: string;
 }
@@ -36,9 +34,9 @@ export function productColors(ranked: readonly string[], labelOf: (key: string) 
   const defaultColors = new Map(ranked.slice(0, SERIES_COLORS.length).map((key, index) => [key, SERIES_COLORS[index] ?? OTHER_COLOR]));
 
   if (picked.length === 0) {
-    const series = [...defaultColors].map(([key, color], index) => ({ key, chartKey: `s${index}`, label: labelOf(key), color }));
+    const series = [...defaultColors].map(([key, color]) => ({ key, label: labelOf(key), color }));
     const byKey = new Map(series.map((item) => [item.key, item]));
-    const other: Series = { key: OTHER_KEY, chartKey: OTHER_KEY, label: "Other", color: OTHER_COLOR };
+    const other: Series = { key: OTHER_KEY, label: "Other", color: OTHER_COLOR };
     if (ranked.length > series.length) series.push(other);
     const known = new Set(ranked);
     return { series, seriesOf: (key) => byKey.get(key) ?? (known.has(key) ? other : null), ranked: [...ranked] };
@@ -54,7 +52,7 @@ export function productColors(ranked: readonly string[], labelOf: (key: string) 
   };
   const series = [...picked]
     .sort((a, b) => position(a) - position(b))
-    .map((key, index) => ({ key, chartKey: `s${index}`, label: labelOf(key), color: colorOf.get(key) ?? OTHER_COLOR }));
+    .map((key) => ({ key, label: labelOf(key), color: colorOf.get(key) ?? OTHER_COLOR }));
   const byKey = new Map(series.map((item) => [item.key, item]));
   return { series, seriesOf: (key) => byKey.get(key) ?? null, ranked: [...ranked] };
 }

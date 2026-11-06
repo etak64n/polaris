@@ -26,8 +26,8 @@ export function DailyLimits({ statuses }: { statuses: DailyLimitStatus[] }) {
         return (
           <li key={status.metric} className="grid gap-1.5">
             <div className="flex items-baseline justify-between gap-2">
-              <span className="font-bold text-heading">{LABELS[status.metric]}</span>
-              <span className={cn("numeric flex items-center gap-1 font-bold", reached ? "text-destructive" : near ? "text-warning" : "text-heading")}>
+              <span className="font-semibold text-strong">{LABELS[status.metric]}</span>
+              <span className={cn("numeric flex items-center gap-1 font-semibold", reached ? "text-destructive" : near ? "text-warning" : "text-strong")}>
                 {reached && <OctagonAlert aria-hidden="true" className="size-3.5" />}
                 {near && <TriangleAlert aria-hidden="true" className="size-3.5" />}
                 {formatPercent(status.ratio)}
@@ -40,7 +40,7 @@ export function DailyLimits({ statuses }: { statuses: DailyLimitStatus[] }) {
               className="h-2"
               indicatorClassName={reached ? "bg-destructive" : near ? "bg-warning" : undefined}
             />
-            <div className="numeric text-xs text-muted-foreground" title={`${formatCount(status.used)} / ${formatCount(status.limit)}`}>
+            <div className="numeric text-xs text-subdued" title={`${formatCount(status.used)} / ${formatCount(status.limit)}`}>
               {formatCompact(status.used)} / {formatCompact(status.limit)}
             </div>
           </li>
