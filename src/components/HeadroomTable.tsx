@@ -27,6 +27,7 @@ export function HeadroomTable({ items }: { items: Headroom[] }) {
           const reached = item.headroom <= 0;
           const low = !reached && item.headroom < LOW;
           const share = Math.min(1, Math.max(0, 1 - item.headroom));
+          const stops = item.unit === "stops";
           return (
             <TableRow key={item.id}>
               <TableCell>
@@ -41,8 +42,20 @@ export function HeadroomTable({ items }: { items: Headroom[] }) {
                   </span>
                 ))}
               </TableCell>
-              <TableCell className="numeric text-right">{formatLimit(item)}</TableCell>
+              <TableCell className="numeric text-right">
+                {formatLimit(item).map((line) => (
+                  <span key={line} className="block">
+                    {line}
+                  </span>
+                ))}
+              </TableCell>
               <TableCell>
+                {stops ? (
+                  // Stopped requests have no share of a limit, only a count, so no bar.
+                  <span className={cn("numeric font-semibold", reached ? "text-destructive" : "text-strong")}>
+                    {item.used > 0 ? `${formatCount(item.used)} stopped` : "None stopped"}
+                  </span>
+                ) : (
                 <div className="flex items-center gap-3">
                   <div
                     role="meter"
@@ -61,6 +74,7 @@ export function HeadroomTable({ items }: { items: Headroom[] }) {
                     {reached ? "Reached" : `${Math.floor(item.headroom * 100)}% left`}
                   </span>
                 </div>
+                )}
               </TableCell>
               <TableCell className="text-label">{item.past === "stops" ? "Stops" : "Costs money"}</TableCell>
             </TableRow>
@@ -77,19 +91,23 @@ function formatAmount(item: Headroom, value: number): string {
   return formatCount(Math.round(value));
 }
 
-function formatLimit(item: Headroom): string {
+/** The free limit, in lines: the limits per request take two. */
+function formatLimit(item: Headroom): string[] {
+  if (item.unit === "stops") return ["CPU 10 ms", "50 subrequests"];
   const per = item.basis === "busiest-day" ? " per day" : item.basis === "cycle" ? " per month" : "";
-  if (item.unit === "bytes") return formatBytes(item.limit);
-  if (item.unit === "GB-month") return `${item.limit} GB-mo${per}`;
-  return `${formatCompact(item.limit)}${per}`;
+  if (item.unit === "bytes") return [formatBytes(item.limit)];
+  if (item.unit === "GB-month") return [`${item.limit} GB-mo${per}`];
+  return [`${formatCompact(item.limit)}${per}`];
 }
 
 /** The lines under the usage that say which usage it is, such as the busiest day and today. */
 function basisLabel(item: Headroom): string[] {
   if (item.basis === "busiest-day") {
-    const busiest = item.date === null ? "Busiest day" : `Busiest day ${formatDate(item.date)}`;
+    if (item.date === null) return ["Last 31 days"];
+    const busiest = `Busiest day ${formatDate(item.date)}`;
     return item.today === null ? [busiest] : [busiest, `Today ${formatCompact(item.today)}`];
   }
   if (item.basis === "cycle") return ["Projected for the cycle"];
+  if (item.basis === "all-days") return ["Last 31 days"];
   return ["Now"];
 }

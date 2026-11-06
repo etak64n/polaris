@@ -3,20 +3,22 @@ import { estimateCost } from "../shared/cost.ts";
 import { freeHeadroom } from "../shared/headroom.ts";
 import type { DailyUsage } from "../shared/usage.ts";
 
-function day(date: string, requests: number, rowsRead: number, sizes: number[]): DailyUsage {
+function day(date: string, requests: number, rowsRead: number, sizes: number[], kvWrites = 0, stopped = 0): DailyUsage {
   return {
     date,
     workers: [{ scriptName: "api", requests, cpuTimeMs: 0 }],
+    workersStopped: stopped,
     d1: sizes.map((storageBytes, index) => ({ databaseId: `db-${index}`, rowsRead: index === 0 ? rowsRead : 0, rowsWritten: 0, storageBytes })),
     r2: [{ bucketName: "files", classA: 100_000, classB: 0, storageBytes: 0 }],
+    kv: { reads: 0, writes: kvWrites, deletes: 0, lists: 0 },
   };
 }
 
 describe("freeHeadroom", () => {
   const days = [
-    day("2026-11-01", 20_000, 1_000_000, [100_000_000, 50_000_000]),
-    day("2026-11-02", 60_000, 5_000_000, [120_000_000, 50_000_000]),
-    day("2026-11-03", 30_000, 2_000_000, [450_000_000, 50_000_000]),
+    day("2026-11-01", 20_000, 1_000_000, [100_000_000, 50_000_000], 900),
+    day("2026-11-02", 60_000, 5_000_000, [120_000_000, 50_000_000], 100),
+    day("2026-11-03", 30_000, 2_000_000, [450_000_000, 50_000_000], 50),
   ];
   const estimate = estimateCost(days, "free", 1, "2026-11-03");
   const headroom = freeHeadroom(days, 4, estimate.lines);
@@ -33,6 +35,18 @@ describe("freeHeadroom", () => {
     expect(byId.get("d1-largest")).toMatchObject({ used: 450_000_000, limit: 500_000_000 });
     expect(byId.get("d1-largest")?.headroom).toBeCloseTo(0.1);
     expect(byId.get("d1-databases")).toMatchObject({ used: 4, limit: 10 });
+  });
+
+  it("compares the busiest day of KV with its daily limits", () => {
+    expect(byId.get("kv-writes")).toMatchObject({ used: 900, limit: 1_000, date: "2026-11-01", today: 50, past: "stops" });
+    expect(byId.get("kv-writes")?.headroom).toBeCloseTo(0.1);
+  });
+
+  it("counts the requests that the limits per request stopped, which sort first once there are any", () => {
+    expect(byId.get("workers-stopped")).toMatchObject({ used: 0, unit: "stops", headroom: 1 });
+    const stoppedDays = [day("2026-11-01", 10, 0, [], 0, 2), day("2026-11-02", 10, 0, [], 0, 3)];
+    const withStops = freeHeadroom(stoppedDays, 0, []);
+    expect(withStops[0]).toMatchObject({ id: "workers-stopped", used: 5, headroom: -1 });
   });
 
   it("projects the free amounts of R2 to the end of the cycle, as amounts that cost money past them", () => {
