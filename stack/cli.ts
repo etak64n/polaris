@@ -1,6 +1,6 @@
 // `pnpm stack:deploy` and `pnpm stack:delete`: create, update, or delete every
-// resource of this polestar deployment. Sign in with `cf auth login` first. The
-// settings come from polestar.config.ts and the account from .env.
+// resource of this polaris deployment. Sign in with `cf auth login` first. The
+// settings come from polaris.config.ts and the account from .env.
 //
 //   pnpm stack:deploy
 //   pnpm stack:delete [--confirm <stack name>]
@@ -10,7 +10,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createInterface } from "node:readline/promises";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { validateSettings, type PolestarSettings } from "../config/settings.ts";
+import { validateSettings, type PolarisSettings } from "../config/settings.ts";
 import { projectCf } from "./cf.ts";
 import { parseEnvFile } from "./env-file.ts";
 import { deleteStack, deployStack, describe, stackResources, STACK_TAG, type SecretsFile } from "./stack.ts";
@@ -34,7 +34,7 @@ async function main(args: string[]): Promise<void> {
     if (analyticsApiToken === "") throw new Error("ANALYTICS_API_TOKEN in .env is empty. .env.example tells how to issue the token.");
     console.log(`Deploying the stack ${settings.workerName}.`);
     deployStack({ settings, secrets: { accountId: accountIdOf(env), analyticsApiToken }, cf, log, writeSecretsFile });
-    console.log(`\npolestar runs at https://${settings.domain}/`);
+    console.log(`\npolaris runs at https://${settings.domain}/`);
     return;
   }
 
@@ -55,12 +55,12 @@ async function main(args: string[]): Promise<void> {
   // What the stack does not own, which stays in the account.
   console.log("\nDelete these yourself if you no longer need them:");
   console.log("  The API token in ANALYTICS_API_TOKEN of .env, on the Account API Tokens page of the account");
-  for (const other of others) console.log(`  ${other}, which carries the tag of the stack but is not a resource that polestar creates`);
+  for (const other of others) console.log(`  ${other}, which carries the tag of the stack but is not a resource that polaris creates`);
 }
 
-async function readSettings(): Promise<PolestarSettings> {
-  const file = join(ROOT, "polestar.config.ts");
-  if (!existsSync(file)) throw new Error("polestar.config.ts does not exist. Copy polestar.config.example.ts to it and fill in the values.");
+async function readSettings(): Promise<PolarisSettings> {
+  const file = join(ROOT, "polaris.config.ts");
+  if (!existsSync(file)) throw new Error("polaris.config.ts does not exist. Copy polaris.config.example.ts to it and fill in the values.");
   const module = (await import(pathToFileURL(file).href)) as { default: unknown };
   return validateSettings(module.default);
 }
@@ -98,7 +98,7 @@ async function confirmed(stack: string, confirmation: string | null): Promise<bo
 
 /** The secrets for cf deploy, in a folder that only this user can read, which is removed after the deploy. */
 function writeSecretsFile(values: Record<string, string>): SecretsFile {
-  const folder = mkdtempSync(join(tmpdir(), "polestar-"));
+  const folder = mkdtempSync(join(tmpdir(), "polaris-"));
   const path = join(folder, "secrets.json");
   writeFileSync(path, `${JSON.stringify(values, null, 2)}\n`, { mode: 0o600 });
   return { path, remove: () => rmSync(folder, { recursive: true, force: true }) };

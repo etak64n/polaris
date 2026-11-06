@@ -1,4 +1,4 @@
-// The API of polestar. Every route answers only requests that Cloudflare Access
+// The API of polaris. Every route answers only requests that Cloudflare Access
 // let through, or requests to localhost under `cf dev`.
 
 import { Hono } from "hono";

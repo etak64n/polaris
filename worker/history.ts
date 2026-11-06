@@ -47,7 +47,7 @@ export class UsageHistory {
       throw new HistoryError(`${monthKey(month)} in the history bucket is not JSON.`);
     }
     if (file.format !== HISTORY_FORMAT || file.month !== month || !Array.isArray(file.days)) {
-      throw new HistoryError(`${monthKey(month)} in the history bucket is not a polestar history file of format ${HISTORY_FORMAT}.`);
+      throw new HistoryError(`${monthKey(month)} in the history bucket is not a polaris history file of format ${HISTORY_FORMAT}.`);
     }
     return file.days;
   }

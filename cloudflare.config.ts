@@ -1,13 +1,13 @@
 // Worker configuration that the Cloudflare CLI (cf) reads.
 //
-// The values come from polestar.config.ts, so a deployment does not edit this
+// The values come from polaris.config.ts, so a deployment does not edit this
 // file. The account comes from CLOUDFLARE_ACCOUNT_ID in .env, which cf reads.
 // `cf dev` runs in the "development" mode: it answers localhost without
 // Cloudflare Access and keeps the history bucket on this machine. `cf build` and
 // `pnpm stack:deploy`, which runs `cf deploy`, use the "production" mode.
 
 import { bindings, defineConfig, triggers } from "cf/config";
-import polestarConfig from "./polestar.config.ts";
+import polarisConfig from "./polaris.config.ts";
 import { validateSettings } from "./config/settings.ts";
 
 /**
@@ -17,9 +17,9 @@ import { validateSettings } from "./config/settings.ts";
 const HISTORY_SCHEDULE = "0 1 * * *";
 
 export default defineConfig(({ mode }) => {
-  const settings = validateSettings(polestarConfig);
+  const settings = validateSettings(polarisConfig);
   if (mode !== undefined && mode !== "development" && mode !== "production") {
-    throw new Error(`polestar runs in the "development" or "production" mode, not "${mode}".`);
+    throw new Error(`polaris runs in the "development" or "production" mode, not "${mode}".`);
   }
   const isDevelopment = mode === "development";
 

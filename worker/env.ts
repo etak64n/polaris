@@ -1,5 +1,5 @@
 // Bindings that cloudflare.config.ts gives the Worker, and the part of the R2
-// API that polestar uses. Declaring this subset here lets the tests run the
+// API that polaris uses. Declaring this subset here lets the tests run the
 // same code against a bucket in memory.
 
 export interface R2ObjectBody {
@@ -18,7 +18,7 @@ export interface Env {
   ACCESS_TEAM_DOMAIN?: string;
   /** The AUD tag of the Access application, which `pnpm stack:deploy` uploads as a secret. */
   ACCESS_AUD?: string;
-  /** The account that polestar watches, from .env. */
+  /** The account that polaris watches, from .env. */
   CLOUDFLARE_ACCOUNT_ID: string;
   /** "free" or "paid". */
   BILLING_PLAN: string;

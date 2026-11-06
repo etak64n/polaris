@@ -1,5 +1,5 @@
 // Calendar dates in UTC, written as "YYYY-MM-DD". Cloudflare counts usage by the
-// UTC day and resets the daily limits of the Free plan at 00:00 UTC, so polestar
+// UTC day and resets the daily limits of the Free plan at 00:00 UTC, so polaris
 // uses UTC dates everywhere.
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;

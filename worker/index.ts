@@ -1,4 +1,4 @@
-// Entry point of the polestar Worker. Cloudflare serves the browser app from
+// Entry point of the polaris Worker. Cloudflare serves the browser app from
 // static assets, runs this Worker for /api/* requests, and runs it once a day
 // to record the usage in the history bucket.
 

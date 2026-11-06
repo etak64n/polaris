@@ -1,16 +1,16 @@
-// A polestar deployment as one stack, as in CloudFormation: `pnpm stack:deploy`
+// A polaris deployment as one stack, as in CloudFormation: `pnpm stack:deploy`
 // creates or updates every resource that the settings describe, and
 // `pnpm stack:delete` deletes them all.
 //
 // Cloudflare keeps the list of the resources of a stack. Each one carries the tag
-// polestar.stack=<Worker name> (Resource Tagging), so this machine keeps no state.
+// polaris.stack=<Worker name> (Resource Tagging), so this machine keeps no state.
 // A resource that already carries the tag of another stack is never taken over.
 
-import type { PolestarSettings } from "../config/settings.ts";
+import type { PolarisSettings } from "../config/settings.ts";
 import { CfError, type Cf } from "./cf.ts";
 
 /** The tag that marks the resources of a stack. Its value is the name of the stack, the Worker name. */
-export const STACK_TAG = "polestar.stack";
+export const STACK_TAG = "polaris.stack";
 
 export type ResourceType = "worker" | "access_application" | "r2_bucket";
 
@@ -34,7 +34,7 @@ export interface SecretsFile {
 }
 
 export interface DeployOptions {
-  settings: PolestarSettings;
+  settings: PolarisSettings;
   secrets: StackSecrets;
   cf: Cf;
   log: (line: string) => void;
@@ -184,7 +184,7 @@ export function describe(resource: StackResource): string {
 }
 
 /** The Access application that lets only the people in the settings open the domain. */
-export function accessApplicationBody(settings: PolestarSettings) {
+export function accessApplicationBody(settings: PolarisSettings) {
   return {
     name: settings.workerName,
     domain: settings.domain,

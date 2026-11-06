@@ -81,7 +81,7 @@ function Brand() {
   return (
     <Link to={ROUTE_PATHS.overview} className="flex min-w-0 items-center gap-2 px-1 py-1">
       <img src="/favicon.svg" alt="" className="size-7 shrink-0" />
-      <span className="truncate text-lg font-bold tracking-tight text-heading">polestar</span>
+      <span className="truncate text-lg font-bold tracking-tight text-heading">polaris</span>
     </Link>
   );
 }

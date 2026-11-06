@@ -11,7 +11,7 @@ export const noCache: JsonCache = {
   get: (_key, _seconds, compute) => compute(),
 };
 
-/** The part of the Cache API that polestar uses. */
+/** The part of the Cache API that polaris uses. */
 export interface CacheStore {
   match(request: Request): Promise<Response | undefined>;
   put(request: Request, response: Response): Promise<void>;
@@ -21,7 +21,7 @@ export interface CacheStore {
 export function edgeCache(cache: CacheStore): JsonCache {
   return {
     async get<T>(key: string, seconds: number, compute: () => Promise<T>): Promise<T> {
-      const request = new Request(`https://polestar.cache/${encodeURIComponent(key)}`);
+      const request = new Request(`https://polaris.cache/${encodeURIComponent(key)}`);
       const cached = await cache.match(request);
       if (cached !== undefined) return (await cached.json()) as T;
       const value = await compute();

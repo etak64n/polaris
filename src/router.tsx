@@ -1,4 +1,4 @@
-// A small router for the pages of polestar, built on the History API.
+// A small router for the pages of polaris, built on the History API.
 
 import { useSyncExternalStore, type MouseEvent, type ReactNode } from "react";
 

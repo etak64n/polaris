@@ -8,7 +8,7 @@ export function log(level: LogLevel, message: string, requestId: string | null, 
     level,
     message,
     ...(requestId === null ? {} : { requestId }),
-    service: "polestar",
+    service: "polaris",
     ...fields,
   };
   const line = JSON.stringify(entry);

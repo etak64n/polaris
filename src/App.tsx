@@ -25,7 +25,7 @@ export function App() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    document.title = `${TITLES[route]} - polestar`;
+    document.title = `${TITLES[route]} - polaris`;
   }, [route]);
 
   useEffect(() => {
