@@ -1,5 +1,5 @@
-// The blocks that pages are made of: sections with a heading, and the gray tray
-// that holds the white cards of the charts.
+// The blocks that pages are made of: sections with a heading, figures, and the gray
+// tray that holds the white cards of the charts.
 
 import type { ReactNode } from "react";
 
@@ -40,5 +40,20 @@ export function Card({ title, figure, note, children }: { title: string; figure?
       </header>
       {children}
     </article>
+  );
+}
+
+/**
+ * A figure in the manner of the Stripe Dashboard: the name, and the value large under
+ * it. "muted" is a figure to compare with, and "critical" a figure that needs action.
+ */
+export function Figure({ label, value, tone = "default" }: { label: string; value: string; tone?: "default" | "muted" | "critical" }) {
+  const color = tone === "muted" ? "text-subdued" : tone === "critical" ? "text-destructive" : "text-foreground";
+  return (
+    <div className="grid gap-0.5">
+      <span className="text-sm font-semibold text-heading">{label}</span>
+      {/* Plain strings: cn would drop text-figure, which it takes for a color, next to the text color. */}
+      <span className={`numeric text-figure font-bold ${color}`}>{value}</span>
+    </div>
   );
 }

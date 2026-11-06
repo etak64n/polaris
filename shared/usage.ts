@@ -34,7 +34,10 @@ export interface KvUsage {
 export interface DailyUsage {
   date: string;
   workers: WorkerUsage[];
-  /** Workers invocations that a limit per invocation stopped, such as the CPU time or the subrequests. */
+  /**
+   * Workers invocations that a limit stopped, with the status exceededResources: the
+   * CPU time, the subrequests, or the daily requests of the Free plan (Error 1102 or 1027).
+   */
   workersStopped: number;
   d1: D1Usage[];
   r2: R2Usage[];
