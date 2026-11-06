@@ -29,7 +29,7 @@ export default function WorkersPage(props: DashboardProps) {
       title="Workers"
       plural="Workers"
       nameHeader="Worker"
-      tableTitle="By Worker"
+      tableTitle="Workers"
       labelOf={labelOf}
       charts={CHARTS}
       columns={COLUMNS}

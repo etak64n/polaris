@@ -32,8 +32,6 @@ export const FREE_DAILY_LIMITS = {
   d1RowsWritten: 100_000,
 } as const;
 
-export type DailyLimitMetric = keyof typeof FREE_DAILY_LIMITS;
-
 /** D1 storage that the Workers Free plan allows, for all databases together. */
 export const FREE_D1_STORAGE_BYTES = 5 * GB;
 

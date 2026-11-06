@@ -1,7 +1,7 @@
 // Labels of the periods and the times on the metric charts. A day is a UTC date,
 // as Cloudflare analytics count days in UTC; shorter periods show the local time.
 
-import type { Period, Statistic } from "../../shared/metrics.ts";
+import { PERIOD_SECONDS, type Period, type Statistic } from "../../shared/metrics.ts";
 import type { ChartSeries } from "@/components/MetricChart.tsx";
 import { formatDate } from "./format.ts";
 import { INK_COLOR, MUTED_COLOR } from "./palette.ts";
@@ -36,11 +36,19 @@ export function axisEndLabel(iso: string, period: Period, spanMs: number): strin
   return localDate(time);
 }
 
-/** The time of a point in a tooltip, such as 2026/11/06 10:35. */
+/** A moment, such as 2026/11/06 10:35, or the UTC date of a day. */
 export function timeLabel(iso: string, period: Period): string {
   if (period === "1d") return formatDate(iso.slice(0, 10));
   const time = new Date(iso);
   return `${localDate(time)} ${localClock(time)}`;
+}
+
+/** The span of one period, such as 2026/11/06 10:35 – 10:40, which shows how long a period is. */
+export function periodLabel(iso: string, period: Period): string {
+  if (period === "1d") return formatDate(iso.slice(0, 10));
+  const start = new Date(iso);
+  const end = new Date(start.getTime() + PERIOD_SECONDS[period] * 1000);
+  return `${localDate(start)} ${localClock(start)} – ${localClock(end)}`;
 }
 
 /** The series of a sum or a gauge, one per shown resource and "Other", in the colors of the resources. */

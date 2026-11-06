@@ -34,7 +34,7 @@ export default function D1Page(props: DashboardProps) {
       title="D1"
       plural="Databases"
       nameHeader="Database"
-      tableTitle="By database"
+      tableTitle="Databases"
       labelOf={labelOf}
       charts={CHARTS}
       columns={COLUMNS}

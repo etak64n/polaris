@@ -22,12 +22,24 @@ import { cn } from "cn";
 /** Rows on one page of a table. */
 const PAGE_SIZE = 20;
 
+export interface TableSelection<T> {
+  /** Names the column of checkboxes for screen readers. */
+  label: string;
+  isSelected: (row: T) => boolean;
+  /** Whether a row that is not selected can be, such as while there is room for more. */
+  canSelect: (row: T) => boolean;
+  toggle: (row: T) => void;
+  /** Names the checkbox of a row for screen readers. */
+  rowLabel: (row: T) => string;
+}
+
 export function DataTable<T>({
   caption,
   data,
   columns,
   searchText,
   initialSort,
+  selection,
 }: {
   /** Names the table for screen readers and the search box. */
   caption: string;
@@ -36,6 +48,7 @@ export function DataTable<T>({
   /** The text that the search box finds a row by, such as its name. */
   searchText: (row: T) => string;
   initialSort: SortingState;
+  selection?: TableSelection<T>;
 }) {
   const [sorting, setSorting] = useState<SortingState>(initialSort);
   const [search, setSearch] = useState("");
@@ -78,6 +91,11 @@ export function DataTable<T>({
         <TableHeader>
           {table.getHeaderGroups().map((group) => (
             <TableRow key={group.id}>
+              {selection !== undefined && (
+                <TableHead className="w-9">
+                  <span className="sr-only">{selection.label}</span>
+                </TableHead>
+              )}
               {group.headers.map((header, index) => {
                 const sorted = header.column.getIsSorted();
                 const alignRight = index > 0;
@@ -85,14 +103,15 @@ export function DataTable<T>({
                   <TableHead
                     key={header.id}
                     aria-sort={sorted === "asc" ? "ascending" : sorted === "desc" ? "descending" : undefined}
-                    className={cn(index === 0 ? "w-1/2" : "text-right")}
+                    // The name takes about a third, so that five columns of numbers keep their headers apart.
+                    className={cn(index === 0 ? "w-[34%]" : "text-right")}
                   >
                     {header.column.getCanSort() ? (
                       <button
                         type="button"
                         onClick={header.column.getToggleSortingHandler()}
                         className={cn(
-                          "inline-flex cursor-pointer items-center gap-1 font-bold hover:text-foreground",
+                          "inline-flex cursor-pointer items-center gap-1 font-semibold hover:text-strong",
                           alignRight && "flex-row-reverse",
                         )}
                       >
@@ -117,6 +136,18 @@ export function DataTable<T>({
         <TableBody>
           {table.getRowModel().rows.map((row) => (
             <TableRow key={row.id}>
+              {selection !== undefined && (
+                <TableCell className="w-9">
+                  <input
+                    type="checkbox"
+                    checked={selection.isSelected(row.original)}
+                    disabled={!selection.isSelected(row.original) && !selection.canSelect(row.original)}
+                    onChange={() => selection.toggle(row.original)}
+                    aria-label={selection.rowLabel(row.original)}
+                    className="size-3.5 cursor-pointer accent-primary disabled:cursor-default"
+                  />
+                </TableCell>
+              )}
               {row.getVisibleCells().map((cell, index) => (
                 <TableCell key={cell.id} className={cn(index === 0 ? "min-w-0 truncate" : "numeric text-right")}>
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}

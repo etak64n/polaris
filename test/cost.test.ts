@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dailyLimitStatus, estimateCost, type CostEstimate } from "../shared/cost.ts";
+import { estimateCost, type CostEstimate } from "../shared/cost.ts";
 import { datesBetween } from "../shared/dates.ts";
 import { GB } from "../shared/pricing.ts";
 import type { DailyUsage } from "../shared/usage.ts";
@@ -102,16 +102,5 @@ describe("estimateCost of the cycle", () => {
     expect(estimate.completeDays).toBe(0);
     expect(line(estimate, "Workers", "Requests").projectedUsed).toBeNull();
     expect(estimate.projectedTotal).toBeNull();
-  });
-});
-
-describe("dailyLimitStatus", () => {
-  it("compares a day with each daily limit of the Free plan", () => {
-    const status = dailyLimitStatus(day("2026-11-05", { requests: 50_000, rowsRead: 5_000_000, rowsWritten: 120_000 }));
-    expect(status).toEqual([
-      { metric: "workerRequests", used: 50_000, limit: 100_000, ratio: 0.5 },
-      { metric: "d1RowsRead", used: 5_000_000, limit: 5_000_000, ratio: 1 },
-      { metric: "d1RowsWritten", used: 120_000, limit: 100_000, ratio: 1.2 },
-    ]);
   });
 });

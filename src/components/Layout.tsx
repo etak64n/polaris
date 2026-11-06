@@ -25,13 +25,18 @@ export function Tray({ children }: { children: ReactNode }) {
   return <div className="grid gap-2 rounded-2xl bg-surface-subdued p-2 lg:grid-cols-2">{children}</div>;
 }
 
-/** A white card in the tray, with a heading and a short line under it. */
-export function Card({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
+/**
+ * A white card in the tray, in the manner of the metrics of the Stripe Dashboard:
+ * the name, the figure large under it, a note such as the time of the figure, and
+ * the chart.
+ */
+export function Card({ title, figure, note, children }: { title: string; figure?: ReactNode; note?: string; children: ReactNode }) {
   return (
     <article className="grid min-w-0 content-start gap-3 rounded-lg bg-card p-5">
       <header className="grid gap-0.5">
         <h2 className="text-sm font-semibold text-heading">{title}</h2>
-        {description !== undefined && <p className="text-xs text-subdued">{description}</p>}
+        {figure !== undefined && <div className="numeric flex flex-wrap items-baseline gap-x-2 text-figure font-bold text-foreground">{figure}</div>}
+        {note !== undefined && <p className="text-xs text-subdued">{note}</p>}
       </header>
       {children}
     </article>
