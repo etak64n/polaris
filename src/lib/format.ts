@@ -36,6 +36,7 @@ const oneDecimal = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 });
 
 /** CPU time in the largest unit that keeps it above 1: ms, s, min, or h. */
 export function formatDuration(milliseconds: number): string {
+  if (milliseconds < 10) return `${oneDecimal.format(milliseconds)} ms`;
   if (milliseconds < 1000) return `${whole.format(milliseconds)} ms`;
   const seconds = milliseconds / 1000;
   if (seconds < 60) return `${oneDecimal.format(seconds)} s`;

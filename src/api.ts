@@ -1,6 +1,7 @@
 // Calls the polestar API and turns its errors into messages for the screen.
 
 import type { ApiErrorBody, QueryOrder, TopQueriesResponse, UsageResponse } from "../shared/api.ts";
+import type { MetricProduct, MetricRange, MetricsResponse } from "../shared/metrics.ts";
 
 export class ApiError extends Error {
   readonly status: number;
@@ -29,6 +30,13 @@ async function getJson<T>(path: string, signal: AbortSignal): Promise<T> {
 
 export function fetchUsage(days: number, signal: AbortSignal): Promise<UsageResponse> {
   return getJson(`/api/usage?days=${days}`, signal);
+}
+
+/** The metrics of a product over a range, with series for the picked resources or the five largest. */
+export function fetchMetrics(product: MetricProduct, range: MetricRange, picked: readonly string[], signal: AbortSignal): Promise<MetricsResponse> {
+  const params = new URLSearchParams({ product, range });
+  for (const key of picked) params.append("resource", key);
+  return getJson(`/api/metrics?${params}`, signal);
 }
 
 /** The queries of the given databases, or of every database when none is given. */

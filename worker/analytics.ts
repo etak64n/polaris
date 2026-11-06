@@ -5,6 +5,8 @@
 
 import type { QueryOrder, TopQuery } from "../shared/api.ts";
 import { addDays, datesBetween, startOf } from "../shared/dates.ts";
+import type { MetricProduct, MetricRange, MetricsResponse } from "../shared/metrics.ts";
+import { productMetrics } from "./metrics.ts";
 import { emptyDay, type D1Usage, type DailyUsage, type R2Usage, type WorkerUsage } from "../shared/usage.ts";
 
 const API = "https://api.cloudflare.com/client/v4";
@@ -35,6 +37,8 @@ export interface UsageSource {
   topQueries(from: string, to: string, order: QueryOrder, limit: number, databaseIds: readonly string[]): Promise<TopQuery[]>;
   /** D1 database names by database ID. */
   databaseNames(): Promise<Record<string, string>>;
+  /** The time series of the metrics of a product over a range that ends now. */
+  metrics(product: MetricProduct, range: MetricRange, picked: readonly string[], now: Date): Promise<Omit<MetricsResponse, "names">>;
 }
 
 // R2 operations by price class: https://developers.cloudflare.com/r2/pricing/
@@ -189,6 +193,10 @@ export class CloudflareAnalytics implements UsageSource {
         rowsWritten: row.sum.rowsWritten,
         durationMs: row.sum.queryDurationMs,
       }));
+  }
+
+  async metrics(product: MetricProduct, range: MetricRange, picked: readonly string[], now: Date): Promise<Omit<MetricsResponse, "names">> {
+    return productMetrics((query, variables) => this.#graphql(query, variables), product, range, picked, now);
   }
 
   async databaseNames(): Promise<Record<string, string>> {

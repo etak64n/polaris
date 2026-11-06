@@ -1,77 +1,39 @@
-// Workers: requests and CPU time by day, and every Worker with its totals.
+// Workers: the requests, errors, subrequests, and CPU time of every Worker over the range.
 
-import type { ColumnDef } from "@tanstack/react-table";
-import { useMemo, useState } from "react";
-import type { UsageResponse } from "../../shared/api.ts";
-import { billingPeriod } from "../../shared/dates.ts";
-import { DataTable } from "@/components/DataTable.tsx";
-import { PageHeader } from "@/components/PageHeader.tsx";
-import { Panel } from "@/components/Panel.tsx";
-import { RangeToggle } from "@/components/RangeToggle.tsx";
-import { ResourceName } from "@/components/ResourceName.tsx";
-import { ResourcePicker } from "@/components/ResourcePicker.tsx";
-import { UsageChart } from "@/components/UsageChart.tsx";
+import { MetricsDashboard, type ChartDefinition, type ColumnDefinition, type DashboardProps } from "@/components/MetricsDashboard.tsx";
 import { formatCount, formatDuration } from "@/lib/format.ts";
-import { freeLine } from "@/lib/free.ts";
-import { totalsBy, workerValues, type ResourceTotals } from "@/lib/products.ts";
-import { chartRows, productColors } from "@/lib/series.ts";
+
+const CHARTS: ChartDefinition[] = [
+  { title: "Requests", metric: "requests", kind: "sum", format: formatCount, free: "workerRequests" },
+  { title: "Errors", metric: "errors", kind: "sum", format: formatCount },
+  { title: "CPU time per request", metric: "cpuTimeMs", kind: "quantile", format: formatDuration, tickFormat: formatDuration },
+  { title: "Wall time per request", metric: "wallTimeMs", kind: "quantile", format: formatDuration, tickFormat: formatDuration },
+  { title: "Subrequests", metric: "subrequests", kind: "sum", format: formatCount },
+  { title: "CPU time", metric: "cpuTimeMs", kind: "sum", format: formatDuration, tickFormat: formatDuration, free: "workerCpuMs" },
+];
+
+const COLUMNS: ColumnDefinition[] = [
+  { id: "requests", header: "Requests", value: (resource) => resource.totals["requests"] ?? 0, format: formatCount },
+  { id: "errors", header: "Errors", value: (resource) => resource.totals["errors"] ?? 0, format: formatCount },
+  { id: "subrequests", header: "Subrequests", value: (resource) => resource.totals["subrequests"] ?? 0, format: formatCount },
+  { id: "cpu", header: "CPU time", value: (resource) => resource.totals["cpuTimeMs"] ?? 0, format: formatDuration },
+];
 
 const labelOf = (key: string): string => key;
 
-export default function WorkersPage({ usage, range, onRangeChange }: { usage: UsageResponse; range: number; onRangeChange: (range: number) => void }) {
-  const [picked, setPicked] = useState<string[]>([]);
-  const days = useMemo(() => usage.days.slice(-range), [usage, range]);
-  const colors = useMemo(() => productColors(days, workerValues, labelOf, picked), [days, picked]);
-  const cycleDays = billingPeriod(usage.today, usage.cycleStartDay).days;
-  const rows = useMemo(
-    () => totalsBy(days, workerValues).filter((row) => picked.length === 0 || picked.includes(row.key)),
-    [days, picked],
-  );
-  const columns = useMemo<ColumnDef<ResourceTotals>[]>(
-    () => [
-      {
-        id: "name",
-        header: "Worker",
-        accessorFn: (row) => row.key,
-        cell: ({ row }) => <ResourceName color={colors.seriesOf(row.original.key)?.color ?? null} label={row.original.key} title={row.original.key} />,
-      },
-      { id: "requests", header: "Requests", accessorFn: (row) => row.sums[0] ?? 0, cell: ({ getValue }) => formatCount(getValue<number>()) },
-      { id: "cpu", header: "CPU time", accessorFn: (row) => row.sums[1] ?? 0, cell: ({ getValue }) => formatDuration(getValue<number>()) },
-    ],
-    [colors],
-  );
-
+export default function WorkersPage(props: DashboardProps) {
   return (
-    <>
-      <PageHeader title="Workers">
-        <ResourcePicker plural="Workers" colors={colors} labelOf={labelOf} picked={picked} onChange={setPicked} />
-        <RangeToggle range={range} onChange={onRangeChange} />
-      </PageHeader>
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Panel title="Requests">
-          <UsageChart
-            label="Requests"
-            rows={chartRows(days, colors, workerValues, 0)}
-            series={colors.series}
-            format={formatCount}
-            line={freeLine("workerRequests", usage.plan, cycleDays)}
-          />
-        </Panel>
-        <Panel title="CPU time">
-          <UsageChart
-            label="CPU time"
-            rows={chartRows(days, colors, workerValues, 1)}
-            series={colors.series}
-            format={formatDuration}
-            tickFormat={formatDuration}
-            line={freeLine("workerCpuMs", usage.plan, cycleDays)}
-          />
-        </Panel>
-      </div>
-      <Panel title="By Worker">
-        <DataTable caption="Workers" data={rows} columns={columns} searchText={(row) => row.key} initialSort={[{ id: "requests", desc: true }]} />
-      </Panel>
-    </>
+    <MetricsDashboard
+      {...props}
+      product="workers"
+      title="Workers"
+      plural="Workers"
+      nameHeader="Worker"
+      tableTitle="By Worker"
+      labelOf={labelOf}
+      charts={CHARTS}
+      columns={COLUMNS}
+      initialSort="requests"
+    />
   );
 }
-
