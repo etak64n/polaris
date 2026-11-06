@@ -21,6 +21,7 @@ const TITLES: Record<Route, string> = { overview: "Overview", workers: "Workers"
 export function App() {
   const route = matchRoute(usePathname());
   const [range, setRange] = useState<MetricRange>("1d");
+  const [autoRefresh, setAutoRefresh] = useState(false);
   const [usage, setUsage] = useState<UsageResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,7 +46,7 @@ export function App() {
   else if (usage === null) page = error === null ? <LoadingPanels /> : null;
   else if (route === "overview") page = <OverviewPage usage={usage} />;
   else {
-    const props = { usage, range, onRangeChange: setRange };
+    const props = { usage, range, onRangeChange: setRange, autoRefresh, onAutoRefreshChange: setAutoRefresh };
     page = (
       <Suspense fallback={<LoadingPanels />}>
         {route === "workers" && <WorkersPage {...props} />}

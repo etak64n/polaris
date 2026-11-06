@@ -23,20 +23,27 @@ export function TopQueries({
   databaseName,
   colorOf,
   databaseIds,
+  refreshCount,
 }: {
   databaseName: (id: string) => string;
   /** The color of a database in the charts, or null when the charts show it in no color of its own. */
   colorOf: (id: string) => string | null;
   databaseIds: string[];
+  /** The queries load again when this grows, as the auto refresh of the page does. */
+  refreshCount: number;
 }) {
   const [order, setOrder] = useState<QueryOrder>("rowsRead");
   const [days, setDays] = useState(7);
   const [result, setResult] = useState<TopQueriesResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // A refresh keeps the shown queries until the new ones arrive; other changes clear them first.
+  useEffect(() => {
+    setResult(null);
+  }, [days, order, databaseIds]);
+
   useEffect(() => {
     const controller = new AbortController();
-    setResult(null);
     setError(null);
     fetchTopQueries(days, order, databaseIds, controller.signal)
       .then(setResult)
@@ -44,7 +51,7 @@ export function TopQueries({
         if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : String(reason));
       });
     return () => controller.abort();
-  }, [days, order, databaseIds]);
+  }, [days, order, databaseIds, refreshCount]);
 
   return (
     <div className="grid gap-2">

@@ -14,7 +14,7 @@ import { addDays, datesBetween, utcDate } from "../shared/dates.ts";
 import {
   MAX_PICKED_RESOURCES,
   METRIC_RANGES,
-  RANGE_SPECS,
+  refreshSeconds,
   type MetricProduct,
   type MetricRange,
   type MetricsResponse,
@@ -38,8 +38,6 @@ export interface AppDependencies {
 
 const USAGE_CACHE_SECONDS = 300;
 const NAMES_CACHE_SECONDS = 3600;
-/** Metrics with one-minute periods change every minute; the others are kept for five minutes. */
-const METRICS_CACHE_SECONDS = { short: 60, long: 300 };
 const TOP_QUERY_COUNT = 20;
 const TOP_QUERY_DAYS = [1, 7];
 
@@ -92,7 +90,7 @@ export function createApp(dependencies: AppDependencies) {
     const now = dependencies.now();
     const source = dependencies.usageSourceFor(config);
     const cache = dependencies.cacheFor();
-    const seconds = RANGE_SPECS[range].period === "1m" ? METRICS_CACHE_SECONDS.short : METRICS_CACHE_SECONDS.long;
+    const seconds = refreshSeconds(range);
     // One key per cache lifetime, so a cached answer never outlives its periods.
     const slot = Math.floor(now.getTime() / (seconds * 1000));
     const [metrics, names] = await Promise.all([

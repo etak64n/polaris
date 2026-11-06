@@ -23,6 +23,15 @@ export const RANGE_SPECS: Record<MetricRange, { seconds: number; period: Period 
   "90d": { seconds: 7_776_000, period: "1d" },
 };
 
+/**
+ * How long the metrics of a range stay the same: the Worker caches them this long,
+ * and the auto refresh of the dashboards asks again at this interval. Cloudflare
+ * analytics arrive a minute or more late, so a shorter interval shows nothing new.
+ */
+export function refreshSeconds(range: MetricRange): number {
+  return RANGE_SPECS[range].period === "1m" ? 60 : 300;
+}
+
 export type MetricProduct = "workers" | "d1" | "r2";
 
 /** The metrics of each product. Sums add up over a period; quantiles and gauges do not. */

@@ -5,7 +5,8 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { useMemo, useState, type ReactNode } from "react";
 import type { UsageResponse } from "../../shared/api.ts";
 import { billingPeriod } from "../../shared/dates.ts";
-import type { MetricProduct, MetricRange, MetricResource, MetricsResponse, Period } from "../../shared/metrics.ts";
+import { refreshSeconds, type MetricProduct, type MetricRange, type MetricResource, type MetricsResponse, type Period } from "../../shared/metrics.ts";
+import { AutoRefreshToggle } from "@/components/AutoRefreshToggle.tsx";
 import { DataTable } from "@/components/DataTable.tsx";
 import { MetricChart } from "@/components/MetricChart.tsx";
 import { PageHeader } from "@/components/PageHeader.tsx";
@@ -41,6 +42,8 @@ export interface DashboardProps {
   usage: UsageResponse;
   range: MetricRange;
   onRangeChange: (range: MetricRange) => void;
+  autoRefresh: boolean;
+  onAutoRefreshChange: (on: boolean) => void;
 }
 
 // Storage is sampled once an hour, so a shorter period shows the hourly samples.
@@ -52,6 +55,8 @@ export function MetricsDashboard({
   usage,
   range,
   onRangeChange,
+  autoRefresh,
+  onAutoRefreshChange,
   product,
   title,
   plural,
@@ -73,11 +78,11 @@ export function MetricsDashboard({
   charts: ChartDefinition[];
   columns: ColumnDefinition[];
   initialSort: string;
-  /** More panels under the table, such as the top queries of D1. */
-  children?: (context: { colors: ProductColors; picked: string[]; label: (key: string) => string }) => ReactNode;
+  /** More panels under the table, such as the top queries of D1. They load again when `refreshCount` grows. */
+  children?: (context: { colors: ProductColors; picked: string[]; label: (key: string) => string; refreshCount: number }) => ReactNode;
 }) {
   const [picked, setPicked] = useState<string[]>([]);
-  const { metrics, error } = useMetrics(product, range, picked);
+  const { metrics, error, loading, refreshCount } = useMetrics(product, range, picked, autoRefresh ? refreshSeconds(range) : null);
   const cycleDays = billingPeriod(usage.today, usage.cycleStartDay).days;
   const label = useMemo(() => (key: string): string => (metrics === null ? key : labelOf(key, metrics)), [metrics, labelOf]);
   const colors = useMemo(
@@ -116,6 +121,7 @@ export function MetricsDashboard({
       <PageHeader title={title}>
         <ResourcePicker plural={plural} colors={colors} labelOf={label} picked={picked} onChange={setPicked} />
         <RangePicker range={range} onChange={onRangeChange} />
+        <AutoRefreshToggle on={autoRefresh} onChange={onAutoRefreshChange} loading={loading} />
       </PageHeader>
       {error !== null && <p className="error-box break-words">{error}</p>}
       {metrics === null ? (
@@ -166,7 +172,7 @@ export function MetricsDashboard({
           </Panel>
         </>
       )}
-      {children?.({ colors, picked, label })}
+      {children?.({ colors, picked, label, refreshCount })}
     </>
   );
 }

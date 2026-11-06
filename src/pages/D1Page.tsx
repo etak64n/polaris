@@ -40,9 +40,9 @@ export default function D1Page(props: DashboardProps) {
       columns={COLUMNS}
       initialSort="read"
     >
-      {({ colors, picked, label }) => (
+      {({ colors, picked, label, refreshCount }) => (
         <Panel title="Top queries">
-          <TopQueries databaseName={label} colorOf={(id) => colors.seriesOf(id)?.color ?? null} databaseIds={picked} />
+          <TopQueries databaseName={label} colorOf={(id) => colors.seriesOf(id)?.color ?? null} databaseIds={picked} refreshCount={refreshCount} />
         </Panel>
       )}
     </MetricsDashboard>
