@@ -14,7 +14,7 @@ const API = "https://api.cloudflare.com/client/v4";
 /** The most rows that one dataset returns. A range that reaches it is asked for again in halves. */
 export const ROW_LIMIT = 10_000;
 
-/** The longest range that one usage query covers. Analytics keep about 31 days of D1 and R2 usage. */
+/** The longest range that one usage query covers. One analytics query covers at most 32 days. */
 export const MAX_QUERY_DAYS = 31;
 
 export type FetchFn = (input: string, init: RequestInit) => Promise<Response>;

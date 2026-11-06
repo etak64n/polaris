@@ -1,5 +1,4 @@
-// Usage of one UTC day, by resource. polaris keeps days in this shape in the
-// history bucket and sends them to the browser in the same shape.
+// Usage of one UTC day, by resource, as the Worker sends it to the browser.
 
 export interface WorkerUsage {
   scriptName: string;

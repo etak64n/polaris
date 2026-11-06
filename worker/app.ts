@@ -4,14 +4,13 @@
 import { Hono } from "hono";
 import {
   TOP_QUERY_DATABASES_MAX,
-  USAGE_DAYS_MAX,
-  USAGE_DAYS_MIN,
+  USAGE_DAYS,
   type ApiErrorBody,
   type QueryOrder,
   type TopQueriesResponse,
   type UsageResponse,
 } from "../shared/api.ts";
-import { addDays, datesBetween, monthOf, utcDate } from "../shared/dates.ts";
+import { addDays, datesBetween, utcDate } from "../shared/dates.ts";
 import {
   MAX_PICKED_RESOURCES,
   METRIC_RANGES,
@@ -20,12 +19,11 @@ import {
   type MetricRange,
   type MetricsResponse,
 } from "../shared/metrics.ts";
-import { emptyDay, type DailyUsage } from "../shared/usage.ts";
+import { emptyDay } from "../shared/usage.ts";
 import { AccessDeniedError, isLocalhost, verifyAccessToken, type KeySetProvider } from "./access.ts";
-import { AnalyticsError, MAX_QUERY_DAYS, type UsageSource } from "./analytics.ts";
+import { AnalyticsError, type UsageSource } from "./analytics.ts";
 import type { JsonCache } from "./cache.ts";
 import type { Env } from "./env.ts";
-import { HistoryError, UsageHistory } from "./history.ts";
 import { badRequest, HttpError, notFound } from "./http.ts";
 import { errorFields, log } from "./log.ts";
 import { ConfigurationError, readRuntimeConfig, type RuntimeConfig } from "./runtime-config.ts";
@@ -37,9 +35,6 @@ export interface AppDependencies {
   cacheFor: () => JsonCache;
   now: () => Date;
 }
-
-/** Dates that come from Cloudflare analytics: today and the days before it that analytics still hold. */
-export const LIVE_DAYS = MAX_QUERY_DAYS;
 
 const USAGE_CACHE_SECONDS = 300;
 const NAMES_CACHE_SECONDS = 3600;
@@ -69,25 +64,21 @@ export function createApp(dependencies: AppDependencies) {
 
   app.get("/api/usage", async (c) => {
     const config = c.get("config");
-    const dayCount = readWholeNumber(c.req.query("days"), "days", USAGE_DAYS_MIN, USAGE_DAYS_MAX);
     const today = utcDate(dependencies.now());
-    const from = addDays(today, -(dayCount - 1));
-    const liveFrom = addDays(today, -(LIVE_DAYS - 1));
+    const from = addDays(today, -(USAGE_DAYS - 1));
     const source = dependencies.usageSourceFor(config);
     const cache = dependencies.cacheFor();
 
-    const [live, recorded, databaseNames] = await Promise.all([
-      cache.get(`usage/${config.accountId}/${liveFrom}/${today}`, USAGE_CACHE_SECONDS, () => source.dailyUsage(liveFrom, today)),
-      from < liveFrom ? readRecorded(new UsageHistory(c.env.HISTORY), from, addDays(liveFrom, -1)) : Promise.resolve([]),
+    const [days, databaseNames] = await Promise.all([
+      cache.get(`usage/${config.accountId}/${from}/${today}`, USAGE_CACHE_SECONDS, () => source.dailyUsage(from, today)),
       cache.get(`d1-names/${config.accountId}`, NAMES_CACHE_SECONDS, () => source.databaseNames()),
     ]);
-    const byDate = new Map([...recorded, ...live].map((day) => [day.date, day]));
+    const byDate = new Map(days.map((day) => [day.date, day]));
     const body: UsageResponse = {
       plan: config.plan,
       cycleStartDay: config.cycleStartDay,
       today,
       days: datesBetween(from, today).map((date) => byDate.get(date) ?? emptyDay(date)),
-      liveFrom,
       databaseNames,
     };
     return c.json(body);
@@ -159,16 +150,8 @@ function statusOf(error: Error): { status: 400 | 403 | 404 | 500 | 502; code: st
   if (error instanceof HttpError) return { status: error.status as 400 | 404, code: error.code };
   if (error instanceof AccessDeniedError) return { status: 403, code: "access_denied" };
   if (error instanceof AnalyticsError) return { status: 502, code: "analytics_unavailable" };
-  if (error instanceof HistoryError) return { status: 500, code: "history_unreadable" };
   if (error instanceof ConfigurationError) return { status: 500, code: "configuration" };
   return { status: 500, code: "internal" };
-}
-
-/** Recorded days from `from` to `to`, both included. */
-async function readRecorded(history: UsageHistory, from: string, to: string): Promise<DailyUsage[]> {
-  const months = [...new Set(datesBetween(from, to).map(monthOf))];
-  const files = await Promise.all(months.map((month) => history.read(month)));
-  return files.flat().filter((day) => day.date >= from && day.date <= to);
 }
 
 function readWholeNumber(value: string | undefined, name: string, min: number, max: number): number {

@@ -49,11 +49,10 @@ function writeSecretsFile(written: Record<string, string>[], removed: string[]) 
 }
 
 describe("deployStack", () => {
-  it("creates the bucket and the Access application, deploys with the AUD tag, and tags each resource", () => {
+  it("creates the Access application, deploys with the AUD tag, and tags each resource", () => {
     let deployed = false;
     const cf = new FakeCf((args) => {
       const command = args.slice(0, 3).join(" ");
-      if (command === "r2 buckets list") return { buckets: [{ name: "other-bucket" }] };
       if (command === "zero-trust access applications") {
         if (args[3] === "list") return [{ id: "app-of-another-domain", domain: "other.example.com", aud: "x" }];
         if (args[3] === "create") return { id: "app-1", aud: "aud-1", domain: settings.domain };
@@ -72,7 +71,6 @@ describe("deployStack", () => {
 
     const resources = deployStack({ settings, secrets: SECRETS, cf, log: () => {}, writeSecretsFile: writeSecretsFile(written, removed) });
 
-    expect(cf.callsOf("r2", "buckets", "create")).toEqual([["r2", "buckets", "create", "--name", "polaris-history"]]);
     const created = cf.callsOf("zero-trust", "access", "applications", "create")[0] ?? [];
     expect(JSON.parse(created[created.indexOf("--body") + 1] ?? "{}")).toEqual({
       name: "polaris",
@@ -84,17 +82,15 @@ describe("deployStack", () => {
     expect(written).toEqual([{ CLOUDFLARE_ACCOUNT_ID: SECRETS.accountId, ANALYTICS_API_TOKEN: "token", ACCESS_AUD: "aud-1" }]);
     expect(removed).toHaveLength(1);
     expect(tagBodies(cf)).toEqual([
-      { resource_type: "r2_bucket", resource_id: "polaris-history", tags: { [STACK_TAG]: "polaris" } },
       { resource_type: "access_application", resource_id: "app-1", tags: { [STACK_TAG]: "polaris" } },
       { resource_type: "worker", resource_id: "worker-1", tags: { [STACK_TAG]: "polaris" } },
     ]);
-    expect(resources.map((resource) => resource.type)).toEqual(["r2_bucket", "access_application", "worker"]);
+    expect(resources.map((resource) => resource.type)).toEqual(["access_application", "worker"]);
   });
 
-  it("keeps the bucket, updates the Access application of the domain, and keeps the other tags", () => {
+  it("updates the Access application of the domain and keeps the other tags", () => {
     const cf = new FakeCf((args) => {
       const command = args.slice(0, 3).join(" ");
-      if (command === "r2 buckets list") return { buckets: [{ name: "polaris-history" }] };
       if (command === "zero-trust access applications") {
         if (args[3] === "list") return [{ id: "app-9", domain: settings.domain, aud: "aud-9" }];
         if (args[3] === "update") return { id: "app-9", aud: "aud-9" };
@@ -106,7 +102,6 @@ describe("deployStack", () => {
 
     deployStack({ settings, secrets: SECRETS, cf, log: () => {}, writeSecretsFile: writeSecretsFile([], []) });
 
-    expect(cf.callsOf("r2", "buckets", "create")).toEqual([]);
     expect(cf.callsOf("zero-trust", "access", "applications", "create")).toEqual([]);
     expect(cf.callsOf("zero-trust", "access", "applications", "update")[0]?.slice(0, 5)).toEqual([
       "zero-trust",
@@ -118,22 +113,20 @@ describe("deployStack", () => {
     expect(tagBodies(cf).map((body) => body.tags)).toEqual([
       { owner: "platform", [STACK_TAG]: "polaris" },
       { owner: "platform", [STACK_TAG]: "polaris" },
-      { owner: "platform", [STACK_TAG]: "polaris" },
     ]);
   });
 
   it("changes nothing when a resource belongs to another stack", () => {
     const cf = new FakeCf((args) => {
       const command = args.slice(0, 3).join(" ");
-      if (command === "r2 buckets list") return { buckets: [{ name: "polaris-history" }] };
-      if (command === "zero-trust access applications") return [];
+      if (command === "zero-trust access applications") return [{ id: "app-9", domain: settings.domain, aud: "aud-9" }];
       if (command === "workers get polaris") return notFound(args);
       if (command === "tags account-resources get") return { tags: { [STACK_TAG]: "another-polaris" } };
       return {};
     });
 
     expect(() => deployStack({ settings, secrets: SECRETS, cf, log: () => {}, writeSecretsFile: writeSecretsFile([], []) })).toThrow(
-      "R2 bucket polaris-history belongs to the stack another-polaris",
+      "Access application polaris belongs to the stack another-polaris",
     );
     expect(cf.calls.filter((call) => call.some((word) => ["create", "update", "delete", "deploy"].includes(word)))).toEqual([]);
   });
@@ -142,17 +135,15 @@ describe("deployStack", () => {
 describe("stackResources", () => {
   it("finds the resources by the tag of the stack, in the order of deletion", () => {
     const cf = new FakeCf(() => [
-      { type: "r2_bucket", id: "polaris-history", name: "polaris-history" },
-      { type: "worker", id: "worker-1", name: "polaris" },
+      { resource_type: "access_application", resource_id: "app-1", name: "polaris" },
       { type: "d1_database", id: "db-1", name: "notes" },
-      { resource_type: "access_application", resource_id: "app-1", name: "usage.example.com" },
+      { type: "worker", id: "worker-1", name: "polaris" },
     ]);
     const { resources, others } = stackResources(cf, "polaris");
     expect(cf.calls).toEqual([["tags", "resources", "list", "--tag", `${STACK_TAG}=polaris`]]);
     expect(resources).toEqual([
       { type: "worker", id: "worker-1", name: "polaris" },
-      { type: "access_application", id: "app-1", name: "usage.example.com" },
-      { type: "r2_bucket", id: "polaris-history", name: "polaris-history" },
+      { type: "access_application", id: "app-1", name: "polaris" },
     ]);
     expect(others).toEqual(["d1_database notes"]);
   });
@@ -162,42 +153,18 @@ describe("deleteStack", () => {
   const resources: StackResource[] = [
     { type: "worker", id: "worker-1", name: "polaris" },
     { type: "access_application", id: "app-1", name: "polaris" },
-    { type: "r2_bucket", id: "polaris-history", name: "polaris-history" },
   ];
 
-  it("deletes the Worker, the Access application, and the bucket after emptying it", () => {
-    let objects = ["daily/2026-10.json", "daily/2026-11.json"];
-    let bucketDeleteTries = 0;
-    const cf = new FakeCf((args) => {
-      if (args[0] === "r2" && args[1] === "objects" && args[2] === "list") return objects.map((key) => ({ key }));
-      if (args[0] === "r2" && args[1] === "objects" && args[2] === "bulk-delete") {
-        objects = [];
-        return {};
-      }
-      if (args.slice(0, 3).join(" ") === "r2 buckets delete") {
-        bucketDeleteTries += 1;
-        if (bucketDeleteTries === 1) return new CfError(args, "[10008] The bucket you tried to delete is not empty.\n409 Conflict · HTTP /accounts/x/r2/buckets/polaris-history");
-      }
-      return {};
-    });
-    const waits: number[] = [];
-
-    deleteStack({ cf, log: () => {}, resources, wait: (milliseconds) => waits.push(milliseconds) });
-
+  it("deletes the Worker, then the Access application, and removes their tags", () => {
+    const cf = new FakeCf(() => ({}));
+    deleteStack({ cf, log: () => {}, resources });
     const untag = (type: string, id: string) => ["tags", "account-resources", "delete", "--resource-type", type, "--resource-id", id, "--force"];
     expect(cf.calls).toEqual([
       ["workers", "delete", "worker-1", "--force"],
       untag("worker", "worker-1"),
       ["zero-trust", "access", "applications", "delete", "app-1", "--force"],
       untag("access_application", "app-1"),
-      ["r2", "objects", "list", "--bucket-name", "polaris-history", "--per-page", "1000"],
-      ["r2", "objects", "bulk-delete", "--bucket-name", "polaris-history", "--body", JSON.stringify(["daily/2026-10.json", "daily/2026-11.json"]), "--force"],
-      ["r2", "objects", "list", "--bucket-name", "polaris-history", "--per-page", "1000"],
-      ["r2", "buckets", "delete", "polaris-history", "--force"],
-      ["r2", "buckets", "delete", "polaris-history", "--force"],
-      untag("r2_bucket", "polaris-history"),
     ]);
-    expect(waits).toEqual([2000]);
   });
 
   it("counts a resource that is already gone as deleted, and removes its tag", () => {
@@ -205,17 +172,10 @@ describe("deleteStack", () => {
     const cf = new FakeCf((args) => (args[0] === "tags" ? {} : gone(args)));
     const lines: string[] = [];
 
-    deleteStack({ cf, log: (line) => lines.push(line), resources: [resources[1] as StackResource], wait: () => {} });
+    deleteStack({ cf, log: (line) => lines.push(line), resources: [resources[1] as StackResource] });
 
     expect(cf.calls.at(-1)).toEqual(["tags", "account-resources", "delete", "--resource-type", "access_application", "--resource-id", "app-1", "--force"]);
     expect(lines).toEqual(["Access application polaris: already gone"]);
-  });
-
-  it("stops when R2 keeps objects that it was asked to delete", () => {
-    const cf = new FakeCf((args) => (args[2] === "list" ? [{ key: "locked.json" }] : {}));
-    expect(() => deleteStack({ cf, log: () => {}, resources: [resources[2] as StackResource], wait: () => {} })).toThrow(
-      "R2 did not delete the objects of the bucket polaris-history, such as locked.json.",
-    );
   });
 });
 
