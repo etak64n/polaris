@@ -24,26 +24,13 @@ export function OverviewPage({ usage }: { usage: UsageResponse }) {
     [usage, estimate],
   );
   const { period } = estimate;
-  const first = usage.days[0]?.date;
-  const last = usage.days.at(-1)?.date;
 
   return (
     <>
       {/* The sections carry the large headings. */}
       <h1 className="sr-only">Overview</h1>
       {free && (
-        <Section
-          large
-          title="Free plan limits"
-          aside={
-            first !== undefined &&
-            last !== undefined && (
-              <span className="numeric text-xs text-subdued">
-                {formatDate(first)} – {formatDate(last)}
-              </span>
-            )
-          }
-        >
+        <Section large title="Free plan limits">
           <FreeLimits limits={limits} />
         </Section>
       )}

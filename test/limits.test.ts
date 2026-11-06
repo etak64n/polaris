@@ -24,14 +24,16 @@ describe("freeLimits", () => {
   const limits = freeLimits(days, 4, estimate.lines);
   const byId = new Map([...limits.daily, ...limits.sizes, ...limits.monthly].map((limit) => [limit.id, limit]));
 
-  it("compares the busiest day with each daily limit, and keeps the usage of today", () => {
-    expect(byId.get("workers-requests")).toMatchObject({ used: 60_000, limit: 100_000, date: "2026-11-02", today: 30_000 });
-    expect(byId.get("workers-requests")?.left).toBeCloseTo(0.4);
-    expect(byId.get("d1-rows-read")).toMatchObject({ used: 5_000_000, date: "2026-11-02", today: 2_000_000, left: 0 });
+  it("compares the usage of today, the last day, with each daily limit", () => {
+    expect(byId.get("workers-requests")).toMatchObject({ used: 30_000, limit: 100_000 });
+    expect(byId.get("workers-requests")?.left).toBeCloseTo(0.7);
+    expect(byId.get("d1-rows-read")).toMatchObject({ used: 2_000_000, limit: 5_000_000 });
+    expect(byId.get("d1-rows-read")?.left).toBeCloseTo(0.6);
+    expect(byId.get("kv-lists")).toMatchObject({ used: 0, left: 1 });
   });
 
-  it("names no busiest day for a limit without usage", () => {
-    expect(byId.get("kv-lists")).toMatchObject({ used: 0, date: null, today: 0, left: 1 });
+  it("leaves every daily limit whole without any day", () => {
+    expect(freeLimits([], 0, []).daily.every((limit) => limit.used === 0 && limit.left === 1)).toBe(true);
   });
 
   it("compares the sizes and the number of databases now", () => {
@@ -42,12 +44,12 @@ describe("freeLimits", () => {
     expect(byId.get("d1-databases")).toMatchObject({ used: 4, limit: 10 });
   });
 
-  it("compares the busiest day of KV with its daily limits", () => {
-    expect(byId.get("kv-writes")).toMatchObject({ used: 900, limit: 1_000, date: "2026-11-01", today: 50 });
-    expect(byId.get("kv-writes")?.left).toBeCloseTo(0.1);
+  it("compares the KV operations of today with their daily limits", () => {
+    expect(byId.get("kv-writes")).toMatchObject({ used: 50, limit: 1_000 });
+    expect(byId.get("kv-writes")?.left).toBeCloseTo(0.95);
   });
 
-  it("counts the requests that a limit stopped", () => {
+  it("counts the requests that a limit stopped on any of the days", () => {
     expect(limits.stopped).toBe(0);
     const stoppedDays = [day("2026-11-01", 10, 0, [], 0, 2), day("2026-11-02", 10, 0, [], 0, 3)];
     expect(freeLimits(stoppedDays, 0, []).stopped).toBe(5);

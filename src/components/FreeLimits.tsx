@@ -1,12 +1,13 @@
 // The Free plan limits in one table per kind of limit, so that every column holds one
 // value and the heading of the table says which usage it compares: the daily limits
-// with the busiest day, the sizes and counts with now, and the free amounts of R2 with
-// the projection for the cycle. Each table puts the limit with the least left first.
+// with today, the sizes and counts with now, and the free amounts of R2 with the
+// projection for the cycle. Each table puts the limit with the least left first.
 
+import { USAGE_DAYS } from "../../shared/api.ts";
 import type { FreeLimit, FreeLimits as Limits } from "../../shared/limits.ts";
 import { Figure, Section } from "@/components/Layout.tsx";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { formatBytes, formatCompact, formatCount, formatDate } from "@/lib/format.ts";
+import { formatBytes, formatCompact, formatCount } from "@/lib/format.ts";
 
 /** The share left under which a limit needs attention. */
 const LOW = 0.2;
@@ -14,18 +15,21 @@ const LOW = 0.2;
 export function FreeLimits({ limits }: { limits: Limits }) {
   return (
     <div className="grid gap-8">
-      <Figure label="Requests stopped by a limit" value={formatCount(limits.stopped)} tone={limits.stopped > 0 ? "critical" : "default"} />
+      <Figure
+        label="Requests stopped by a limit"
+        value={formatCount(limits.stopped)}
+        note={`Last ${USAGE_DAYS} days`}
+        tone={limits.stopped > 0 ? "critical" : "default"}
+      />
       <Section title="Per day" aside={<Note>Resets at 00:00 UTC</Note>}>
-        <Table className="table-fixed min-w-[720px]">
+        <Table className="table-fixed min-w-[560px]">
           <TableHeader>
             <TableRow>
               <TableHead className="w-28">Product</TableHead>
               <TableHead className="w-48">Item</TableHead>
               <TableHead className="text-right">Free limit</TableHead>
-              <TableHead className="text-right">Busiest day</TableHead>
-              <TableHead className="text-right">Used that day</TableHead>
-              <TableHead className="text-right">Left that day</TableHead>
               <TableHead className="text-right">Used today</TableHead>
+              <TableHead className="text-right">Left</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -34,10 +38,8 @@ export function FreeLimits({ limits }: { limits: Limits }) {
                 <TableCell className="font-semibold">{limit.product}</TableCell>
                 <TableCell>{limit.item}</TableCell>
                 <TableCell className="numeric text-right text-subdued">{formatAmount(limit, limit.limit)}</TableCell>
-                <TableCell className="numeric text-right">{limit.date === null ? "—" : formatDate(limit.date)}</TableCell>
                 <TableCell className="numeric text-right">{formatAmount(limit, limit.used)}</TableCell>
                 <LeftCell limit={limit} />
-                <TableCell className="numeric text-right">{limit.today === null ? "—" : formatAmount(limit, limit.today)}</TableCell>
               </TableRow>
             ))}
           </TableBody>
