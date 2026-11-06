@@ -114,6 +114,89 @@ describe("productMetrics", () => {
     expect(metrics.resources[0]?.latest).toEqual({ storageBytes: 2000, objects: 5 });
   });
 
+  it("splits the KV operations by action, with the latency of the picked namespaces and their storage", async () => {
+    const namespace = "0123456789abcdef0123456789abcdef";
+    const { graphql, calls } = graphqlAnswering(() => ({
+      sums: [
+        { sum: { requests: 40 }, dimensions: { key: namespace, action: "read", t: "2026-11-06T10:30:00Z" } },
+        { sum: { requests: 3 }, dimensions: { key: namespace, action: "write", t: "2026-11-06T10:30:00Z" } },
+        { sum: { requests: 1 }, dimensions: { key: namespace, action: "list", t: "2026-11-06T10:30:00Z" } },
+      ],
+      stats: [{ quantiles: { latencyMsP50: 4, latencyMsP99: 30 }, dimensions: { t: "2026-11-06T10:30:00Z" } }],
+      gauges: [{ max: { byteCount: 2048, keyCount: 12 }, dimensions: { key: namespace, t: "2026-11-06T10:00:00Z" } }],
+    }));
+
+    const metrics = await productMetrics(graphql, "kv", "1h", [namespace], NOW);
+
+    expect(calls[0]?.query).toContain("namespaceId_in: $picked");
+    expect(metrics.resources[0]?.totals).toEqual({ reads: 40, writes: 3, deletes: 0, lists: 1 });
+    expect(metrics.quantiles["latencyMs"]?.p99.at(-1)).toBe(30);
+    expect(metrics.resources[0]?.latest).toEqual({ storageBytes: 2048, keys: 12 });
+  });
+
+  it("adds the requests of the Durable Objects invocations to the duration and rows of their samples", async () => {
+    const namespace = "fedcba9876543210fedcba9876543210";
+    const { graphql, calls } = graphqlAnswering(() => ({
+      sums: [{ sum: { requests: 20, errors: 1 }, dimensions: { key: namespace, t: "2026-11-06T10:30:00Z" } }],
+      moreSums: [{ sum: { duration: 2.5, rowsRead: 300, rowsWritten: 9 }, dimensions: { key: namespace, t: "2026-11-06T10:30:00Z" } }],
+      gauges: [],
+    }));
+
+    const metrics = await productMetrics(graphql, "durableObjects", "1h", [], NOW);
+
+    expect(calls[0]?.query).toContain("durableObjectsPeriodicGroups");
+    expect(metrics.resources[0]?.totals).toEqual({ requests: 20, errors: 1, gbSeconds: 2.5, rowsRead: 300, rowsWritten: 9 });
+  });
+
+  it("reads the backlog of a queue as the average of its samples", async () => {
+    const queue = "00112233445566778899aabbccddeeff";
+    const { graphql } = graphqlAnswering(() => ({
+      sums: [{ sum: { billableOperations: 6 }, dimensions: { key: queue, t: "2026-11-06T10:30:00Z" } }],
+      gauges: [{ avg: { messages: 2.5 }, dimensions: { key: queue, t: "2026-11-06T10:00:00Z" } }],
+    }));
+
+    const metrics = await productMetrics(graphql, "queues", "1h", [], NOW);
+
+    expect(metrics.resources[0]?.totals).toEqual({ operations: 6 });
+    expect(metrics.resources[0]?.latest).toEqual({ backlog: 2.5 });
+  });
+
+  it("keeps the browser time of the whole account as one series", async () => {
+    const { graphql } = graphqlAnswering(() => ({
+      sums: [{ count: 2, sum: { totalSessionDurationMs: 90_000 }, dimensions: { t: "2026-11-06T10:30:00Z" } }],
+    }));
+
+    const metrics = await productMetrics(graphql, "browserRun", "1h", [], NOW);
+
+    expect(metrics.shown).toEqual([""]);
+    expect(metrics.resources[0]).toMatchObject({ key: "", totals: { browserMs: 90_000, sessions: 2 } });
+  });
+
+  it("counts the queries and the errors of Hyperdrive, and the neurons of each Workers AI model", async () => {
+    const config = "aabbccddeeff00112233445566778899";
+    const hyperdrive = graphqlAnswering(() => ({
+      sums: [
+        { count: 7, dimensions: { key: config, status: "complete", t: "2026-11-06T10:30:00Z" } },
+        { count: 2, dimensions: { key: config, status: "error", t: "2026-11-06T10:30:00Z" } },
+      ],
+    }));
+    expect((await productMetrics(hyperdrive.graphql, "hyperdrive", "1h", [], NOW)).resources[0]?.totals).toEqual({ queries: 9, errors: 2 });
+
+    const ai = graphqlAnswering(() => ({
+      sums: [{ count: 3, sum: { totalNeurons: 120.5 }, dimensions: { key: "@cf/meta/llama-3.1-8b-instruct", t: "2026-11-06T10:30:00Z" } }],
+    }));
+    expect((await productMetrics(ai.graphql, "workersAi", "1h", [], NOW)).resources[0]?.totals).toEqual({ neurons: 120.5, requests: 3 });
+  });
+
+  it("asks only for the days that the analytics of Workflows keep", async () => {
+    const { graphql, calls } = graphqlAnswering(() => ({ sums: [] }));
+    const metrics = await productMetrics(graphql, "workflows", "90d", [], NOW);
+    expect(metrics.times).toHaveLength(90);
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.variables["start"]).toBe("2026-10-07T00:00:00Z");
+    expect(metrics.sums["steps"]).toEqual({});
+  });
+
   it("asks for a range longer than one query covers in parts", async () => {
     const { graphql, calls } = graphqlAnswering(() => ({ sums: [], stats: [], gauges: [] }));
     await productMetrics(graphql, "d1", "90d", [], NOW);

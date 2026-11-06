@@ -145,8 +145,22 @@ describe("GET /api/metrics", () => {
     expect(body.names).toEqual({});
   });
 
+  it("names the resources of the products whose analytics give IDs, such as the namespaces of KV", async () => {
+    const namespace = "0123456789abcdef0123456789abcdef";
+    source.resourceNamesOf = { kv: { [namespace]: "sessions" } };
+    const response = await get(`/api/metrics?product=kv&range=1d&resource=${namespace}`);
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as MetricsResponse;
+    expect(body).toMatchObject({ product: "kv", shown: [namespace], names: { [namespace]: "sessions" } });
+  });
+
+  it("takes the account as the only resource of Browser Run", async () => {
+    expect((await get("/api/metrics?product=browserRun&range=1d&resource=")).status).toBe(200);
+    expect((await get("/api/metrics?product=browserRun&range=1d&resource=session")).status).toBe(400);
+  });
+
   it("refuses an unknown product, range, or resource, and more resources than the most", async () => {
-    expect((await get("/api/metrics?product=kv&range=1d")).status).toBe(400);
+    expect((await get("/api/metrics?product=vectorize&range=1d")).status).toBe(400);
     expect((await get("/api/metrics?product=workers&range=2d")).status).toBe(400);
     expect((await get("/api/metrics?product=d1&range=1d&resource=blog")).status).toBe(400);
     const six = Array.from({ length: 6 }, (_, index) => `resource=worker-${index}`).join("&");

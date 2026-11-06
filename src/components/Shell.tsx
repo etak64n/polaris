@@ -2,19 +2,34 @@
 // pages on the left, and the page on the right. On narrow screens the sidebar
 // hides, and the menu button in the bar on top slides it in from the left.
 
-import { Cpu, Database, HardDrive, LayoutDashboard, Menu as MenuIcon } from "lucide-react";
+import { AppWindow, Boxes, Cpu, Database, HardDrive, KeyRound, LayoutDashboard, ListOrdered, Menu as MenuIcon, Sparkles, Workflow, Zap } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
+import type { MetricProduct } from "../../shared/metrics.ts";
 import type { PlanType } from "../../shared/plan.ts";
+import { PRODUCT_NAMES } from "@/lib/products.ts";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "cn";
 import { Link, ROUTE_PATHS, usePathname } from "@/router.tsx";
 
-const PAGES = [
-  { to: ROUTE_PATHS.overview, label: "Overview", icon: <LayoutDashboard /> },
-  { to: ROUTE_PATHS.workers, label: "Workers", icon: <Cpu /> },
-  { to: ROUTE_PATHS.d1, label: "D1", icon: <Database /> },
-  { to: ROUTE_PATHS.r2, label: "R2", icon: <HardDrive /> },
+const ICONS: Record<MetricProduct, ReactNode> = {
+  workers: <Cpu />,
+  durableObjects: <Boxes />,
+  queues: <ListOrdered />,
+  workflows: <Workflow />,
+  browserRun: <AppWindow />,
+  d1: <Database />,
+  r2: <HardDrive />,
+  kv: <KeyRound />,
+  hyperdrive: <Zap />,
+  workersAi: <Sparkles />,
+};
+
+/** The products in groups, as the Cloudflare dashboard groups them. */
+const GROUPS: { label: string; products: MetricProduct[] }[] = [
+  { label: "Compute", products: ["workers", "durableObjects", "queues", "workflows", "browserRun"] },
+  { label: "Storage & databases", products: ["d1", "r2", "kv", "hyperdrive"] },
+  { label: "AI", products: ["workersAi"] },
 ];
 
 export function Shell({ plan, children }: { plan: PlanType | null; children: ReactNode }) {
@@ -71,11 +86,23 @@ function Sidebar({ plan, pathname }: { plan: PlanType | null; pathname: string }
       <div className="flex h-16 shrink-0 items-center">
         <Brand plan={plan} />
       </div>
-      <nav className="-mx-1 grid gap-0.5" aria-label="Pages">
-        {PAGES.map((page) => (
-          <NavLink key={page.to} to={page.to} current={pathname === page.to} icon={page.icon}>
-            {page.label}
+      <nav className="grid gap-6" aria-label="Pages">
+        <div className="-mx-1 grid gap-0.5">
+          <NavLink to={ROUTE_PATHS.overview} current={pathname === ROUTE_PATHS.overview} icon={<LayoutDashboard />}>
+            Overview
           </NavLink>
+        </div>
+        {GROUPS.map((group) => (
+          <div key={group.label} className="grid gap-1">
+            <h2 className="text-xs text-subdued">{group.label}</h2>
+            <div className="-mx-1 grid gap-0.5">
+              {group.products.map((product) => (
+                <NavLink key={product} to={ROUTE_PATHS[product]} current={pathname === ROUTE_PATHS[product]} icon={ICONS[product]}>
+                  {PRODUCT_NAMES[product]}
+                </NavLink>
+              ))}
+            </div>
+          </div>
         ))}
       </nav>
     </div>

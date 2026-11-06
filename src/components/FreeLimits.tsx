@@ -16,7 +16,7 @@ export function FreeLimits({ limits }: { limits: Limits }) {
   return (
     <div className="grid gap-8">
       <Figure
-        label="Requests stopped by a limit"
+        label="Workers requests stopped by a limit"
         value={formatCount(limits.stopped)}
         note={`Last ${USAGE_DAYS} days`}
         tone={limits.stopped > 0 ? "critical" : "default"}

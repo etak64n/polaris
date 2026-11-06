@@ -1,9 +1,11 @@
 // The app: loads the usage of the billing cycle, and shows the page that the URL names.
 // The product pages load their own metrics for the time range that they share.
 
-import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, useState, type ComponentType, type LazyExoticComponent, type ReactNode } from "react";
 import type { UsageResponse } from "../shared/api.ts";
-import type { MetricRange } from "../shared/metrics.ts";
+import type { MetricProduct, MetricRange } from "../shared/metrics.ts";
+import type { DashboardProps } from "@/components/MetricsDashboard.tsx";
+import { PRODUCT_NAMES } from "@/lib/products.ts";
 import { fetchUsage } from "@/api.ts";
 import { Shell } from "@/components/Shell.tsx";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -12,11 +14,20 @@ import { OverviewPage } from "@/pages/OverviewPage.tsx";
 import { matchRoute, usePathname, type Route } from "@/router.tsx";
 
 // The pages with charts load after the first paint, because the charts are large.
-const WorkersPage = lazy(() => import("@/pages/WorkersPage.tsx"));
-const D1Page = lazy(() => import("@/pages/D1Page.tsx"));
-const R2Page = lazy(() => import("@/pages/R2Page.tsx"));
+const PAGES: Record<MetricProduct, LazyExoticComponent<ComponentType<DashboardProps>>> = {
+  workers: lazy(() => import("@/pages/WorkersPage.tsx")),
+  durableObjects: lazy(() => import("@/pages/DurableObjectsPage.tsx")),
+  queues: lazy(() => import("@/pages/QueuesPage.tsx")),
+  workflows: lazy(() => import("@/pages/WorkflowsPage.tsx")),
+  browserRun: lazy(() => import("@/pages/BrowserRunPage.tsx")),
+  d1: lazy(() => import("@/pages/D1Page.tsx")),
+  r2: lazy(() => import("@/pages/R2Page.tsx")),
+  kv: lazy(() => import("@/pages/KvPage.tsx")),
+  hyperdrive: lazy(() => import("@/pages/HyperdrivePage.tsx")),
+  workersAi: lazy(() => import("@/pages/WorkersAiPage.tsx")),
+};
 
-const TITLES: Record<Route, string> = { overview: "Overview", workers: "Workers", d1: "D1", r2: "R2", "not-found": "Not found" };
+const TITLES: Record<Route, string> = { overview: "Overview", ...PRODUCT_NAMES, "not-found": "Not found" };
 
 export function App() {
   const route = matchRoute(usePathname());
@@ -46,12 +57,10 @@ export function App() {
   else if (usage === null) page = error === null ? <LoadingPanels /> : null;
   else if (route === "overview") page = <OverviewPage usage={usage} />;
   else {
-    const props = { usage, range, onRangeChange: setRange, autoRefresh, onAutoRefreshChange: setAutoRefresh };
+    const Page = PAGES[route];
     page = (
       <Suspense fallback={<LoadingPanels />}>
-        {route === "workers" && <WorkersPage {...props} />}
-        {route === "d1" && <D1Page {...props} />}
-        {route === "r2" && <R2Page {...props} />}
+        <Page usage={usage} range={range} onRangeChange={setRange} autoRefresh={autoRefresh} onAutoRefreshChange={setAutoRefresh} />
       </Suspense>
     );
   }

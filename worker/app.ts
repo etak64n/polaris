@@ -13,6 +13,7 @@ import {
 import { addDays, datesBetween, utcDate } from "../shared/dates.ts";
 import {
   MAX_PICKED_RESOURCES,
+  METRIC_PRODUCTS,
   METRIC_RANGES,
   refreshSeconds,
   type MetricProduct,
@@ -21,7 +22,7 @@ import {
 } from "../shared/metrics.ts";
 import { emptyDay } from "../shared/usage.ts";
 import { AccessDeniedError, isLocalhost, verifyAccessToken, type KeySetProvider } from "./access.ts";
-import { AnalyticsError, type UsageSource } from "./analytics.ts";
+import { AnalyticsError, isNamedProduct, type UsageSource } from "./analytics.ts";
 import type { JsonCache } from "./cache.ts";
 import type { Env } from "./env.ts";
 import { badRequest, HttpError, notFound } from "./http.ts";
@@ -104,7 +105,9 @@ export function createApp(dependencies: AppDependencies) {
       ),
       product === "d1"
         ? cache.get(`d1-names/${config.accountId}`, NAMES_CACHE_SECONDS, () => source.databaseNames())
-        : Promise.resolve<Record<string, string>>({}),
+        : isNamedProduct(product)
+          ? cache.get(`names/${config.accountId}/${product}`, NAMES_CACHE_SECONDS, () => source.resourceNames(product))
+          : Promise.resolve<Record<string, string>>({}),
     ]);
     const body: MetricsResponse = { ...metrics, names };
     return c.json(body);
@@ -178,8 +181,9 @@ function readDatabaseIds(values: string[] | undefined): string[] {
 }
 
 function readProduct(value: string | undefined): MetricProduct {
-  if (value === "workers" || value === "d1" || value === "r2") return value;
-  throw badRequest('product must be "workers", "d1", or "r2".');
+  const product = METRIC_PRODUCTS.find((item) => item === value);
+  if (product === undefined) throw badRequest(`product must be one of ${METRIC_PRODUCTS.join(", ")}.`);
+  return product;
 }
 
 function readRange(value: string | undefined): MetricRange {
@@ -188,11 +192,21 @@ function readRange(value: string | undefined): MetricRange {
   return range;
 }
 
-// The forms of the resources of each product. R2 operations on the whole account have no bucket name.
+// The forms of the resources of each product. R2 operations on the whole account have no
+// bucket name, and Browser Run has no resource but the account. The analytics write some
+// IDs as 32 hexadecimal digits and others as UUIDs, as KV does for its namespaces.
+const HEX_ID = /^(?:[0-9a-f]{32}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/;
 const RESOURCE_KEY: Record<MetricProduct, RegExp> = {
   workers: /^[A-Za-z0-9_-]{1,63}$/,
+  durableObjects: HEX_ID,
+  queues: HEX_ID,
+  workflows: /^[A-Za-z0-9_-]{1,64}$/,
+  browserRun: /^$/,
   d1: DATABASE_ID,
   r2: /^(?:|[a-z0-9][a-z0-9-]{1,61}[a-z0-9])$/,
+  kv: HEX_ID,
+  hyperdrive: HEX_ID,
+  workersAi: /^@?[A-Za-z0-9._:/-]{1,200}$/,
 };
 
 /** The picked resources, without repeats, in the order given. */
