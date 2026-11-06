@@ -7,7 +7,7 @@ import type { QueryOrder, TopQuery } from "../shared/api.ts";
 import { addDays, datesBetween, startOf } from "../shared/dates.ts";
 import type { MetricProduct, MetricRange, MetricsResponse } from "../shared/metrics.ts";
 import { productMetrics } from "./metrics.ts";
-import { emptyDay, type D1Usage, type DailyUsage, type R2Usage, type WorkerUsage } from "../shared/usage.ts";
+import { emptyDay, type D1Usage, type DailyUsage, type KvUsage, type R2Usage, type WorkerUsage } from "../shared/usage.ts";
 
 const API = "https://api.cloudflare.com/client/v4";
 
@@ -89,6 +89,14 @@ query PolarisUsage($accountTag: string!, $from: Date!, $to: Date!, $start: Time!
         max { payloadSize metadataSize }
         dimensions { date bucketName }
       }
+      kv: kvOperationsAdaptiveGroups(limit: ${ROW_LIMIT}, filter: { date_geq: $from, date_leq: $to }) {
+        sum { requests }
+        dimensions { date actionType }
+      }
+      workersStopped: workersInvocationsAdaptive(limit: ${ROW_LIMIT}, filter: { datetime_geq: $start, datetime_lt: $end, status: "exceededResources" }) {
+        sum { requests }
+        dimensions { date }
+      }
     }
   }
 }`;
@@ -126,13 +134,26 @@ export interface R2StorageRow {
   max: { payloadSize: number; metadataSize: number };
   dimensions: { date: string; bucketName: string };
 }
+export interface KvRow {
+  sum: { requests: number };
+  dimensions: { date: string; actionType: string };
+}
+export interface StoppedRow {
+  sum: { requests: number };
+  dimensions: { date: string };
+}
 export interface UsageAccount {
   workers: WorkerRow[];
   d1: D1Row[];
   d1Storage: D1StorageRow[];
   r2Operations: R2OperationRow[];
   r2Storage: R2StorageRow[];
+  kv: KvRow[];
+  workersStopped: StoppedRow[];
 }
+
+/** The operations of KV by the action types of its analytics. Other types count toward no daily limit. */
+const KV_OPERATIONS: Record<string, keyof KvUsage> = { read: "reads", write: "writes", delete: "deletes", list: "lists" };
 interface TopQueryRow {
   count: number;
   sum: { rowsRead: number; rowsWritten: number; queryDurationMs: number };
@@ -329,6 +350,16 @@ export function buildDays(dates: string[], account: UsageAccount): DailyUsage[] 
     const usage = bucket(row.dimensions.date, row.dimensions.bucketName);
     if (usage === undefined) continue;
     usage.storageBytes = Math.max(usage.storageBytes, row.max.payloadSize + row.max.metadataSize);
+  }
+  for (const row of account.kv) {
+    const day = days.get(row.dimensions.date);
+    const operation = KV_OPERATIONS[row.dimensions.actionType];
+    if (day === undefined || operation === undefined) continue;
+    day.kv[operation] += row.sum.requests;
+  }
+  for (const row of account.workersStopped) {
+    const day = days.get(row.dimensions.date);
+    if (day !== undefined) day.workersStopped += row.sum.requests;
   }
 
   const byName = <T>(name: (item: T) => string) => (a: T, b: T): number => name(a).localeCompare(name(b));

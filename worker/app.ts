@@ -37,6 +37,11 @@ export interface AppDependencies {
 }
 
 const USAGE_CACHE_SECONDS = 300;
+/**
+ * The shape of the cached days. It changes with DailyUsage, so a newly deployed
+ * Worker never reads days that an older one cached in another shape.
+ */
+const USAGE_SHAPE = "v2";
 const NAMES_CACHE_SECONDS = 3600;
 const TOP_QUERY_COUNT = 20;
 const TOP_QUERY_DAYS = [1, 7];
@@ -68,7 +73,7 @@ export function createApp(dependencies: AppDependencies) {
     const cache = dependencies.cacheFor();
 
     const [days, databaseNames] = await Promise.all([
-      cache.get(`usage/${config.accountId}/${from}/${today}`, USAGE_CACHE_SECONDS, () => source.dailyUsage(from, today)),
+      cache.get(`usage/${USAGE_SHAPE}/${config.accountId}/${from}/${today}`, USAGE_CACHE_SECONDS, () => source.dailyUsage(from, today)),
       cache.get(`d1-names/${config.accountId}`, NAMES_CACHE_SECONDS, () => source.databaseNames()),
     ]);
     const byDate = new Map(days.map((day) => [day.date, day]));

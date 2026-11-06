@@ -23,15 +23,26 @@ export interface R2Usage {
   storageBytes: number;
 }
 
+/** Operations of Workers KV in the whole account, which the Free plan limits per day. */
+export interface KvUsage {
+  reads: number;
+  writes: number;
+  deletes: number;
+  lists: number;
+}
+
 export interface DailyUsage {
   date: string;
   workers: WorkerUsage[];
+  /** Workers invocations that a limit per invocation stopped, such as the CPU time or the subrequests. */
+  workersStopped: number;
   d1: D1Usage[];
   r2: R2Usage[];
+  kv: KvUsage;
 }
 
 export function emptyDay(date: string): DailyUsage {
-  return { date, workers: [], d1: [], r2: [] };
+  return { date, workers: [], workersStopped: 0, d1: [], r2: [], kv: { reads: 0, writes: 0, deletes: 0, lists: 0 } };
 }
 
 /** The usage of every resource of a day, added up per metric. */

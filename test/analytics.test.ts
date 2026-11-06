@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { AnalyticsError, CloudflareAnalytics, r2Class, ROW_LIMIT, type FetchFn, type UsageAccount } from "../worker/analytics.ts";
 
 const ACCOUNT = "0123456789abcdef0123456789abcdef";
-const EMPTY: UsageAccount = { workers: [], d1: [], d1Storage: [], r2Operations: [], r2Storage: [] };
+const EMPTY: UsageAccount = { workers: [], d1: [], d1Storage: [], r2Operations: [], r2Storage: [], kv: [], workersStopped: [] };
+const NO_KV = { reads: 0, writes: 0, deletes: 0, lists: 0 };
 
 function graphql(account: unknown): Response {
   return Response.json({ data: { viewer: { accounts: [account] } }, errors: null });
@@ -34,6 +35,8 @@ describe("CloudflareAnalytics.dailyUsage", () => {
     });
     expect(body.query).toContain("workersInvocationsAdaptive");
     expect(body.query).toContain("cpuTimeUs");
+    expect(body.query).toContain("kvOperationsAdaptiveGroups");
+    expect(body.query).toContain('status: "exceededResources"');
   });
 
   it("adds up the rows of each day and resource, and keeps the dates without usage", async () => {
@@ -55,22 +58,34 @@ describe("CloudflareAnalytics.dailyUsage", () => {
         { sum: { requests: 1 }, dimensions: { date: "2026-11-02", bucketName: "files", actionType: "SomeNewOperation" } },
       ],
       r2Storage: [{ max: { payloadSize: 1000, metadataSize: 24 }, dimensions: { date: "2026-11-02", bucketName: "files" } }],
+      kv: [
+        { sum: { requests: 30 }, dimensions: { date: "2026-11-01", actionType: "read" } },
+        { sum: { requests: 2 }, dimensions: { date: "2026-11-01", actionType: "write" } },
+        { sum: { requests: 1 }, dimensions: { date: "2026-11-02", actionType: "delete" } },
+        { sum: { requests: 4 }, dimensions: { date: "2026-11-02", actionType: "list" } },
+        { sum: { requests: 9 }, dimensions: { date: "2026-11-02", actionType: "someNewAction" } },
+      ],
+      workersStopped: [{ sum: { requests: 3 }, dimensions: { date: "2026-11-02" } }],
     };
     const { analytics } = analyticsAnswering(() => graphql(account));
     expect(await analytics.dailyUsage("2026-11-01", "2026-11-03")).toEqual([
       {
         date: "2026-11-01",
         workers: [{ scriptName: "api", requests: 15, cpuTimeMs: 3 }],
+        workersStopped: 0,
         d1: [{ databaseId: "db-1", rowsRead: 100, rowsWritten: 3, storageBytes: 4096 }],
         r2: [],
+        kv: { reads: 30, writes: 2, deletes: 0, lists: 0 },
       },
       {
         date: "2026-11-02",
         workers: [{ scriptName: "blog", requests: 7, cpuTimeMs: 1 }],
+        workersStopped: 3,
         d1: [{ databaseId: "db-2", rowsRead: 0, rowsWritten: 0, storageBytes: 8192 }],
         r2: [{ bucketName: "files", classA: 5, classB: 9, storageBytes: 1024 }],
+        kv: { reads: 0, writes: 0, deletes: 1, lists: 4 },
       },
-      { date: "2026-11-03", workers: [], d1: [], r2: [] },
+      { date: "2026-11-03", workers: [], workersStopped: 0, d1: [], r2: [], kv: NO_KV },
     ]);
   });
 

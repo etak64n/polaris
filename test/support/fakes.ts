@@ -13,6 +13,8 @@ export function usageOf(date: string, amount: number): DailyUsage {
     workers: [{ scriptName: "api", requests: amount, cpuTimeMs: amount / 10 }],
     d1: [{ databaseId: "db-1", rowsRead: amount * 10, rowsWritten: amount, storageBytes: 1_000_000 }],
     r2: [{ bucketName: "files", classA: amount, classB: amount * 2, storageBytes: 2_000_000 }],
+    workersStopped: 0,
+    kv: { reads: amount * 3, writes: amount, deletes: 0, lists: 0 },
   };
 }
 
