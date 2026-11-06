@@ -4,7 +4,7 @@ import type { QueryOrder, TopQuery } from "../../shared/api.ts";
 import type { MetricProduct, MetricRange, MetricsResponse } from "../../shared/metrics.ts";
 import { datesBetween } from "../../shared/dates.ts";
 import { emptyDay, type DailyUsage } from "../../shared/usage.ts";
-import type { UsageSource } from "../../worker/analytics.ts";
+import type { NamedProduct, UsageSource } from "../../worker/analytics.ts";
 
 /** Usage of one Worker, one database, and one bucket, with the same numbers for every resource. */
 export function usageOf(date: string, amount: number): DailyUsage {
@@ -47,5 +47,13 @@ export class FakeUsageSource implements UsageSource {
   async databaseNames(): Promise<Record<string, string>> {
     if (this.failure !== null) throw this.failure;
     return this.names;
+  }
+
+  /** The names of the resources of the other products, by product. */
+  resourceNamesOf: Partial<Record<NamedProduct, Record<string, string>>> = {};
+
+  async resourceNames(product: NamedProduct): Promise<Record<string, string>> {
+    if (this.failure !== null) throw this.failure;
+    return this.resourceNamesOf[product] ?? {};
   }
 }

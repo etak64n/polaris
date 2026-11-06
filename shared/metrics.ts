@@ -32,13 +32,22 @@ export function refreshSeconds(range: MetricRange): number {
   return RANGE_SPECS[range].period === "1m" ? 60 : 300;
 }
 
-export type MetricProduct = "workers" | "d1" | "r2";
+/** The products with a dashboard of their own, in the order of the sidebar. */
+export const METRIC_PRODUCTS = ["workers", "durableObjects", "queues", "workflows", "browserRun", "d1", "r2", "kv", "hyperdrive", "workersAi"] as const;
+export type MetricProduct = (typeof METRIC_PRODUCTS)[number];
 
 /** The metrics of each product. Sums add up over a period; quantiles and gauges do not. */
 export const PRODUCT_METRICS = {
   workers: { sums: ["requests", "errors", "subrequests", "cpuTimeMs"], quantiles: ["cpuTimeMs", "wallTimeMs"], gauges: [] },
+  durableObjects: { sums: ["requests", "errors", "gbSeconds", "rowsRead", "rowsWritten"], quantiles: [], gauges: ["storageBytes"] },
+  queues: { sums: ["operations"], quantiles: [], gauges: ["backlog"] },
+  workflows: { sums: ["steps", "cpuTimeMs", "retries"], quantiles: [], gauges: [] },
+  browserRun: { sums: ["browserMs", "sessions"], quantiles: [], gauges: [] },
   d1: { sums: ["rowsRead", "rowsWritten", "readQueries", "writeQueries"], quantiles: ["queryTimeMs"], gauges: ["storageBytes"] },
   r2: { sums: ["classA", "classB"], quantiles: [], gauges: ["storageBytes", "objects"] },
+  kv: { sums: ["reads", "writes", "deletes", "lists"], quantiles: ["latencyMs"], gauges: ["storageBytes", "keys"] },
+  hyperdrive: { sums: ["queries", "errors"], quantiles: [], gauges: [] },
+  workersAi: { sums: ["neurons", "requests"], quantiles: [], gauges: [] },
 } as const satisfies Record<MetricProduct, { sums: readonly string[]; quantiles: readonly string[]; gauges: readonly string[] }>;
 
 export type SumMetric<P extends MetricProduct> = (typeof PRODUCT_METRICS)[P]["sums"][number];
@@ -79,6 +88,6 @@ export interface MetricsResponse {
   quantiles: Record<string, Record<Statistic, (number | null)[]>>;
   /** Per gauge metric, per shown resource and OTHER_SERIES, the largest value in each period, or null. */
   gauges: Record<string, Record<string, (number | null)[]>>;
-  /** D1 database names by ID, for the D1 product. */
+  /** The names of the resources by their IDs, for the products whose resources have IDs: D1, KV, Durable Objects, Queues, and Hyperdrive. */
   names: Record<string, string>;
 }

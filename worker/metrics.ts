@@ -26,6 +26,13 @@ export type GraphqlFn = <T>(query: string, variables: Record<string, string | st
 /** The longest span that one query covers: Cloudflare allows 32 days. */
 const MAX_QUERY_SECONDS = 31 * 86_400;
 
+/**
+ * The days that the analytics of some products keep, fewer than the 90 days of the
+ * others. Cloudflare refuses a query that reaches further back, so the dashboards of
+ * these products ask only for the periods that remain, and the earlier ones stay empty.
+ */
+const RETENTION_DAYS: Partial<Record<MetricProduct, number>> = { workflows: 31, browserRun: 31, hyperdrive: 31, workersAi: 31 };
+
 const TIME_FIELD: Record<Period, string> = {
   "1m": "datetimeMinute",
   "5m": "datetimeFiveMinutes",
@@ -60,9 +67,11 @@ function rowTime(value: string): string {
 
 interface Row {
   dimensions: Record<string, string>;
+  count?: number;
   sum?: Record<string, number>;
   quantiles?: Record<string, number>;
   max?: Record<string, number>;
+  avg?: Record<string, number>;
 }
 
 interface QueryRows {
@@ -129,6 +138,72 @@ function productQuery(product: MetricProduct, field: string, gaugeField: string,
         max { payloadSize metadataSize objectCount }
         dimensions { key: bucketName t: ${gaugeField} }
       }${tail}`;
+    case "kv":
+      return `${head}
+      sums: kvOperationsAdaptiveGroups(limit: ${ROW_LIMIT}, filter: { ${filter} }) {
+        sum { requests }
+        dimensions { key: namespaceId action: actionType t: ${field} }
+      }
+      stats: kvOperationsAdaptiveGroups(limit: ${ROW_LIMIT}, filter: { ${filter}${picked ? ", namespaceId_in: $picked" : ""} }) {
+        quantiles { latencyMsP50 latencyMsP99 }
+        dimensions { t: ${field} }
+      }
+      gauges: kvStorageAdaptiveGroups(limit: ${ROW_LIMIT}, filter: { datetime_geq: $gaugeStart, datetime_lt: $end }) {
+        max { byteCount keyCount }
+        dimensions { key: namespaceId t: ${gaugeField} }
+      }${tail}`;
+    case "durableObjects":
+      // Requests come from the invocations, and duration and rows from the periodic samples.
+      return `${head}
+      sums: durableObjectsInvocationsAdaptiveGroups(limit: ${ROW_LIMIT}, filter: { ${filter} }) {
+        sum { requests errors }
+        dimensions { key: namespaceId t: ${field} }
+      }
+      moreSums: durableObjectsPeriodicGroups(limit: ${ROW_LIMIT}, filter: { ${filter} }) {
+        sum { duration rowsRead rowsWritten }
+        dimensions { key: namespaceId t: ${field} }
+      }
+      gauges: durableObjectsSqlStorageGroups(limit: ${ROW_LIMIT}, filter: { datetime_geq: $gaugeStart, datetime_lt: $end }) {
+        max { storedBytes }
+        dimensions { key: namespaceId t: ${gaugeField} }
+      }${tail}`;
+    case "queues":
+      return `${head}
+      sums: queueMessageOperationsAdaptiveGroups(limit: ${ROW_LIMIT}, filter: { ${filter} }) {
+        sum { billableOperations }
+        dimensions { key: queueId t: ${field} }
+      }
+      gauges: queueBacklogAdaptiveGroups(limit: ${ROW_LIMIT}, filter: { datetime_geq: $gaugeStart, datetime_lt: $end }) {
+        avg { messages }
+        dimensions { key: queueId t: ${gaugeField} }
+      }${tail}`;
+    case "workflows":
+      return `${head}
+      sums: workflowsAdaptiveGroups(limit: ${ROW_LIMIT}, filter: { ${filter} }) {
+        sum { allStepCount cpuTime retryCount }
+        dimensions { key: workflowName t: ${field} }
+      }${tail}`;
+    case "browserRun":
+      // Browser time has no resource of its own: the whole account is one series.
+      return `${head}
+      sums: browserRenderingBrowserTimeUsageAdaptiveGroups(limit: ${ROW_LIMIT}, filter: { ${filter} }) {
+        count
+        sum { totalSessionDurationMs }
+        dimensions { t: ${field} }
+      }${tail}`;
+    case "hyperdrive":
+      return `${head}
+      sums: hyperdriveQueriesAdaptiveGroups(limit: ${ROW_LIMIT}, filter: { ${filter} }) {
+        count
+        dimensions { key: configId status: eventStatus t: ${field} }
+      }${tail}`;
+    case "workersAi":
+      return `${head}
+      sums: aiInferenceAdaptiveGroups(limit: ${ROW_LIMIT}, filter: { ${filter} }) {
+        count
+        sum { totalNeurons }
+        dimensions { key: modelId t: ${field} }
+      }${tail}`;
   }
 }
 
@@ -155,6 +230,35 @@ function sumValues(product: MetricProduct, row: Row): Record<string, number> {
       const requests = sum["requests"] ?? 0;
       return { classA: operationClass === "A" ? requests : 0, classB: operationClass === "B" ? requests : 0 };
     }
+    case "kv": {
+      const action = row.dimensions["action"] ?? "";
+      const requests = sum["requests"] ?? 0;
+      return {
+        reads: action === "read" ? requests : 0,
+        writes: action === "write" ? requests : 0,
+        deletes: action === "delete" ? requests : 0,
+        lists: action === "list" ? requests : 0,
+      };
+    }
+    case "durableObjects":
+      // A row of the invocations has no duration, and a row of the samples has no requests.
+      return {
+        requests: sum["requests"] ?? 0,
+        errors: sum["errors"] ?? 0,
+        gbSeconds: sum["duration"] ?? 0,
+        rowsRead: sum["rowsRead"] ?? 0,
+        rowsWritten: sum["rowsWritten"] ?? 0,
+      };
+    case "queues":
+      return { operations: sum["billableOperations"] ?? 0 };
+    case "workflows":
+      return { steps: sum["allStepCount"] ?? 0, cpuTimeMs: sum["cpuTime"] ?? 0, retries: sum["retryCount"] ?? 0 };
+    case "browserRun":
+      return { browserMs: sum["totalSessionDurationMs"] ?? 0, sessions: row.count ?? 0 };
+    case "hyperdrive":
+      return { queries: row.count ?? 0, errors: row.dimensions["status"] === "error" ? (row.count ?? 0) : 0 };
+    case "workersAi":
+      return { neurons: sum["totalNeurons"] ?? 0, requests: row.count ?? 0 };
   }
 }
 
@@ -169,7 +273,9 @@ function quantileValues(product: MetricProduct, row: Row): Record<string, Record
       };
     case "d1":
       return { queryTimeMs: { p50: q["queryBatchTimeMsP50"] ?? 0, p99: q["queryBatchTimeMsP99"] ?? 0 } };
-    case "r2":
+    case "kv":
+      return { latencyMs: { p50: q["latencyMsP50"] ?? 0, p99: q["latencyMsP99"] ?? 0 } };
+    default:
       return {};
   }
 }
@@ -177,12 +283,19 @@ function quantileValues(product: MetricProduct, row: Row): Record<string, Record
 function gaugeValues(product: MetricProduct, row: Row): Record<string, number> {
   const max = row.max ?? {};
   switch (product) {
-    case "workers":
-      return {};
     case "d1":
       return { storageBytes: max["databaseSizeBytes"] ?? 0 };
     case "r2":
       return { storageBytes: (max["payloadSize"] ?? 0) + (max["metadataSize"] ?? 0), objects: max["objectCount"] ?? 0 };
+    case "kv":
+      return { storageBytes: max["byteCount"] ?? 0, keys: max["keyCount"] ?? 0 };
+    case "durableObjects":
+      return { storageBytes: max["storedBytes"] ?? 0 };
+    case "queues":
+      // The backlog is the average number of messages that wait during a sample.
+      return { backlog: row.avg?.["messages"] ?? 0 };
+    default:
+      return {};
   }
 }
 
@@ -214,9 +327,10 @@ async function queryRows(
   const byPicked = usesPicked(product, picked);
   if (byPicked) variables["picked"] = [...picked];
   const query = productQuery(product, TIME_FIELD[window.period], gaugeHourly ? "datetimeHour" : TIME_FIELD[window.period], byPicked);
-  const result = await graphql<Partial<QueryRows>>(query, variables);
-  const rows: QueryRows = { sums: result.sums ?? [], stats: result.stats ?? [], gauges: result.gauges ?? [] };
-  const full = Object.entries(rows).find(([, list]) => list.length >= ROW_LIMIT);
+  const result = await graphql<Partial<QueryRows> & { moreSums?: Row[] }>(query, variables);
+  // A dataset that reached the row limit misses rows, so the range is asked for again in halves.
+  const full = Object.entries(result).find(([, list]) => Array.isArray(list) && list.length >= ROW_LIMIT);
+  const rows: QueryRows = { sums: [...(result.sums ?? []), ...(result.moreSums ?? [])], stats: result.stats ?? [], gauges: result.gauges ?? [] };
   if (full === undefined) return rows;
   if (times.length === 1) {
     throw new AnalyticsError(`Cloudflare returned ${ROW_LIMIT} rows of ${full[0]} for one period from ${first}, its most for one query.`);
@@ -233,6 +347,20 @@ function rankOf(product: MetricProduct, resource: MetricResource): number {
       return resource.totals["rowsRead"] ?? 0;
     case "r2":
       return resource.latest["storageBytes"] ?? 0;
+    case "kv":
+      return resource.totals["reads"] ?? 0;
+    case "durableObjects":
+      return resource.totals["requests"] ?? 0;
+    case "queues":
+      return resource.totals["operations"] ?? 0;
+    case "workflows":
+      return resource.totals["steps"] ?? 0;
+    case "browserRun":
+      return resource.totals["browserMs"] ?? 0;
+    case "hyperdrive":
+      return resource.totals["queries"] ?? 0;
+    case "workersAi":
+      return resource.totals["neurons"] ?? 0;
   }
 }
 
@@ -245,7 +373,10 @@ export async function productMetrics(
   now: Date,
 ): Promise<Omit<MetricsResponse, "names">> {
   const window = metricsWindow(range, now);
-  const rows = await queryRows(graphql, product, window, window.times, picked);
+  const retention = RETENTION_DAYS[product];
+  const kept =
+    retention === undefined ? window.times : window.times.filter((time) => Date.parse(time) >= now.getTime() - retention * 86_400_000);
+  const rows = await queryRows(graphql, product, window, kept, picked);
   const definition = PRODUCT_METRICS[product];
   const index = new Map(window.times.map((time, position) => [time, position]));
   const count = window.times.length;

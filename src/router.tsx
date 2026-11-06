@@ -1,10 +1,23 @@
 // A small router for the pages of polaris, built on the History API.
 
 import { useSyncExternalStore, type MouseEvent, type ReactNode } from "react";
+import type { MetricProduct } from "../shared/metrics.ts";
 
-export type Route = "overview" | "workers" | "d1" | "r2" | "not-found";
+export type Route = "overview" | MetricProduct | "not-found";
 
-export const ROUTE_PATHS = { overview: "/", workers: "/workers", d1: "/d1", r2: "/r2" } as const satisfies Record<Exclude<Route, "not-found">, string>;
+export const ROUTE_PATHS = {
+  overview: "/",
+  workers: "/workers",
+  durableObjects: "/durable-objects",
+  queues: "/queues",
+  workflows: "/workflows",
+  browserRun: "/browser-run",
+  d1: "/d1",
+  r2: "/r2",
+  kv: "/kv",
+  hyperdrive: "/hyperdrive",
+  workersAi: "/workers-ai",
+} as const satisfies Record<Exclude<Route, "not-found">, string>;
 
 export function matchRoute(pathname: string): Route {
   const found = (Object.entries(ROUTE_PATHS) as [Exclude<Route, "not-found">, string][]).find(([, path]) => path === pathname);

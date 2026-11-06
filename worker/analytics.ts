@@ -1,7 +1,10 @@
 // Reads the usage of the account from the Cloudflare GraphQL Analytics API, and
-// the names of the D1 databases from the Cloudflare API.
+// the names of the resources from the Cloudflare API.
 //
-// The token needs Account Analytics Read for the usage and D1 Read for the names.
+// The token needs Account Analytics Read for the usage and D1 Read for the names of
+// the databases. The names of the other resources need Workers KV Storage Read,
+// Workers Scripts Read (Durable Objects), Queues Read, and Hyperdrive Read: without
+// one of them, the dashboard of that product shows the IDs of its resources.
 
 import type { QueryOrder, TopQuery } from "../shared/api.ts";
 import { addDays, datesBetween, startOf } from "../shared/dates.ts";
@@ -37,8 +40,23 @@ export interface UsageSource {
   topQueries(from: string, to: string, order: QueryOrder, limit: number, databaseIds: readonly string[]): Promise<TopQuery[]>;
   /** D1 database names by database ID. */
   databaseNames(): Promise<Record<string, string>>;
+  /** The names of the resources of a product by their IDs, or none when the token may not read them. */
+  resourceNames(product: NamedProduct): Promise<Record<string, string>>;
   /** The time series of the metrics of a product over a range that ends now. */
   metrics(product: MetricProduct, range: MetricRange, picked: readonly string[], now: Date): Promise<Omit<MetricsResponse, "names">>;
+}
+
+/** The products whose analytics name their resources by IDs, and where the Cloudflare API lists their names. */
+const NAMES_API = {
+  kv: { path: "storage/kv/namespaces", id: "id", name: "title" },
+  durableObjects: { path: "workers/durable_objects/namespaces", id: "id", name: "name" },
+  queues: { path: "queues", id: "queue_id", name: "queue_name" },
+  hyperdrive: { path: "hyperdrive/configs", id: "id", name: "name" },
+} as const satisfies Partial<Record<MetricProduct, { path: string; id: string; name: string }>>;
+export type NamedProduct = keyof typeof NAMES_API;
+
+export function isNamedProduct(product: MetricProduct): product is NamedProduct {
+  return product in NAMES_API;
 }
 
 // R2 operations by price class: https://developers.cloudflare.com/r2/pricing/
@@ -304,6 +322,31 @@ export class CloudflareAnalytics implements UsageSource {
       if (!Array.isArray(result)) throw new AnalyticsError("The Cloudflare API returned no list of D1 databases.");
       for (const database of result as { uuid?: unknown; name?: unknown }[]) {
         if (typeof database.uuid === "string" && typeof database.name === "string") names[database.uuid] = database.name;
+      }
+      if (result.length < perPage) return names;
+    }
+  }
+
+  async resourceNames(product: NamedProduct): Promise<Record<string, string>> {
+    const api = NAMES_API[product];
+    const names: Record<string, string> = {};
+    const perPage = 100;
+    for (let page = 1; ; page += 1) {
+      const url = `${API}/accounts/${this.#accountId}/${api.path}?page=${page}&per_page=${perPage}`;
+      let body: unknown;
+      try {
+        body = await this.#request(url, { method: "GET" });
+      } catch (error) {
+        // A token without the permission reads no names, and the dashboard shows the IDs.
+        if (error instanceof AnalyticsError && /answered (401|403)/.test(error.message)) return names;
+        throw error;
+      }
+      const result = (body as { result?: unknown }).result;
+      if (!Array.isArray(result)) return names;
+      for (const item of result as Record<string, unknown>[]) {
+        const id = item[api.id];
+        const name = item[api.name];
+        if (typeof id === "string" && typeof name === "string") names[id] = name;
       }
       if (result.length < perPage) return names;
     }
