@@ -97,6 +97,42 @@ query PolarisUsage($accountTag: string!, $from: Date!, $to: Date!, $start: Time!
         sum { requests }
         dimensions { date }
       }
+      pagesFunctions: pagesFunctionsInvocationsAdaptiveGroups(limit: ${ROW_LIMIT}, filter: { datetime_geq: $start, datetime_lt: $end }) {
+        sum { requests }
+        dimensions { date }
+      }
+      durableObjects: durableObjectsInvocationsAdaptiveGroups(limit: ${ROW_LIMIT}, filter: { datetime_geq: $start, datetime_lt: $end }) {
+        sum { requests }
+        dimensions { date }
+      }
+      durableObjectsPeriodic: durableObjectsPeriodicGroups(limit: ${ROW_LIMIT}, filter: { datetime_geq: $start, datetime_lt: $end }) {
+        sum { duration rowsRead rowsWritten }
+        dimensions { date }
+      }
+      durableObjectsStorage: durableObjectsSqlStorageGroups(limit: ${ROW_LIMIT}, filter: { date_geq: $from, date_leq: $to }) {
+        max { storedBytes }
+        dimensions { date namespaceId }
+      }
+      queues: queueMessageOperationsAdaptiveGroups(limit: ${ROW_LIMIT}, filter: { datetime_geq: $start, datetime_lt: $end }) {
+        sum { billableOperations }
+        dimensions { date }
+      }
+      workersAi: aiInferenceAdaptiveGroups(limit: ${ROW_LIMIT}, filter: { datetime_geq: $start, datetime_lt: $end }) {
+        sum { totalNeurons }
+        dimensions { date }
+      }
+      hyperdrive: hyperdriveQueriesAdaptiveGroups(limit: ${ROW_LIMIT}, filter: { datetime_geq: $start, datetime_lt: $end }) {
+        count
+        dimensions { date }
+      }
+      browserRun: browserRenderingBrowserTimeUsageAdaptiveGroups(limit: ${ROW_LIMIT}, filter: { datetime_geq: $start, datetime_lt: $end }) {
+        sum { totalSessionDurationMs }
+        dimensions { date }
+      }
+      workflows: workflowsAdaptiveGroups(limit: ${ROW_LIMIT}, filter: { datetime_geq: $start, datetime_lt: $end }) {
+        sum { allStepCount }
+        dimensions { date }
+      }
     }
   }
 }`;
@@ -138,8 +174,37 @@ export interface KvRow {
   sum: { requests: number };
   dimensions: { date: string; actionType: string };
 }
-export interface StoppedRow {
+/** A count of a day, such as the stopped Workers requests or the requests to Pages Functions. */
+export interface RequestsRow {
   sum: { requests: number };
+  dimensions: { date: string };
+}
+export interface DurableObjectsPeriodicRow {
+  sum: { duration: number; rowsRead: number; rowsWritten: number };
+  dimensions: { date: string };
+}
+export interface DurableObjectsStorageRow {
+  max: { storedBytes: number };
+  dimensions: { date: string; namespaceId: string };
+}
+export interface QueuesRow {
+  sum: { billableOperations: number };
+  dimensions: { date: string };
+}
+export interface WorkersAiRow {
+  sum: { totalNeurons: number };
+  dimensions: { date: string };
+}
+export interface HyperdriveRow {
+  count: number;
+  dimensions: { date: string };
+}
+export interface BrowserRunRow {
+  sum: { totalSessionDurationMs: number };
+  dimensions: { date: string };
+}
+export interface WorkflowsRow {
+  sum: { allStepCount: number };
   dimensions: { date: string };
 }
 export interface UsageAccount {
@@ -149,7 +214,16 @@ export interface UsageAccount {
   r2Operations: R2OperationRow[];
   r2Storage: R2StorageRow[];
   kv: KvRow[];
-  workersStopped: StoppedRow[];
+  workersStopped: RequestsRow[];
+  pagesFunctions: RequestsRow[];
+  durableObjects: RequestsRow[];
+  durableObjectsPeriodic: DurableObjectsPeriodicRow[];
+  durableObjectsStorage: DurableObjectsStorageRow[];
+  queues: QueuesRow[];
+  workersAi: WorkersAiRow[];
+  hyperdrive: HyperdriveRow[];
+  browserRun: BrowserRunRow[];
+  workflows: WorkflowsRow[];
 }
 
 /** The operations of KV by the action types of its analytics. Other types count toward no daily limit. */
@@ -360,6 +434,52 @@ export function buildDays(dates: string[], account: UsageAccount): DailyUsage[] 
   for (const row of account.workersStopped) {
     const day = days.get(row.dimensions.date);
     if (day !== undefined) day.workersStopped += row.sum.requests;
+  }
+  for (const row of account.pagesFunctions) {
+    const day = days.get(row.dimensions.date);
+    if (day !== undefined) day.pagesFunctionsRequests += row.sum.requests;
+  }
+  for (const row of account.durableObjects) {
+    const day = days.get(row.dimensions.date);
+    if (day !== undefined) day.durableObjects.requests += row.sum.requests;
+  }
+  for (const row of account.durableObjectsPeriodic) {
+    const day = days.get(row.dimensions.date);
+    if (day === undefined) continue;
+    day.durableObjects.gbSeconds += row.sum.duration;
+    day.durableObjects.rowsRead += row.sum.rowsRead;
+    day.durableObjects.rowsWritten += row.sum.rowsWritten;
+  }
+  // The stored data of a day is the most of each namespace during the day, added up.
+  const namespaceBytes = new Map<string, number>();
+  for (const row of account.durableObjectsStorage) {
+    if (!days.has(row.dimensions.date)) continue;
+    const key = `${row.dimensions.date}/${row.dimensions.namespaceId}`;
+    namespaceBytes.set(key, Math.max(namespaceBytes.get(key) ?? 0, row.max.storedBytes));
+  }
+  for (const [key, bytes] of namespaceBytes) {
+    const day = days.get(key.slice(0, key.indexOf("/")));
+    if (day !== undefined) day.durableObjects.storageBytes += bytes;
+  }
+  for (const row of account.queues) {
+    const day = days.get(row.dimensions.date);
+    if (day !== undefined) day.queuesOperations += row.sum.billableOperations;
+  }
+  for (const row of account.workersAi) {
+    const day = days.get(row.dimensions.date);
+    if (day !== undefined) day.workersAiNeurons += row.sum.totalNeurons;
+  }
+  for (const row of account.hyperdrive) {
+    const day = days.get(row.dimensions.date);
+    if (day !== undefined) day.hyperdriveQueries += row.count;
+  }
+  for (const row of account.browserRun) {
+    const day = days.get(row.dimensions.date);
+    if (day !== undefined) day.browserRunMs += row.sum.totalSessionDurationMs;
+  }
+  for (const row of account.workflows) {
+    const day = days.get(row.dimensions.date);
+    if (day !== undefined) day.workflowsSteps += row.sum.allStepCount;
   }
 
   const byName = <T>(name: (item: T) => string) => (a: T, b: T): number => name(a).localeCompare(name(b));

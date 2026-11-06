@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { estimateCost, type CostEstimate } from "../shared/cost.ts";
 import { datesBetween } from "../shared/dates.ts";
 import { GB } from "../shared/pricing.ts";
-import type { DailyUsage } from "../shared/usage.ts";
+import { emptyDay, type DailyUsage } from "../shared/usage.ts";
 
 interface Amounts {
   requests?: number;
@@ -17,12 +17,10 @@ interface Amounts {
 
 function day(date: string, amounts: Amounts = {}): DailyUsage {
   return {
-    date,
+    ...emptyDay(date),
     workers: [{ scriptName: "api", requests: amounts.requests ?? 0, cpuTimeMs: amounts.cpuMs ?? 0 }],
     d1: [{ databaseId: "db", rowsRead: amounts.rowsRead ?? 0, rowsWritten: amounts.rowsWritten ?? 0, storageBytes: amounts.d1Bytes ?? 0 }],
     r2: [{ bucketName: "files", classA: amounts.classA ?? 0, classB: amounts.classB ?? 0, storageBytes: amounts.r2Bytes ?? 0 }],
-    workersStopped: 0,
-    kv: { reads: 0, writes: 0, deletes: 0, lists: 0 },
   };
 }
 

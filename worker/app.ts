@@ -41,7 +41,7 @@ const USAGE_CACHE_SECONDS = 300;
  * The shape of the cached days. It changes with DailyUsage, so a newly deployed
  * Worker never reads days that an older one cached in another shape.
  */
-const USAGE_SHAPE = "v2";
+const USAGE_SHAPE = "v3";
 const NAMES_CACHE_SECONDS = 3600;
 const TOP_QUERY_COUNT = 20;
 const TOP_QUERY_DAYS = [1, 7];

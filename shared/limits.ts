@@ -1,20 +1,27 @@
 // The limits of the Workers Free plan, and the share of each that the usage leaves:
-// the daily limits against the usage of today, the sizes and the number of D1
-// databases now, and the monthly free amounts of R2 projected to the end of the
-// billing cycle.
+// the daily limits against the usage of today, the sizes and the counts now, and the
+// monthly free amounts of R2 projected to the end of the billing cycle.
 //
 // Past a limit of the Free plan, the usage stops instead of costing money: Workers
-// answer with Error 1027, and D1 queries and KV operations fail until 00:00 UTC. R2
-// bills past its free amounts on both plans.
+// answer with Error 1027, and the queries, operations, and invocations of the other
+// products fail until 00:00 UTC. R2 bills past its free amounts on both plans.
 //
-// Sources, checked on PRICES_CHECKED_ON:
+// Sources, checked on 2026-11-06:
 //   https://developers.cloudflare.com/workers/platform/limits/
+//   https://developers.cloudflare.com/workers/platform/pricing/
 //   https://developers.cloudflare.com/d1/platform/limits/
 //   https://developers.cloudflare.com/kv/platform/pricing/
+//   https://developers.cloudflare.com/durable-objects/platform/pricing/
+//   https://developers.cloudflare.com/queues/platform/pricing/
+//   https://developers.cloudflare.com/workers-ai/platform/pricing/
+//   https://developers.cloudflare.com/hyperdrive/platform/pricing/
+//   https://developers.cloudflare.com/browser-run/limits/
+//   https://developers.cloudflare.com/workflows/reference/pricing/
+//   https://developers.cloudflare.com/pages/functions/pricing/
 //   https://developers.cloudflare.com/workers/observability/metrics-and-analytics/#invocation-statuses
 
 import type { CostLine } from "./cost.ts";
-import { FREE_D1_STORAGE_BYTES, FREE_DAILY_LIMITS } from "./pricing.ts";
+import { FREE_D1_STORAGE_BYTES, FREE_DAILY_LIMITS, GB } from "./pricing.ts";
 import type { DailyUsage } from "./usage.ts";
 
 /** The largest D1 database that the Workers Free plan allows. */
@@ -26,15 +33,30 @@ export const FREE_D1_DATABASES = 10;
 /** Daily limits of Workers KV on the Free plan, for the whole account. */
 export const FREE_KV_DAILY_LIMITS = { reads: 100_000, writes: 1_000, deletes: 1_000, lists: 1_000 } as const;
 
+/** Daily limits of Durable Objects on the Free plan. Its rows have the same numbers as those of D1. */
+export const FREE_DURABLE_OBJECTS_DAILY_LIMITS = { requests: 100_000, gbSeconds: 13_000, rowsRead: 5_000_000, rowsWritten: 100_000 } as const;
+
+/** The SQLite data of every Durable Object that the Free plan allows. */
+export const FREE_DURABLE_OBJECTS_STORAGE_BYTES = 5 * GB;
+
+/** Daily limits of the other products on the Free plan. Browser Run allows 10 minutes of browser time. */
+export const FREE_OTHER_DAILY_LIMITS = {
+  queuesOperations: 10_000,
+  workersAiNeurons: 10_000,
+  hyperdriveQueries: 100_000,
+  browserRunMinutes: 10,
+  workflowsSteps: 3_000,
+} as const;
+
 export interface FreeLimit {
   id: string;
-  product: "Workers" | "D1" | "KV" | "R2";
+  product: "Workers" | "D1" | "KV" | "R2" | "Durable Objects" | "Queues" | "Workers AI" | "Hyperdrive" | "Browser Run" | "Workflows";
   /** What the limit counts, such as "Rows read". */
   item: string;
   /** The usage that the limit compares with: of today, now, or projected for the cycle. */
   used: number;
   limit: number;
-  unit: "count" | "bytes" | "GB-month";
+  unit: "count" | "bytes" | "GB-month" | "GB-s" | "minutes";
   /** The share of the limit that the usage leaves: 1 − used ÷ limit. Below zero past the limit. */
   left: number;
 }
@@ -59,8 +81,9 @@ export function freeLimits(days: DailyUsage[], databases: number, r2Lines: CostL
   const latest = days.at(-1);
   const byLeft = (a: FreeLimit, b: FreeLimit): number => a.left - b.left;
   const daily = [
+    // Requests to Pages Functions count toward the requests of Workers.
     ofToday(latest, "workers-requests", "Workers", "Requests", FREE_DAILY_LIMITS.workerRequests, (day) =>
-      sum(day.workers.map((worker) => worker.requests)),
+      sum(day.workers.map((worker) => worker.requests)) + day.pagesFunctionsRequests,
     ),
     ofToday(latest, "d1-rows-read", "D1", "Rows read", FREE_DAILY_LIMITS.d1RowsRead, (day) =>
       sum(day.d1.map((database) => database.rowsRead)),
@@ -72,12 +95,22 @@ export function freeLimits(days: DailyUsage[], databases: number, r2Lines: CostL
     ofToday(latest, "kv-writes", "KV", "Writes", FREE_KV_DAILY_LIMITS.writes, (day) => day.kv.writes),
     ofToday(latest, "kv-deletes", "KV", "Deletes", FREE_KV_DAILY_LIMITS.deletes, (day) => day.kv.deletes),
     ofToday(latest, "kv-lists", "KV", "Lists", FREE_KV_DAILY_LIMITS.lists, (day) => day.kv.lists),
+    ofToday(latest, "do-requests", "Durable Objects", "Requests", FREE_DURABLE_OBJECTS_DAILY_LIMITS.requests, (day) => day.durableObjects.requests),
+    ofToday(latest, "do-duration", "Durable Objects", "Duration", FREE_DURABLE_OBJECTS_DAILY_LIMITS.gbSeconds, (day) => day.durableObjects.gbSeconds, "GB-s"),
+    ofToday(latest, "do-rows-read", "Durable Objects", "Rows read", FREE_DURABLE_OBJECTS_DAILY_LIMITS.rowsRead, (day) => day.durableObjects.rowsRead),
+    ofToday(latest, "do-rows-written", "Durable Objects", "Rows written", FREE_DURABLE_OBJECTS_DAILY_LIMITS.rowsWritten, (day) => day.durableObjects.rowsWritten),
+    ofToday(latest, "queues-operations", "Queues", "Operations", FREE_OTHER_DAILY_LIMITS.queuesOperations, (day) => day.queuesOperations),
+    ofToday(latest, "workers-ai-neurons", "Workers AI", "Neurons", FREE_OTHER_DAILY_LIMITS.workersAiNeurons, (day) => day.workersAiNeurons),
+    ofToday(latest, "hyperdrive-queries", "Hyperdrive", "Queries", FREE_OTHER_DAILY_LIMITS.hyperdriveQueries, (day) => day.hyperdriveQueries),
+    ofToday(latest, "browser-run-time", "Browser Run", "Browser time", FREE_OTHER_DAILY_LIMITS.browserRunMinutes, (day) => day.browserRunMs / 60_000, "minutes"),
+    ofToday(latest, "workflows-steps", "Workflows", "Steps", FREE_OTHER_DAILY_LIMITS.workflowsSteps, (day) => day.workflowsSteps),
   ];
   const sizes = (latest?.d1 ?? []).map((database) => database.storageBytes);
   const now = [
     current("d1-storage", "D1", "Storage", sum(sizes), FREE_D1_STORAGE_BYTES, "bytes"),
     current("d1-largest", "D1", "Largest database", Math.max(0, ...sizes), FREE_D1_DATABASE_BYTES, "bytes"),
     current("d1-databases", "D1", "Databases", databases, FREE_D1_DATABASES, "count"),
+    current("do-storage", "Durable Objects", "Storage", latest?.durableObjects.storageBytes ?? 0, FREE_DURABLE_OBJECTS_STORAGE_BYTES, "bytes"),
   ];
   const monthly: FreeLimit[] = [];
   for (const line of r2Lines) {
@@ -108,9 +141,10 @@ function ofToday(
   item: string,
   limit: number,
   of: (day: DailyUsage) => number,
+  unit: FreeLimit["unit"] = "count",
 ): FreeLimit {
   const used = today === undefined ? 0 : of(today);
-  return { id, product, item, used, limit, unit: "count", left: 1 - used / limit };
+  return { id, product, item, used, limit, unit, left: 1 - used / limit };
 }
 
 function current(id: string, product: FreeLimit["product"], item: string, used: number, limit: number, unit: FreeLimit["unit"]): FreeLimit {
