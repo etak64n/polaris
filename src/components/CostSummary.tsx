@@ -20,7 +20,7 @@ export function CostSummary({ estimate, paidEstimate }: { estimate: CostEstimate
       <Table className="table-fixed min-w-[640px]">
         <TableHeader>
           <TableRow>
-            <TableHead className="w-28">Product</TableHead>
+            <TableHead className="w-36">Product</TableHead>
             <TableHead className="w-48">Item</TableHead>
             <TableHead className="text-right">Used</TableHead>
             <TableHead className="text-right">Included</TableHead>

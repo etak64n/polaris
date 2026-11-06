@@ -1,9 +1,26 @@
 import { describe, expect, it } from "vitest";
+import { emptyDay } from "../shared/usage.ts";
 import { AnalyticsError, CloudflareAnalytics, r2Class, ROW_LIMIT, type FetchFn, type UsageAccount } from "../worker/analytics.ts";
 
 const ACCOUNT = "0123456789abcdef0123456789abcdef";
-const EMPTY: UsageAccount = { workers: [], d1: [], d1Storage: [], r2Operations: [], r2Storage: [], kv: [], workersStopped: [] };
-const NO_KV = { reads: 0, writes: 0, deletes: 0, lists: 0 };
+const EMPTY: UsageAccount = {
+  workers: [],
+  d1: [],
+  d1Storage: [],
+  r2Operations: [],
+  r2Storage: [],
+  kv: [],
+  workersStopped: [],
+  pagesFunctions: [],
+  durableObjects: [],
+  durableObjectsPeriodic: [],
+  durableObjectsStorage: [],
+  queues: [],
+  workersAi: [],
+  hyperdrive: [],
+  browserRun: [],
+  workflows: [],
+};
 
 function graphql(account: unknown): Response {
   return Response.json({ data: { viewer: { accounts: [account] } }, errors: null });
@@ -37,10 +54,13 @@ describe("CloudflareAnalytics.dailyUsage", () => {
     expect(body.query).toContain("cpuTimeUs");
     expect(body.query).toContain("kvOperationsAdaptiveGroups");
     expect(body.query).toContain('status: "exceededResources"');
+    expect(body.query).toContain("durableObjectsPeriodicGroups");
+    expect(body.query).toContain("aiInferenceAdaptiveGroups");
   });
 
   it("adds up the rows of each day and resource, and keeps the dates without usage", async () => {
     const account: UsageAccount = {
+      ...EMPTY,
       workers: [
         { sum: { requests: 10, cpuTimeUs: 2500 }, dimensions: { date: "2026-11-01", scriptName: "api" } },
         { sum: { requests: 5, cpuTimeUs: 500 }, dimensions: { date: "2026-11-01", scriptName: "api" } },
@@ -70,23 +90,56 @@ describe("CloudflareAnalytics.dailyUsage", () => {
     const { analytics } = analyticsAnswering(() => graphql(account));
     expect(await analytics.dailyUsage("2026-11-01", "2026-11-03")).toEqual([
       {
-        date: "2026-11-01",
+        ...emptyDay("2026-11-01"),
         workers: [{ scriptName: "api", requests: 15, cpuTimeMs: 3 }],
-        workersStopped: 0,
         d1: [{ databaseId: "db-1", rowsRead: 100, rowsWritten: 3, storageBytes: 4096 }],
-        r2: [],
         kv: { reads: 30, writes: 2, deletes: 0, lists: 0 },
       },
       {
-        date: "2026-11-02",
+        ...emptyDay("2026-11-02"),
         workers: [{ scriptName: "blog", requests: 7, cpuTimeMs: 1 }],
         workersStopped: 3,
         d1: [{ databaseId: "db-2", rowsRead: 0, rowsWritten: 0, storageBytes: 8192 }],
         r2: [{ bucketName: "files", classA: 5, classB: 9, storageBytes: 1024 }],
         kv: { reads: 0, writes: 0, deletes: 1, lists: 4 },
       },
-      { date: "2026-11-03", workers: [], workersStopped: 0, d1: [], r2: [], kv: NO_KV },
+      emptyDay("2026-11-03"),
     ]);
+  });
+
+  it("adds up the products with daily limits other than Workers, D1, R2, and KV", async () => {
+    const account: UsageAccount = {
+      ...EMPTY,
+      pagesFunctions: [{ sum: { requests: 12 }, dimensions: { date: "2026-11-01" } }],
+      durableObjects: [
+        { sum: { requests: 40 }, dimensions: { date: "2026-11-01" } },
+        { sum: { requests: 2 }, dimensions: { date: "2026-11-01" } },
+      ],
+      durableObjectsPeriodic: [{ sum: { duration: 12.5, rowsRead: 300, rowsWritten: 7 }, dimensions: { date: "2026-11-01" } }],
+      // Each namespace counts with its most of the day.
+      durableObjectsStorage: [
+        { max: { storedBytes: 1000 }, dimensions: { date: "2026-11-01", namespaceId: "ns-1" } },
+        { max: { storedBytes: 1500 }, dimensions: { date: "2026-11-01", namespaceId: "ns-1" } },
+        { max: { storedBytes: 500 }, dimensions: { date: "2026-11-01", namespaceId: "ns-2" } },
+      ],
+      queues: [{ sum: { billableOperations: 30 }, dimensions: { date: "2026-11-01" } }],
+      workersAi: [{ sum: { totalNeurons: 440.5 }, dimensions: { date: "2026-11-01" } }],
+      hyperdrive: [{ count: 9, dimensions: { date: "2026-11-01" } }],
+      browserRun: [{ sum: { totalSessionDurationMs: 90_000 }, dimensions: { date: "2026-11-01" } }],
+      workflows: [{ sum: { allStepCount: 6 }, dimensions: { date: "2026-11-01" } }],
+    };
+    const { analytics } = analyticsAnswering(() => graphql(account));
+    const [day] = await analytics.dailyUsage("2026-11-01", "2026-11-01");
+    expect(day).toEqual({
+      ...emptyDay("2026-11-01"),
+      pagesFunctionsRequests: 12,
+      durableObjects: { requests: 42, gbSeconds: 12.5, rowsRead: 300, rowsWritten: 7, storageBytes: 2000 },
+      queuesOperations: 30,
+      workersAiNeurons: 440.5,
+      hyperdriveQueries: 9,
+      browserRunMs: 90_000,
+      workflowsSteps: 6,
+    });
   });
 
   it("asks for each half of the range again when a dataset reaches the row limit", async () => {

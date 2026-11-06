@@ -25,7 +25,7 @@ export function FreeLimits({ limits }: { limits: Limits }) {
         <Table className="table-fixed min-w-[560px]">
           <TableHeader>
             <TableRow>
-              <TableHead className="w-28">Product</TableHead>
+              <TableHead className="w-36">Product</TableHead>
               <TableHead className="w-48">Item</TableHead>
               <TableHead className="text-right">Free limit</TableHead>
               <TableHead className="text-right">Used today</TableHead>
@@ -49,7 +49,7 @@ export function FreeLimits({ limits }: { limits: Limits }) {
         <Table className="table-fixed min-w-[560px]">
           <TableHeader>
             <TableRow>
-              <TableHead className="w-28">Product</TableHead>
+              <TableHead className="w-36">Product</TableHead>
               <TableHead className="w-48">Item</TableHead>
               <TableHead className="text-right">Free limit</TableHead>
               <TableHead className="text-right">Now</TableHead>
@@ -74,7 +74,7 @@ export function FreeLimits({ limits }: { limits: Limits }) {
           <Table className="table-fixed min-w-[560px]">
             <TableHeader>
               <TableRow>
-                <TableHead className="w-28">Product</TableHead>
+                <TableHead className="w-36">Product</TableHead>
                 <TableHead className="w-48">Item</TableHead>
                 <TableHead className="text-right">Free amount</TableHead>
                 <TableHead className="text-right">Projected</TableHead>
@@ -133,7 +133,16 @@ function LeftCell({ limit }: { limit: FreeLimit }) {
 }
 
 function formatAmount(limit: FreeLimit, value: number): string {
-  if (limit.unit === "bytes") return formatBytes(value);
-  if (limit.unit === "GB-month") return `${Number.isInteger(value) ? value : value.toFixed(2)} GB-mo`;
-  return formatCompact(Math.round(value));
+  switch (limit.unit) {
+    case "bytes":
+      return formatBytes(value);
+    case "GB-month":
+      return `${Number.isInteger(value) ? value : value.toFixed(2)} GB-mo`;
+    case "GB-s":
+      return `${formatCompact(Math.round(value))} GB-s`;
+    case "minutes":
+      return `${Number.isInteger(value) ? value : value.toFixed(1)} min`;
+    case "count":
+      return formatCompact(Math.round(value));
+  }
 }

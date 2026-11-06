@@ -9,11 +9,10 @@ import type { UsageSource } from "../../worker/analytics.ts";
 /** Usage of one Worker, one database, and one bucket, with the same numbers for every resource. */
 export function usageOf(date: string, amount: number): DailyUsage {
   return {
-    date,
+    ...emptyDay(date),
     workers: [{ scriptName: "api", requests: amount, cpuTimeMs: amount / 10 }],
     d1: [{ databaseId: "db-1", rowsRead: amount * 10, rowsWritten: amount, storageBytes: 1_000_000 }],
     r2: [{ bucketName: "files", classA: amount, classB: amount * 2, storageBytes: 2_000_000 }],
-    workersStopped: 0,
     kv: { reads: amount * 3, writes: amount, deletes: 0, lists: 0 },
   };
 }

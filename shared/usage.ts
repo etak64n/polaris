@@ -31,6 +31,18 @@ export interface KvUsage {
   lists: number;
 }
 
+/** Usage of Durable Objects in the whole account, which the Free plan limits per day and in size. */
+export interface DurableObjectsUsage {
+  requests: number;
+  /** Compute duration, in GB-seconds. */
+  gbSeconds: number;
+  /** Rows that SQLite-backed Durable Objects read and wrote. */
+  rowsRead: number;
+  rowsWritten: number;
+  /** The SQLite data of every namespace, the most during the day, in bytes. */
+  storageBytes: number;
+}
+
 export interface DailyUsage {
   date: string;
   workers: WorkerUsage[];
@@ -39,13 +51,40 @@ export interface DailyUsage {
    * CPU time, the subrequests, or the daily requests of the Free plan (Error 1102 or 1027).
    */
   workersStopped: number;
+  /** Requests to Pages Functions, which count toward the daily requests of Workers. */
+  pagesFunctionsRequests: number;
   d1: D1Usage[];
   r2: R2Usage[];
   kv: KvUsage;
+  durableObjects: DurableObjectsUsage;
+  /** Billable operations of Queues: each 64 KB that a message write, read, or delete moves. */
+  queuesOperations: number;
+  /** Neurons of Workers AI. */
+  workersAiNeurons: number;
+  /** Database queries through Hyperdrive. */
+  hyperdriveQueries: number;
+  /** Browser time of Browser Run, in milliseconds. */
+  browserRunMs: number;
+  /** Steps of Workflows, of every kind, sleeps and waits for events included. */
+  workflowsSteps: number;
 }
 
 export function emptyDay(date: string): DailyUsage {
-  return { date, workers: [], workersStopped: 0, d1: [], r2: [], kv: { reads: 0, writes: 0, deletes: 0, lists: 0 } };
+  return {
+    date,
+    workers: [],
+    workersStopped: 0,
+    pagesFunctionsRequests: 0,
+    d1: [],
+    r2: [],
+    kv: { reads: 0, writes: 0, deletes: 0, lists: 0 },
+    durableObjects: { requests: 0, gbSeconds: 0, rowsRead: 0, rowsWritten: 0, storageBytes: 0 },
+    queuesOperations: 0,
+    workersAiNeurons: 0,
+    hyperdriveQueries: 0,
+    browserRunMs: 0,
+    workflowsSteps: 0,
+  };
 }
 
 /** The usage of every resource of a day, added up per metric. */
