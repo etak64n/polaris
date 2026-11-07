@@ -18,6 +18,7 @@ export interface RuntimeConfig {
   apiToken: string;
   plan: PlanType;
   cycleStartDay: number;
+  freeLimitLines: boolean;
 }
 
 export class ConfigurationError extends Error {
@@ -60,6 +61,8 @@ export function readRuntimeConfig(env: Env): RuntimeConfig {
   if (dayText !== "" && (!Number.isInteger(day) || day < 1 || day > 31)) {
     problems.push("BILLING_CYCLE_START_DAY must be a whole number from 1 to 31.");
   }
+  const linesText = text("FREE_LIMIT_LINES");
+  if (linesText !== "" && linesText !== "true" && linesText !== "false") problems.push('FREE_LIMIT_LINES must be "true" or "false".');
 
   const auth: AuthConfig =
     authModeText === "local-development"
@@ -71,6 +74,7 @@ export function readRuntimeConfig(env: Env): RuntimeConfig {
     apiToken: text("ANALYTICS_API_TOKEN"),
     plan: planText === "paid" ? "paid" : "free",
     cycleStartDay: day,
+    freeLimitLines: linesText === "true",
   };
   if (problems.length > 0) throw new ConfigurationError(problems);
   return config;

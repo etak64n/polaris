@@ -144,7 +144,7 @@ export function MetricsDashboard({
     if (metrics === null) return [];
     const shown = picked.length === 0 ? metrics.resources : metrics.resources.filter((resource) => picked.includes(resource.key));
     return charts.map((chart): ChartView => {
-      const free = chart.free === undefined ? null : freeLine(chart.free, usage.plan, cycleDays);
+      const free = chart.free === undefined || !usage.freeLimitLines ? null : freeLine(chart.free, cycleDays);
       // A daily limit compares with the sum of a day, but a level such as storage compares at any period.
       const line = chart.kind === "sum" && metrics.period !== "1d" ? null : free;
       // The line shows on the chart once the usage comes near it. Far under it, the
@@ -206,7 +206,7 @@ export function MetricsDashboard({
         note: at === null ? undefined : `As of ${timeLabel(metrics.times[at] ?? "", metrics.period)}`,
       };
     });
-  }, [metrics, charts, colors, picked, usage.plan, cycleDays]);
+  }, [metrics, charts, colors, picked, usage.freeLimitLines, cycleDays]);
 
   return (
     <>

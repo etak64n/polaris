@@ -122,6 +122,7 @@ export function createApp(dependencies: AppDependencies) {
     const body: UsageResponse = {
       plan: config.plan,
       cycleStartDay: config.cycleStartDay,
+      freeLimitLines: config.freeLimitLines,
       today,
       days: datesBetween(from, today).map((date) => byDate.get(date) ?? emptyDay(date)),
       databaseNames,

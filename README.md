@@ -86,6 +86,8 @@ export default definePolarisConfig({
     // such as "onetimepin", "github", or "passkeys"
     loginMethods: ["onetimepin"],
   },
+  // Whether the dashboard charts draw lines at the Free plan limits
+  freeLimitLines: true,
 });
 ```
 
