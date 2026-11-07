@@ -62,10 +62,9 @@ export function deployStack({ settings, secrets, cf, log, writeSecretsFile }: De
   };
   if (existingApp !== null) claim({ type: "access_application", id: existingApp.id, name: settings.workerName });
   if (existingWorker !== null) claim({ type: "worker", id: existingWorker.id, name: stack });
-  // The Zero Trust organization signs the tokens of Access. An account without one, or a
-  // login method that the organization lacks, stops the deploy here too.
+  // The Zero Trust organization signs the tokens of Access. An account without one stops
+  // the deploy here too.
   const teamDomain = accessTeamDomain(cf);
-  const loginMethods = offeredLoginMethods(settings.access.loginMethods, identityProviders(cf));
 
   if (domain === undefined) {
     // When the account has no Workers yet, deploy once so Cloudflare assigns the workers.dev URL.
@@ -86,8 +85,8 @@ export function deployStack({ settings, secrets, cf, log, writeSecretsFile }: De
   };
 
   // The Access application of the domain, whose only policy allows the people in the
-  // settings, and whose sign-in page offers the login methods in the settings.
-  const body = JSON.stringify(accessApplicationBody({ ...settings, domain }, loginMethods.map((method) => method.id)));
+  // settings, and whose sign-in page offers the login methods of the organization.
+  const body = JSON.stringify(accessApplicationBody({ ...settings, domain }));
   const app = readAccessApplication(
     existingApp === null
       ? cf.json(["zero-trust", "access", "applications", "create", "--body", body])
@@ -96,7 +95,6 @@ export function deployStack({ settings, secrets, cf, log, writeSecretsFile }: De
   const appResource: StackResource = { type: "access_application", id: app.id, name: settings.workerName };
   mark(appResource);
   log(`${describe(appResource)}: ${existingApp === null ? "created" : "updated"}`);
-  log(`  Sign-in: ${loginMethods.map(describeLoginMethod).join(", ")}`);
 
   // The Worker, with the secrets of .env, the team domain, and the AUD tag of the Access application.
   deployWorker(cf, writeSecretsFile, secrets, { teamDomain, aud: app.aud });
@@ -180,19 +178,16 @@ export function describe(resource: StackResource): string {
 }
 
 /**
- * The Access application that lets only the people in the settings open the domain,
- * through the login methods of these IDs. Cloudflare replaces the whole application on
- * an update, so the body holds every setting that polaris makes.
+ * The Access application that lets only the people in the settings open the domain.
+ * Without a list of identity providers, its sign-in page offers every login method of
+ * the Zero Trust organization. Cloudflare replaces the whole application on an update,
+ * so the body holds every setting that polaris makes.
  */
-export function accessApplicationBody(
-  settings: PolarisSettings & { domain: string },
-  loginMethodIds: readonly string[],
-) {
+export function accessApplicationBody(settings: PolarisSettings & { domain: string }) {
   return {
     name: settings.workerName,
     domain: settings.domain,
     type: "self_hosted",
-    allowed_idps: loginMethodIds,
     policies: [
       {
         name: "Allowed people",
@@ -222,52 +217,6 @@ function deployWorker(
   }
 }
 
-/** A login method of the Zero Trust organization, which the Cloudflare API calls an identity provider. */
-export interface LoginMethod {
-  id: string;
-  /** The kind of login method, such as onetimepin, github, or passkeys. */
-  type: string;
-  /** The name in the dashboard. Cloudflare leaves it empty for the one-time PIN. */
-  name: string;
-}
-
-/**
- * The login methods that the sign-in page offers: every one of the organization for
- * "all", or the ones that the settings name. A setting names a login method by its ID,
- * or by its type when the organization has one login method of that type.
- */
-export function offeredLoginMethods(setting: "all" | readonly string[], methods: readonly LoginMethod[]): LoginMethod[] {
-  const path = "access.loginMethods";
-  if (methods.length === 0) {
-    throw new Error("The Zero Trust organization has no login method, so nobody could sign in. Add one in Zero Trust > Integrations > Identity providers.");
-  }
-  if (setting === "all") return [...methods];
-  const problems: string[] = [];
-  const offered: LoginMethod[] = [];
-  for (const name of setting) {
-    const byId = methods.find((method) => method.id === name);
-    const matches = byId === undefined ? methods.filter((method) => method.type === name) : [byId];
-    const [match] = matches;
-    if (match === undefined) {
-      problems.push(
-        `${path} names ${name}, but the Zero Trust organization has no login method of that type or ID. It has ${methods.map(describeLoginMethod).join(", ")}. Write one of them, write "all", or add ${name} in Zero Trust > Integrations > Identity providers.`,
-      );
-    } else if (matches.length > 1) {
-      const listed = matches.map((method) => (method.name === "" ? method.id : `${method.id} (${method.name})`)).join(", ");
-      problems.push(`The Zero Trust organization has ${matches.length} login methods of the type ${name}: ${listed}. Write the ID of the one to allow in ${path}.`);
-    } else if (!offered.includes(match)) {
-      offered.push(match);
-    }
-  }
-  if (problems.length > 0) throw new Error(problems.join("\n"));
-  return offered;
-}
-
-/** A login method as the settings can name it: its type, and its name in the dashboard when it has one. */
-function describeLoginMethod(method: LoginMethod): string {
-  return method.name === "" ? method.type : `${method.type} (${method.name})`;
-}
-
 /** The team domain of the Zero Trust organization of the account, which signs the tokens of Access. */
 function accessTeamDomain(cf: Cf): string {
   let organization: unknown = null;
@@ -283,14 +232,6 @@ function accessTeamDomain(cf: Cf): string {
     );
   }
   return `https://${domain}`;
-}
-
-function identityProviders(cf: Cf): LoginMethod[] {
-  return list(cf.json(["zero-trust", "identity-providers", "list"])).flatMap((item) => {
-    const id = text(item, "id");
-    const type = text(item, "type");
-    return id === undefined || type === undefined ? [] : [{ id, type, name: text(item, "name") ?? "" }];
-  });
 }
 
 function accessApplications(cf: Cf): { id: string; domain: string }[] {

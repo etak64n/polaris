@@ -22,9 +22,9 @@ export interface BillingSettings {
 }
 
 /**
- * Cloudflare Access, which asks for a sign-in before polaris opens. The team domain of
- * the Zero Trust organization is not a setting: an account has one organization, and
- * `pnpm stack:deploy` reads its team domain from Cloudflare.
+ * Cloudflare Access, which asks for a sign-in before polaris opens. The sign-in offers
+ * the login methods of the Zero Trust organization of the account, and `pnpm stack:deploy`
+ * reads the team domain of that organization from Cloudflare.
  */
 export interface AccessSettings {
   /**
@@ -32,12 +32,6 @@ export interface AccessSettings {
    * the domain an Access application whose only policy allows these addresses.
    */
   allow: string[];
-  /**
-   * The login methods that the sign-in page of the domain offers: "all" for every login
-   * method that the Zero Trust organization has when polaris deploys, or a list of them,
-   * each by its type, such as "onetimepin" or "github", or by its ID.
-   */
-  loginMethods: "all" | string[];
 }
 
 /**
@@ -80,7 +74,6 @@ const WORKER_NAME = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 const HOSTNAME = /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z][a-z0-9-]{0,61}[a-z0-9]$/;
 // A practical check of an email address: one @, no spaces, and a dot in the domain.
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const NO_WHITESPACE = /^\S+$/;
 
 type Problems = string[];
 type Fields = Record<string, unknown>;
@@ -138,30 +131,9 @@ function readBilling(input: unknown, problems: Problems): BillingSettings | null
 function readAccess(input: unknown, problems: Problems): AccessSettings | null {
   const access = readObject(input, "access", problems);
   if (access === null) return null;
-  checkKeys(access, "access.", ["allow", "loginMethods"], problems);
+  checkKeys(access, "access.", ["allow"], problems);
   const allow = readEmails(access, "allow", "access.", problems);
-  const loginMethods = readLoginMethods(access, problems);
-  return { allow, loginMethods };
-}
-
-// Reads the login methods of the Access application. `pnpm stack:deploy` looks them up
-// in the Zero Trust organization, because only Cloudflare knows which ones exist.
-function readLoginMethods(access: Fields, problems: Problems): "all" | string[] {
-  const path = "access.loginMethods";
-  if (!("loginMethods" in access)) {
-    problems.push(`${path} is missing.`);
-    return [];
-  }
-  const value = access["loginMethods"];
-  if (value === "all") return "all";
-  if (!Array.isArray(value) || !value.every((item) => typeof item === "string" && NO_WHITESPACE.test(item))) {
-    problems.push(`${path} must be "all" or a list of login method types or IDs, such as ["onetimepin"].`);
-    return [];
-  }
-  if (value.length === 0) problems.push(`${path} must name at least one login method.`);
-  const repeated = value.filter((item, index) => value.indexOf(item) !== index);
-  if (repeated.length > 0) problems.push(`${path} must name each login method once: ${[...new Set(repeated)].join(", ")}.`);
-  return value as string[];
+  return { allow };
 }
 
 function readEmails(fields: Fields, key: string, prefix: string, problems: Problems): string[] {
