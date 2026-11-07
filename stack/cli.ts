@@ -14,7 +14,6 @@ import { validateSettings, type PolarisSettings } from "../config/settings.ts";
 import { projectCf } from "./cf.ts";
 import { parseEnvFile } from "./env-file.ts";
 import { deleteStack, deployStack, describe, stackResources, STACK_TAG, type SecretsFile } from "./stack.ts";
-import { tokenFormUrl } from "./token-form.ts";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const ACCOUNT_ID = /^[0-9a-f]{32}$/;
@@ -35,8 +34,8 @@ async function main(args: string[]): Promise<void> {
     const analyticsApiToken = env.get("ANALYTICS_API_TOKEN") ?? "";
     if (analyticsApiToken === "") {
       throw new Error(
-        "ANALYTICS_API_TOKEN in .env is empty. This link opens the form for the token in the account of CLOUDFLARE_ACCOUNT_ID, " +
-          `with its permissions selected. Create the token, and paste it after ANALYTICS_API_TOKEN= in .env.\n${tokenFormUrl(accountId)}`,
+        "ANALYTICS_API_TOKEN in .env is empty. polaris reads the usage of the account in CLOUDFLARE_ACCOUNT_ID with an account API token of that account. " +
+          "Create the token with the permissions that .env.example lists, and write it after ANALYTICS_API_TOKEN= in .env.",
       );
     }
     console.log(`Deploying the stack ${settings.workerName}.`);
