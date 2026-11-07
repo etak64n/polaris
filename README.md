@@ -97,11 +97,11 @@ pnpm stack:deploy
 
 ### 3. Update or Delete
 
-- **Update to a new release**: Check the [release notes](https://github.com/etak64n/polaris/releases) for any configuration changes, then check out the tag and redeploy:
+- **Update to the latest release**: Check the [release notes](https://github.com/etak64n/polaris/releases) for any configuration changes, then check out `latest` and redeploy:
 
 ```bash
-git fetch --tags
-git checkout v0.2.0
+git fetch --tags --force
+git checkout latest
 pnpm install
 pnpm stack:deploy
 ```

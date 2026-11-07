@@ -46,3 +46,8 @@ jobs:
         run: gh release create "$GITHUB_REF_NAME" --title "polaris $GITHUB_REF_NAME" --notes-from-tag --verify-tag
         env:
           GH_TOKEN: ${{ github.token }}
+
+      - name: Point the latest tag at this release
+        run: |
+          git tag --force latest "$GITHUB_SHA"
+          git push --force origin refs/tags/latest:refs/tags/latest
