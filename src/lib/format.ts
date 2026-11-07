@@ -49,6 +49,13 @@ export function formatDate(date: string): string {
   return date.replaceAll("-", "/");
 }
 
+/** A moment, such as a sign-in, as YYYY/MM/DD HH:MM in the time zone of the browser. */
+export function formatDateTime(iso: string): string {
+  const value = new Date(iso);
+  const pad = (number: number) => String(number).padStart(2, "0");
+  return `${value.getFullYear()}/${pad(value.getMonth() + 1)}/${pad(value.getDate())} ${pad(value.getHours())}:${pad(value.getMinutes())}`;
+}
+
 /** A share of a whole, such as 42%. */
 export function formatPercent(ratio: number): string {
   return `${Math.round(ratio * 100)}%`;

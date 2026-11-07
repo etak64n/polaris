@@ -4,9 +4,12 @@
 
 import { AppWindow, Boxes, Cpu, Database, HardDrive, KeyRound, LayoutDashboard, ListOrdered, Menu as MenuIcon, Sparkles, Workflow, Zap } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
+import type { Me } from "../../shared/api.ts";
 import type { MetricProduct } from "../../shared/metrics.ts";
 import type { PlanType } from "../../shared/plan.ts";
 import { PRODUCT_NAMES } from "@/lib/products.ts";
+import { fetchMe } from "@/api.ts";
+import { AccountMenu, type Account } from "@/components/AccountMenu.tsx";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "cn";
@@ -35,9 +38,23 @@ const GROUPS: { label: string; products: MetricProduct[] }[] = [
 export function Shell({ plan, children }: { plan: PlanType | null; children: ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const pathname = usePathname();
+  // Who signed in, for the foot of the sidebar. The shell stays while pages change, so it asks once.
+  const [me, setMe] = useState<Me | null | undefined>(undefined);
+  const [meError, setMeError] = useState<string | null>(null);
+  const account: Account = { me, error: meError };
 
   // Opening a page closes the menu.
   useEffect(() => setMenuOpen(false), [pathname]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchMe(controller.signal)
+      .then((body) => setMe(body.me))
+      .catch((reason: unknown) => {
+        if (!controller.signal.aborted) setMeError(reason instanceof Error ? reason.message : String(reason));
+      });
+    return () => controller.abort();
+  }, []);
 
   return (
     <>
@@ -53,7 +70,7 @@ export function Shell({ plan, children }: { plan: PlanType | null; children: Rea
         Skip to content
       </a>
       <aside className="fixed inset-y-0 left-0 z-20 hidden w-(--ds-sidebar-width) border-r border-hairline bg-card lg:block">
-        <Sidebar plan={plan} pathname={pathname} />
+        <Sidebar plan={plan} pathname={pathname} account={account} />
       </aside>
       <header className="sticky top-0 z-20 flex h-14 items-center gap-1 border-b border-hairline bg-card px-2 lg:hidden">
         <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
@@ -62,7 +79,7 @@ export function Shell({ plan, children }: { plan: PlanType | null; children: Rea
           </Button>
           <SheetContent side="left" showCloseButton={false} className="gap-0 p-0 data-[side=left]:w-(--ds-sidebar-width)">
             <SheetTitle className="sr-only">Menu</SheetTitle>
-            <Sidebar plan={plan} pathname={pathname} />
+            <Sidebar plan={plan} pathname={pathname} account={account} />
           </SheetContent>
         </Sheet>
         <Brand plan={null} />
@@ -80,7 +97,7 @@ export function Shell({ plan, children }: { plan: PlanType | null; children: Rea
   );
 }
 
-function Sidebar({ plan, pathname }: { plan: PlanType | null; pathname: string }) {
+function Sidebar({ plan, pathname, account }: { plan: PlanType | null; pathname: string; account: Account }) {
   return (
     <div className="flex h-full flex-col gap-4 overflow-y-auto px-5 pb-6">
       <div className="flex h-16 shrink-0 items-center">
@@ -105,6 +122,9 @@ function Sidebar({ plan, pathname }: { plan: PlanType | null; pathname: string }
           </div>
         ))}
       </nav>
+      <div className="-mx-1 mt-auto pt-4">
+        <AccountMenu account={account} />
+      </div>
     </div>
   );
 }

@@ -1,11 +1,12 @@
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
-import type { TopQueriesResponse, UsageResponse } from "../shared/api.ts";
+import type { MeResponse, TopQueriesResponse, UsageResponse } from "../shared/api.ts";
 import type { MetricsResponse } from "../shared/metrics.ts";
 import { AnalyticsError } from "../worker/analytics.ts";
 import { createApp } from "../worker/app.ts";
 import { noCache } from "../worker/cache.ts";
 import type { Env } from "../worker/env.ts";
-import { AUD, createAccessKeys, TEAM_DOMAIN, type AccessKeys } from "./support/access.ts";
+import type { IdentityFetcher } from "../worker/access.ts";
+import { AUD, createAccessKeys, TEAM_DOMAIN, VIEWER_EMAIL, type AccessKeys } from "./support/access.ts";
 import { FakeUsageSource, usageOf } from "./support/fakes.ts";
 
 const ACCOUNT = "0123456789abcdef0123456789abcdef";
@@ -13,6 +14,12 @@ const NOW = new Date("2026-11-05T12:00:00Z");
 
 let keys: AccessKeys;
 let source: FakeUsageSource;
+// The identity of the session that Access answers, and the requests for it.
+let identity: IdentityFetcher;
+let identityCalls: { teamDomain: string; token: string }[];
+
+/** A sign-in with a passkey at 2026-11-07T05:42:45Z, as Access reports it. */
+const SIGNED_IN_IDENTITY = { email: VIEWER_EMAIL, idp: { id: "idp-passkeys", type: "passkeys" }, iat: 1_794_030_165 };
 
 beforeAll(async () => {
   keys = await createAccessKeys();
@@ -20,6 +27,8 @@ beforeAll(async () => {
 
 beforeEach(() => {
   source = new FakeUsageSource();
+  identity = async () => SIGNED_IN_IDENTITY;
+  identityCalls = [];
 });
 
 function env(overrides: Partial<Env> = {}): Env {
@@ -36,7 +45,16 @@ function env(overrides: Partial<Env> = {}): Env {
 }
 
 function app() {
-  return createApp({ keySetFor: () => keys.keySet, usageSourceFor: () => source, cacheFor: () => noCache, now: () => NOW });
+  return createApp({
+    keySetFor: () => keys.keySet,
+    fetchIdentity: (teamDomain, token) => {
+      identityCalls.push({ teamDomain, token });
+      return identity(teamDomain, token);
+    },
+    usageSourceFor: () => source,
+    cacheFor: () => noCache,
+    now: () => NOW,
+  });
 }
 
 async function get(path: string, options: { token?: string | null; env?: Env; origin?: string } = {}): Promise<Response> {
@@ -62,6 +80,48 @@ describe("Cloudflare Access", () => {
     const local = env({ AUTH_MODE: "local-development" });
     expect((await get("/api/usage", { token: null, env: local, origin: "http://localhost:5173" })).status).toBe(200);
     expect((await get("/api/usage", { token: null, env: local })).status).toBe(403);
+  });
+});
+
+describe("GET /api/me", () => {
+  it("tells who signed in, with the login method and the time of the sign-in from Access", async () => {
+    const token = await keys.sign();
+    const response = await get("/api/me", { token });
+    expect(response.status).toBe(200);
+    expect((await response.json()) as MeResponse).toEqual({
+      me: { email: VIEWER_EMAIL, method: "passkeys", signedInAt: "2026-11-07T05:42:45.000Z", logoutUrl: "/cdn-cgi/access/logout" },
+    });
+    expect(identityCalls).toEqual([{ teamDomain: TEAM_DOMAIN, token }]);
+  });
+
+  it("answers 502 when Access does not tell the login method", async () => {
+    identity = async () => ({ email: VIEWER_EMAIL, iat: 1_794_030_165 });
+    const response = await get("/api/me");
+    expect(response.status).toBe(502);
+    expect(await response.json()).toMatchObject({ error: { code: "access_unavailable" } });
+  });
+
+  it("answers 502 with the reason when Access cannot be reached", async () => {
+    identity = async () => {
+      throw new Error("Cloudflare Access answered 503 for the identity of the session.");
+    };
+    const response = await get("/api/me");
+    expect(response.status).toBe(502);
+    const body = (await response.json()) as { error: { message: string } };
+    expect(body.error.message).toContain("Cloudflare Access answered 503");
+  });
+
+  it("names no person for a service token", async () => {
+    const response = await get("/api/me", { token: await keys.sign({ email: null }) });
+    expect(response.status).toBe(403);
+    expect(identityCalls).toEqual([]);
+  });
+
+  it("names nobody under cf dev, without asking Access", async () => {
+    const response = await get("/api/me", { token: null, env: env({ AUTH_MODE: "local-development" }), origin: "http://localhost:5173" });
+    expect(response.status).toBe(200);
+    expect((await response.json()) as MeResponse).toEqual({ me: null });
+    expect(identityCalls).toEqual([]);
   });
 });
 
