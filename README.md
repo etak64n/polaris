@@ -63,7 +63,7 @@ Create a read-only Cloudflare Account API Token for `ANALYTICS_API_TOKEN` with t
 > [!TIP]
 > **Quick link:** Open the [pre-filled Cloudflare Account API Tokens form](https://dash.cloudflare.com/?to=/:account/api-tokens&permissionGroupKeys=%5B%7B%22key%22%3A%22account_analytics%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22d1%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22da1261c3d38544a4bba805b22566f8b6%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%227cf72faf220841aabcfdfab81c43c4f6%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22workers_kv_storage%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22queues%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22query_cache%22%2C%22type%22%3A%22read%22%7D%5D&name=polaris) to create the token with all seven permissions already selected.
 >
-> If you have more than one Cloudflare account, leave `ANALYTICS_API_TOKEN` empty and run `pnpm stack:deploy`. It prints this link for the account in `.env`.
+> If Cloudflare asks for an account, choose the one that polaris will watch.
 
 ### 2. Clone and Install
 
