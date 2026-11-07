@@ -11,10 +11,23 @@ export function CostSummary({ estimate, paidEstimate }: { estimate: CostEstimate
   return (
     <div className="grid gap-6">
       <div className="flex flex-wrap gap-x-12 gap-y-4">
-        <Figure label="This cycle so far" value={formatMoney(estimate.total)} />
-        <Figure label="Projected" value={estimate.projectedTotal === null ? "—" : formatMoney(estimate.projectedTotal)} />
+        <Figure
+          label="This cycle so far"
+          value={formatMoney(estimate.total)}
+          help="The cost of the usage from the first day of the billing cycle to today, on the current plan."
+        />
+        <Figure
+          label="Projected"
+          value={estimate.projectedTotal === null ? "—" : formatMoney(estimate.projectedTotal)}
+          help="The cost that the billing cycle reaches on its last day if the usage goes on at its pace so far."
+        />
         {paidEstimate !== null && (
-          <Figure label="On Workers Paid" value={formatMoney(paidEstimate.projectedTotal ?? paidEstimate.total)} tone="muted" />
+          <Figure
+            label="On Workers Paid"
+            value={formatMoney(paidEstimate.projectedTotal ?? paidEstimate.total)}
+            tone="muted"
+            help="The projected cost of this billing cycle if the account were on Workers Paid: $5 a month, plus the usage past what the plan includes."
+          />
         )}
       </div>
       <Table className="table-fixed min-w-[640px]">

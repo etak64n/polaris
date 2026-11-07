@@ -5,6 +5,7 @@
 
 import { USAGE_DAYS } from "../../shared/api.ts";
 import type { FreeLimit, FreeLimits as Limits } from "../../shared/limits.ts";
+import { HelpTip } from "@/components/HelpTip.tsx";
 import { Figure, Section } from "@/components/Layout.tsx";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatBytes, formatCompact, formatCount } from "@/lib/format.ts";
@@ -31,7 +32,9 @@ export function FreeLimits({ limits }: { limits: Limits }) {
               <TableHead className="w-40">Item</TableHead>
               <TableHead className="w-28 text-right">Free limit</TableHead>
               <TableHead className="w-28 text-right">Used today</TableHead>
-              <TableHead className="w-44 text-right">Left</TableHead>
+              <TableHead className="w-44 text-right">
+                <LeftHeading />
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -55,7 +58,9 @@ export function FreeLimits({ limits }: { limits: Limits }) {
               <TableHead className="w-40">Item</TableHead>
               <TableHead className="w-28 text-right">Free limit</TableHead>
               <TableHead className="w-28 text-right">Now</TableHead>
-              <TableHead className="w-44 text-right">Left</TableHead>
+              <TableHead className="w-44 text-right">
+                <LeftHeading />
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -80,7 +85,9 @@ export function FreeLimits({ limits }: { limits: Limits }) {
                 <TableHead className="w-40">Item</TableHead>
                 <TableHead className="w-28 text-right">Free amount</TableHead>
                 <TableHead className="w-28 text-right">Projected</TableHead>
-                <TableHead className="w-44 text-right">Left</TableHead>
+                <TableHead className="w-44 text-right">
+                <LeftHeading />
+              </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -98,6 +105,16 @@ export function FreeLimits({ limits }: { limits: Limits }) {
         </Section>
       )}
     </div>
+  );
+}
+
+/** The heading of the Left column, whose ⓘ tells what the share is and how the table is ordered. */
+function LeftHeading() {
+  return (
+    <span className="inline-flex items-center gap-1">
+      Left
+      <HelpTip title="Left">The share of the limit that the usage leaves. Each table puts the limit with the least left first.</HelpTip>
+    </span>
   );
 }
 
