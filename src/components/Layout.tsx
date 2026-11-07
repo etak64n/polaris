@@ -2,6 +2,7 @@
 // tray that holds the white cards of the charts.
 
 import type { ReactNode } from "react";
+import { HelpTip } from "@/components/HelpTip.tsx";
 
 /**
  * A part of a page under a heading, with its controls on the right of the heading.
@@ -51,17 +52,23 @@ export function Figure({
   label,
   value,
   note,
+  help,
   tone = "default",
 }: {
   label: string;
   value: string;
   note?: string;
+  /** What the value means, behind an ⓘ after the label. */
+  help?: ReactNode;
   tone?: "default" | "muted" | "critical";
 }) {
   const color = tone === "muted" ? "text-subdued" : tone === "critical" ? "text-destructive" : "text-foreground";
   return (
     <div className="grid gap-0.5">
-      <span className="text-sm font-semibold text-heading">{label}</span>
+      <span className="flex items-center gap-1 text-sm font-semibold text-heading">
+        {label}
+        {help !== undefined && <HelpTip title={label}>{help}</HelpTip>}
+      </span>
       {/* Plain strings: cn would drop text-figure, which it takes for a color, next to the text color. */}
       <span className={`numeric text-figure font-bold ${color}`}>{value}</span>
       {note !== undefined && <span className="text-xs text-subdued">{note}</span>}
