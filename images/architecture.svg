@@ -15,7 +15,7 @@ CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 <title id="title">Architecture of polaris</title>
 <desc id="desc">A browser signs in through Cloudflare Access to the polaris Worker in your Cloudflare account. The Worker asks Access for its keys, to check the token of the sign-in, and for the person who signed in. The Worker serves the dashboard app, keeps answers in the Cache API, and reads usage from the GraphQL Analytics API, and the names of resources, the Cron Triggers, and the subscriptions from the Cloudflare API, with a read-only API token that it keeps as a secret. pnpm stack:deploy on your machine creates the Access application and the Worker, and puts the token in the Worker.</desc>
 <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#667691"/></marker></defs>
-<rect x="0" y="0" width="960" height="560" rx="12" fill="#ffffff" stroke="none" />
+<rect x="0" y="0" width="960" height="560" rx="0" fill="#ffffff" stroke="none" />
 <rect x="220" y="40" width="548" height="420" rx="16" fill="#f4f7fa" stroke="#d4dee9" stroke-dasharray="6 4"/>
 <g transform="translate(238 52) scale(0.7500)" color="#667691" fill="none" stroke="#667691" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 19A3.5 3.5 0 1 1 6.6 12A5 5 0 1 1 16.5 11.03A4 4 0 1 1 17 19Z"/></g>
 <text x="262" y="66" font-size="13" fill="#667691" font-weight="600">Your Cloudflare account</text>
