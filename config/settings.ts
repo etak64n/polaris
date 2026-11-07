@@ -21,20 +21,23 @@ export interface BillingSettings {
   cycleStartDay: number;
 }
 
+/**
+ * Cloudflare Access, which asks for a sign-in before polaris opens. The team domain of
+ * the Zero Trust organization is not a setting: an account has one organization, and
+ * `pnpm stack:deploy` reads its team domain from Cloudflare.
+ */
 export interface AccessSettings {
-  /** Cloudflare Access team domain, such as https://example.cloudflareaccess.com. */
-  teamDomain: string;
   /**
    * Email addresses of the people who may open polaris. `pnpm stack:deploy` gives
    * the domain an Access application whose only policy allows these addresses.
    */
   allow: string[];
   /**
-   * The login methods of the Zero Trust organization that the sign-in page of the
-   * domain offers, each by its type, such as "onetimepin", "github", or "passkeys",
-   * or by its ID. The Access application allows these login methods only.
+   * The login methods that the sign-in page of the domain offers: "all" for every login
+   * method that the Zero Trust organization has when polaris deploys, or a list of them,
+   * each by its type, such as "onetimepin" or "github", or by its ID.
    */
-  loginMethods: string[];
+  loginMethods: "all" | string[];
 }
 
 /**
@@ -82,7 +85,7 @@ const NO_WHITESPACE = /^\S+$/;
 type Problems = string[];
 type Fields = Record<string, unknown>;
 
-/** Checks the settings and returns them with the team domain normalized to its origin. */
+/** Checks the settings and returns them. */
 export function validateSettings(input: unknown): PolarisSettings {
   const problems: Problems = [];
   const root = readObject(input, "settings", problems);
@@ -135,24 +138,24 @@ function readBilling(input: unknown, problems: Problems): BillingSettings | null
 function readAccess(input: unknown, problems: Problems): AccessSettings | null {
   const access = readObject(input, "access", problems);
   if (access === null) return null;
-  checkKeys(access, "access.", ["teamDomain", "allow", "loginMethods"], problems);
-  const teamDomain = readOrigin(access, "teamDomain", "access.", problems);
+  checkKeys(access, "access.", ["allow", "loginMethods"], problems);
   const allow = readEmails(access, "allow", "access.", problems);
   const loginMethods = readLoginMethods(access, problems);
-  return { teamDomain, allow, loginMethods };
+  return { allow, loginMethods };
 }
 
 // Reads the login methods of the Access application. `pnpm stack:deploy` looks them up
 // in the Zero Trust organization, because only Cloudflare knows which ones exist.
-function readLoginMethods(access: Fields, problems: Problems): string[] {
+function readLoginMethods(access: Fields, problems: Problems): "all" | string[] {
   const path = "access.loginMethods";
   if (!("loginMethods" in access)) {
     problems.push(`${path} is missing.`);
     return [];
   }
   const value = access["loginMethods"];
+  if (value === "all") return "all";
   if (!Array.isArray(value) || !value.every((item) => typeof item === "string" && NO_WHITESPACE.test(item))) {
-    problems.push(`${path} must be a list of login method types or IDs, such as "onetimepin".`);
+    problems.push(`${path} must be "all" or a list of login method types or IDs, such as ["onetimepin"].`);
     return [];
   }
   if (value.length === 0) problems.push(`${path} must name at least one login method.`);
@@ -197,26 +200,6 @@ function readPattern(fields: Fields, key: string, prefix: string, pattern: RegEx
     return "";
   }
   return value;
-}
-
-// Accepts an https:// origin, such as the team domain of Cloudflare Access.
-function readOrigin(fields: Fields, key: string, prefix: string, problems: Problems): string {
-  if (!(key in fields)) {
-    problems.push(`${prefix}${key} is missing.`);
-    return "";
-  }
-  const value = fields[key];
-  if (typeof value !== "string" || !URL.canParse(value)) {
-    problems.push(`${prefix}${key} must be an https:// origin.`);
-    return "";
-  }
-  const url = new URL(value);
-  const isOrigin = url.pathname === "/" && url.search === "" && url.hash === "" && url.username === "" && url.password === "";
-  if (!isOrigin || url.protocol !== "https:") {
-    problems.push(`${prefix}${key} must be an https:// origin.`);
-    return "";
-  }
-  return url.origin;
 }
 
 // Reports keys that polaris does not read, which are usually misspelled settings.
