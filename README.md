@@ -42,7 +42,7 @@ polaris is stateless and requires no database or storage. `pnpm stack:deploy` cr
 
 | Requirement | Details |
 | :--- | :--- |
-| **Cloudflare Account & Zero Trust** | A Cloudflare account with a Zero Trust organization. The Free plan is enough. |
+| **Cloudflare Account & Zero Trust** | Turn on Zero Trust in your Cloudflare account: open **Zero Trust** in the dashboard, choose a team name, and select the Free plan. |
 | **Node.js** | `22.23+`, `24.22+`, or `26.12+` |
 | **pnpm** | `12.16+` |
 
