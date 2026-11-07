@@ -27,10 +27,12 @@ polaris tracks how much of each Cloudflare Free plan limit remains in your accou
 
 ![Architecture of polaris](images/architecture.svg)
 
-polaris requires no database or storage of its own. `pnpm stack:deploy` provisions only two resources in your Cloudflare account:
+polaris is stateless and requires no database or storage. `pnpm stack:deploy` creates two resources in your Cloudflare account:
 
-- **Cloudflare Access Application**: Puts a sign-in gate in front of your dashboard domain so only your allowed email addresses can open it.
-- **Cloudflare Worker**: Serves the static dashboard UI, verifies the Access token on `/api/*`, fetches metrics on demand from Cloudflare's GraphQL Analytics and REST APIs using a read-only token, and caches responses in the Cache API for a few minutes.
+| Resource | Role |
+| :--- | :--- |
+| **Cloudflare Access Application** | Restricts dashboard access to the email addresses you allow. |
+| **Cloudflare Worker** | Hosts the dashboard UI and queries Cloudflare APIs on demand using a read-only token. |
 
 ## Quickstart
 
