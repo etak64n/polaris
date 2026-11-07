@@ -65,8 +65,9 @@ jobs:
           await pointAt(page.getByRole("button", { name: "About Left" }).first());
           await pause(2600);
           await page.mouse.move(760, 640, { steps: 15 });
-          await scrollTo(page.getByRole("heading", { name: "Cost" }));
-          await pointAt(page.getByRole("button", { name: "About Projected" }));
+          await scrollTo(page.getByRole("heading", { name: "Cost", exact: true }));
+          // The ⓘ of the figure, rather than those of the Projected columns of the tables.
+          await pointAt(page.locator('div > span > button[aria-label="About Projected"]'));
           await pause(2600);
           await page.mouse.move(760, 640, { steps: 15 });
           await pause(800);
