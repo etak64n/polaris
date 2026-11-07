@@ -19,13 +19,19 @@ export const ROUTE_PATHS = {
   workersAi: "/workers-ai",
 } as const satisfies Record<Exclude<Route, "not-found">, string>;
 
+/**
+ * Where the app lives: "" on its own domain, and "/polaris" for the demo on GitHub Pages,
+ * which serves a project under its name. Paths in the app leave it out.
+ */
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+
 export function matchRoute(pathname: string): Route {
   const found = (Object.entries(ROUTE_PATHS) as [Exclude<Route, "not-found">, string][]).find(([, path]) => path === pathname);
   return found?.[0] ?? "not-found";
 }
 
 export function navigate(to: string): void {
-  window.history.pushState(null, "", to);
+  window.history.pushState(null, "", BASE + to);
   window.dispatchEvent(new PopStateEvent("popstate"));
   window.scrollTo(0, 0);
 }
@@ -35,9 +41,9 @@ function subscribe(onChange: () => void): () => void {
   return () => window.removeEventListener("popstate", onChange);
 }
 
-/** The path of the page that is open, such as /workers. */
+/** The path of the page that is open, such as /workers, without the base of the app. */
 export function usePathname(): string {
-  return useSyncExternalStore(subscribe, () => window.location.pathname);
+  return useSyncExternalStore(subscribe, () => window.location.pathname.slice(BASE.length) || "/");
 }
 
 export function Link({ to, className, current = false, children }: { to: string; className?: string; current?: boolean; children: ReactNode }) {
@@ -48,7 +54,7 @@ export function Link({ to, className, current = false, children }: { to: string;
     navigate(to);
   }
   return (
-    <a href={to} onClick={handleClick} className={className} aria-current={current ? "page" : undefined}>
+    <a href={BASE + to} onClick={handleClick} className={className} aria-current={current ? "page" : undefined}>
       {children}
     </a>
   );

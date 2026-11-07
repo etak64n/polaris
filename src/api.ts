@@ -14,6 +14,12 @@ export class ApiError extends Error {
 }
 
 async function getJson<T>(path: string, signal: AbortSignal): Promise<T> {
+  // The demo on GitHub Pages answers from sample data in the browser. The production
+  // build drops this branch, and with it the module of the demo.
+  if (import.meta.env.MODE === "demo") {
+    const { demoResponse } = await import("./demo/api.ts");
+    return demoResponse(path) as T;
+  }
   const response = await fetch(path, { signal, headers: { Accept: "application/json" } });
   if (!response.ok) {
     let message = `The request failed with status ${response.status}.`;

@@ -8,6 +8,8 @@
 polaris is a dashboard that shows the usage and the estimated cost of your Cloudflare account.
 You deploy polaris as a single Worker in your own account without a database of its own, and Cloudflare Access protects it.
 
+Try the [demo](https://etak64n.github.io/polaris/), which shows every page with sample data.
+
 ## Contents
 
 - [Features](#features)

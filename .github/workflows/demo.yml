@@ -1,0 +1,58 @@
+# Publishes the demo of polaris to GitHub Pages on every push to main: the browser app
+# with sample data in place of the API (vite.demo.config.ts, src/demo/api.ts).
+name: Demo
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One publication at a time. A newer push replaces a run that has not finished.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      # Installs the pnpm version that "packageManager" in package.json names.
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Pages serves a project site under the name of the repository, such as /polaris/.
+      - name: Build the demo
+        run: pnpm exec vite build --config vite.demo.config.ts --mode demo --base "/${{ github.event.repository.name }}/"
+
+      # Pages answers an unknown path with 404.html, so every page of the app opens from its URL.
+      - run: cp demo-dist/index.html demo-dist/404.html
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: demo-dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
