@@ -91,22 +91,20 @@ async function askForToken(accountId: string): Promise<string> {
       console.log("Saved the token in .env.\n");
       return token;
     }
-    console.log("Cloudflare does not accept that token. Paste it again, or press Ctrl-C to stop.");
+    console.log("Cloudflare does not accept that token as an active account API token of this account. Paste it again, or press Ctrl-C to stop.");
   }
 }
 
 /**
- * Whether Cloudflare accepts the token, as an account API token of the account or as a
- * user API token. An expired or disabled token answers with a status other than active.
+ * Whether Cloudflare accepts the token as an active account API token of the account, the
+ * kind of token that the form creates. A token of another account, a user API token, and an
+ * expired or disabled token do not pass. Cloudflare does not tell the permissions here.
  */
 async function tokenIsActive(accountId: string, token: string): Promise<boolean> {
-  for (const url of [`${API}/accounts/${accountId}/tokens/verify`, `${API}/user/tokens/verify`]) {
-    const response = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-    if (!response.ok) continue;
-    const body = (await response.json()) as { result?: { status?: unknown } };
-    if (body.result?.status === "active") return true;
-  }
-  return false;
+  const response = await fetch(`${API}/accounts/${accountId}/tokens/verify`, { headers: { Authorization: `Bearer ${token}` } });
+  if (!response.ok) return false;
+  const body = (await response.json()) as { result?: { status?: unknown } };
+  return body.result?.status === "active";
 }
 
 /** Reads a line from the terminal without showing what the person types or pastes. */
