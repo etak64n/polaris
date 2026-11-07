@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="960" height="560" viewBox="0 0 960 560" role="img" aria-labelledby="title desc" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
 <!--
 Icons: Lucide (https://lucide.dev), user-round, app-window, shield-check, layout-dashboard,
-braces, database-zap, cloud, chart-line, list, key-round, laptop, and tag.
+braces, database-zap, cloud, key-round, laptop, and tag.
 ISC License. Copyright (c) 2026 Lucide Icons and Contributors.
 Permission to use, copy, modify, and/or distribute this software for any purpose with or
 without fee is hereby granted, provided that the above copyright notice and this permission
@@ -46,15 +46,14 @@ CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 <g transform="translate(480 377) scale(1.0000)" color="#3c4f69" fill="none" stroke="#3c4f69" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 15 21.84"/><path d="M21 5V8"/><path d="M21 12L18 17H22L19 22"/><path d="M3 12A9 3 0 0 0 14.59 14.87"/></g>
 <text x="516" y="383" font-size="14" fill="#1a2c44" font-weight="600">Cache API</text>
 <text x="516" y="402" font-size="12" fill="#3c4f69">keeps answers for a few minutes</text>
-<g transform="translate(800 113) scale(0.7500)" color="#667691" fill="none" stroke="#667691" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></g>
-<text x="824" y="127" font-size="13" fill="#667691" font-weight="600">Cloudflare APIs</text>
+<text x="800" y="127" font-size="13" fill="#667691" font-weight="600">Cloudflare APIs</text>
 <rect x="800" y="140" width="140" height="106" rx="8" fill="#ffffff" stroke="#d4dee9" />
-<g transform="translate(858 152) scale(1.0000)" color="#3c4f69" fill="none" stroke="#3c4f69" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="m19 9-5 5-4-4-3 3"/></g>
+<g transform="translate(858 152) scale(1.0000)" color="#3c4f69" fill="none" stroke="#3c4f69" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></g>
 <text x="870" y="198" font-size="14" fill="#1a2c44" font-weight="600" text-anchor="middle">GraphQL</text>
 <text x="870" y="215" font-size="14" fill="#1a2c44" font-weight="600" text-anchor="middle">Analytics API</text>
 <text x="870" y="235" font-size="12" fill="#3c4f69" text-anchor="middle">usage and metrics</text>
 <rect x="800" y="262" width="140" height="92" rx="8" fill="#ffffff" stroke="#d4dee9" />
-<g transform="translate(858 274) scale(1.0000)" color="#3c4f69" fill="none" stroke="#3c4f69" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h.01"/><path d="M3 12h.01"/><path d="M3 19h.01"/><path d="M8 5h13"/><path d="M8 12h13"/><path d="M8 19h13"/></g>
+<g transform="translate(858 274) scale(1.0000)" color="#3c4f69" fill="none" stroke="#3c4f69" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></g>
 <text x="870" y="320" font-size="14" fill="#1a2c44" font-weight="600" text-anchor="middle">Cloudflare API</text>
 <text x="870" y="340" font-size="12" fill="#3c4f69" text-anchor="middle">names of resources</text>
 <g transform="translate(806 370) scale(0.6667)" color="#667691" fill="none" stroke="#667691" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/></g>
