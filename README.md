@@ -48,7 +48,7 @@ polaris is stateless and requires no database or storage. `pnpm stack:deploy` cr
 
 ### 1. Create an API Token
 
-Open the [pre-filled Cloudflare Account API Tokens form](https://dash.cloudflare.com/?to=/:account/api-tokens&permissionGroupKeys=%5B%7B%22key%22%3A%22account_analytics%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22d1%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22da1261c3d38544a4bba805b22566f8b6%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%227cf72faf220841aabcfdfab81c43c4f6%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22workers_kv_storage%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22queues%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22query_cache%22%2C%22type%22%3A%22read%22%7D%5D&name=polaris) and create a read-only token for your account. The form pre-selects the following permissions:
+Create a read-only Cloudflare Account API Token for `ANALYTICS_API_TOKEN` with the following permissions:
 
 | Permission | Required | Purpose |
 | :--- | :--- | :--- |
@@ -59,6 +59,9 @@ Open the [pre-filled Cloudflare Account API Tokens form](https://dash.cloudflare
 | `Workers KV Storage Read` | Optional | Displays KV namespace names instead of raw IDs. |
 | `Queues Read` | Optional | Displays Queue names instead of raw IDs. |
 | `Hyperdrive Read` | Optional | Displays Hyperdrive config names instead of raw IDs. |
+
+> [!TIP]
+> **Quick link:** Open the [pre-filled Cloudflare Account API Tokens form](https://dash.cloudflare.com/?to=/:account/api-tokens&permissionGroupKeys=%5B%7B%22key%22%3A%22account_analytics%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22d1%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22da1261c3d38544a4bba805b22566f8b6%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%227cf72faf220841aabcfdfab81c43c4f6%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22workers_kv_storage%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22queues%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22query_cache%22%2C%22type%22%3A%22read%22%7D%5D&name=polaris) to create the token with all seven permissions already selected.
 
 ### 2. Clone and Install
 
