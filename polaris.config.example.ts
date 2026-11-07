@@ -17,16 +17,16 @@ export default definePolarisConfig({
     // The day of the month on which the billing cycle starts, as the invoices show it
     cycleStartDay: 1,
   },
-  // Cloudflare Access, which lets only these people open polaris
+  // Cloudflare Access, which asks for a sign-in before polaris opens. pnpm stack:deploy
+  // reads the team domain from the Zero Trust organization of the account.
   access: {
-    // The team domain of your Zero Trust organization
-    teamDomain: "https://example.cloudflareaccess.com",
-    // The email addresses that may sign in
+    // The email addresses of the people who may open polaris
     allow: ["you@example.com"],
-    // The login methods of your Zero Trust organization that the sign-in page offers,
-    // by type, such as "onetimepin", "github", or "passkeys"
-    loginMethods: ["onetimepin"],
+    // The login methods that the sign-in page offers: "all" for every login method of your
+    // Zero Trust organization, or a list such as ["onetimepin", "github"].
+    // pnpm stack:deploy prints the ones that it allows.
+    loginMethods: "all",
   },
-  // Whether the dashboard charts draw lines at the Free plan limits
+  // true draws the limits of the Free plan as lines on the charts; false leaves them out
   freeLimitLines: true,
 });

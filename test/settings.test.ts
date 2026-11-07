@@ -37,12 +37,6 @@ describe("validateSettings", () => {
     expect(validateSettings(input).billing).toEqual({ plan: "paid", cycleStartDay: 31 });
   });
 
-  it("writes the team domain as its origin", () => {
-    const input = settings();
-    input.access.teamDomain = "https://example.cloudflareaccess.com/";
-    expect(validateSettings(input).access.teamDomain).toBe("https://example.cloudflareaccess.com");
-  });
-
   it("lists every problem at once, in the order of the settings", () => {
     const input = { ...settings(), workerName: "Polaris!", billing: { plan: "pro", cycleStartDay: 0 }, extra: true };
     expect(problemsOf(input)).toEqual([
@@ -69,6 +63,16 @@ describe("validateSettings", () => {
     expect(problemsOf({ ...settings(), freeLimitLines: "yes" })).toEqual(["freeLimitLines must be true or false."]);
   });
 
+  it("offers every login method of the organization for all, or the listed ones", () => {
+    expect(validateSettings(settings()).access.loginMethods).toBe("all");
+    const input = settings();
+    input.access.loginMethods = ["onetimepin", "github"];
+    expect(validateSettings(input).access.loginMethods).toEqual(["onetimepin", "github"]);
+    expect(problemsOf({ ...settings(), access: { ...settings().access, loginMethods: "every" } })).toEqual([
+      'access.loginMethods must be "all" or a list of login method types or IDs, such as ["onetimepin"].',
+    ]);
+  });
+
   it("offers at least one login method", () => {
     const input = settings();
     input.access.loginMethods = [];
@@ -84,7 +88,7 @@ describe("validateSettings", () => {
   it("names login methods by a type or an ID without spaces", () => {
     const input = settings();
     input.access.loginMethods = ["one-time pin"];
-    expect(problemsOf(input)).toEqual(['access.loginMethods must be a list of login method types or IDs, such as "onetimepin".']);
+    expect(problemsOf(input)).toEqual(['access.loginMethods must be "all" or a list of login method types or IDs, such as ["onetimepin"].']);
   });
 
   it("asks for at least one email address that may sign in", () => {
@@ -95,9 +99,8 @@ describe("validateSettings", () => {
     expect(problemsOf(input)).toEqual(["access.allow must be a list of one or more email addresses."]);
   });
 
-  it("rejects a team domain without https", () => {
-    const input = settings();
-    input.access.teamDomain = "http://example.cloudflareaccess.com";
-    expect(problemsOf(input)).toEqual(["access.teamDomain must be an https:// origin."]);
+  it("reads no team domain, which pnpm stack:deploy takes from the account", () => {
+    const input = { ...settings(), access: { ...settings().access, teamDomain: "https://example.cloudflareaccess.com" } };
+    expect(problemsOf(input)).toEqual(["access.teamDomain is not a setting that polaris reads."]);
   });
 });

@@ -42,7 +42,7 @@ polaris is stateless and requires no database or storage. `pnpm stack:deploy` cr
 
 | Requirement | Details |
 | :--- | :--- |
-| **Cloudflare Account & Zero Trust** | A Cloudflare account with a Zero Trust organization, which provides your `https://<team>.cloudflareaccess.com` team domain on the Free plan. |
+| **Cloudflare Account & Zero Trust** | A Cloudflare account with a Zero Trust organization. The Free plan is enough. |
 | **Node.js** | `22.23+`, `24.22+`, or `26.12+` |
 | **pnpm** | `12.16+` |
 
@@ -101,11 +101,10 @@ export default definePolarisConfig({
     cycleStartDay: 1,
   },
   access: {
-    teamDomain: "https://example.cloudflareaccess.com",
-    allow: ["you@example.com"],
-    loginMethods: ["onetimepin"],
+    allow: ["you@example.com"], // Who may open polaris
+    loginMethods: "all", // Or a list, such as ["onetimepin", "github"]
   },
-  freeLimitLines: true,
+  freeLimitLines: true, // Draw the Free plan limits on the charts
 });
 ```
 
