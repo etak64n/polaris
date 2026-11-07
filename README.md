@@ -5,7 +5,7 @@
   </picture>
 </h1>
 
-<p align="center">A dashboard on Cloudflare Workers that shows your account's usage against the Free plan limits, a cost estimate, and metrics for Workers, D1, R2, and more.</p>
+<p align="center">A dashboard on Cloudflare Workers that shows your account's usage against the Free plan limits, a cost estimate, and metrics for each product.</p>
 
 <p align="center">
   <a href="https://github.com/etak64n/polaris/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/etak64n/polaris/actions/workflows/ci.yml/badge.svg" /></a>
