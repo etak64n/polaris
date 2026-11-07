@@ -32,7 +32,19 @@ async function main(args: string[]): Promise<void> {
     if (options.length > 0) throw new Error(USAGE);
     const accountId = accountIdOf(env);
     const analyticsApiToken = env.get("ANALYTICS_API_TOKEN") ?? "";
-    if (analyticsApiToken === "") throw new Error("Please set ANALYTICS_API_TOKEN in .env. See .env.example for how to create the token.");
+    if (analyticsApiToken === "") {
+      throw new Error(
+        [
+          "Please set ANALYTICS_API_TOKEN in .env.",
+          "Create the token in the Cloudflare dashboard, in the account of CLOUDFLARE_ACCOUNT_ID,",
+          "under Manage account > Account API tokens, with these permissions:",
+          "  - Account Analytics Read",
+          "  - D1 Read",
+          "  - Workers Metadata Read-Only",
+          "  - Billing Read",
+        ].join("\n"),
+      );
+    }
     console.log(`Deploying the stack ${settings.workerName}.`);
     deployStack({ settings, secrets: { accountId, analyticsApiToken }, cf, log, writeSecretsFile });
     return;
