@@ -146,6 +146,8 @@ describe("GET /api/usage", () => {
     expect(body.days.at(-1)).toEqual(usageOf("2026-11-05", 1));
     expect(body.databaseNames).toEqual({ "db-1": "blog" });
     expect(body.cronTriggers).toBe(2);
+    // The Free plan leaves room for the Cron Triggers of 40 Workers in the subrequests of a request.
+    expect(source.cronCalls).toEqual([40]);
     expect(body.subscriptions).toEqual(source.subscriptionList);
     expect(source.usageCalls).toEqual([{ from: "2026-10-06", to: "2026-11-05" }]);
   });
