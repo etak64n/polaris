@@ -22,6 +22,7 @@
     "polaris.config.ts",
     "polaris.config.example.ts",
     "vite.config.ts",
+    "vite.demo.config.ts",
     "vitest.config.ts",
     "config",
     "stack",
