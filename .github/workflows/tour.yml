@@ -162,7 +162,8 @@ jobs:
           await scrollTo(page.getByRole("heading", { name: "CPU time by handler" }));
           await pause(800);
           const table = await page.locator("table").last().boundingBox();
-          await zoom({ x: table.x, y: table.y, width: table.width, height: Math.min(table.height, 300) }, 1.6, () => pause(3600));
+          // Less zoom than the others, so that every column of the table stays in the view.
+          await zoom({ x: table.x, y: table.y, width: table.width, height: Math.min(table.height, 300) }, 1.3, () => pause(3600));
           await pause(1200);
 
           // The browser sends a frame only when the page changes, so the last frame lasts until here.
