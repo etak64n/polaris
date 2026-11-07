@@ -3,10 +3,15 @@
   src/styles.css maps the theme variables of shadcn/ui onto them.
 */
 :root {
-  /* Accent: the one color that marks what is active, selected, or clickable. */
-  --ds-accent: #533afd;
-  --ds-accent-hover: #4434d4;
-  --ds-accent-subtle: #eae7ff;
+  /*
+    Accent: the one color that marks what is active, selected, or clickable. It is the
+    orange of the star in the polaris logo (#fca000), darkened so that text in it keeps
+    a contrast of 4.5:1 on white and on the subtle accent. The text and lines are navy,
+    as in the logo.
+  */
+  --ds-accent: #a85800;
+  --ds-accent-hover: #8f4a00;
+  --ds-accent-subtle: #fff1d6;
   --ds-on-accent: #ffffff;
   --ds-focus-ring: rgb(1 150 237 / 0.36); /* drawn as a 4px ring: box-shadow 0 0 0 4px */
 
