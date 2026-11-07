@@ -261,7 +261,9 @@ function metrics(product: MetricProduct, range: MetricRange, picked: readonly st
         // The period that is running now has only part of its traffic so far.
         const share = index === count - 1 ? Math.min(1, (now.getTime() - start) / step) : 1;
         const value = (daily * step) / DAY_MS * activity(new Date(start)) * share * jitter(`${resource.key}/${metric}/${start}`, 0.25);
-        return metric === "gbSeconds" || metric.endsWith("Ms") ? Math.round(value * 10) / 10 : Math.round(value);
+        if (metric === "gbSeconds" || metric.endsWith("Ms")) return Math.round(value * 10) / 10;
+        // Rounding that keeps the average, so that a rare count such as errors still shows up.
+        return Math.floor(value + noise(`${resource.key}/${metric}/${start}/round`));
       });
     }
     const gauges: Record<string, (number | null)[]> = {};
