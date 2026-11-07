@@ -1,6 +1,6 @@
 {
   "name": "polaris",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "private": true,
   "description": "A dashboard on Cloudflare Workers that shows your account's usage metrics against the Free plan limits, with a cost estimate.",
   "license": "MIT",
