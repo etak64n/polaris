@@ -44,9 +44,9 @@ polaris is stateless and requires no database or storage. `pnpm stack:deploy` cr
 | **Node.js** | `22.23+`, `24.22+`, or `26.12+` |
 | **pnpm** | `12.16+` |
 
-### 1. Create a Read-Only API Token
+### 1. Create an API Token
 
-Create a read-only Cloudflare Account API Token for `ANALYTICS_API_TOKEN` with the following permissions:
+Open the [pre-filled Cloudflare Account API Tokens form](https://dash.cloudflare.com/?to=/:account/api-tokens&permissionGroupKeys=%5B%7B%22key%22%3A%22account_analytics%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22d1%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22da1261c3d38544a4bba805b22566f8b6%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%227cf72faf220841aabcfdfab81c43c4f6%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22workers_kv_storage%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22queues%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22query_cache%22%2C%22type%22%3A%22read%22%7D%5D&name=polaris) and create a read-only token for your account. The form pre-selects the following permissions:
 
 | Permission | Required | Purpose |
 | :--- | :--- | :--- |
@@ -58,17 +58,29 @@ Create a read-only Cloudflare Account API Token for `ANALYTICS_API_TOKEN` with t
 | `Queues Read` | Optional | Displays Queue names instead of raw IDs. |
 | `Hyperdrive Read` | Optional | Displays Hyperdrive config names instead of raw IDs. |
 
-> [!TIP]
-> **Quick link:** Open the [pre-filled Cloudflare Account API Tokens form](https://dash.cloudflare.com/?to=/:account/api-tokens&permissionGroupKeys=%5B%7B%22key%22%3A%22account_analytics%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22d1%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22da1261c3d38544a4bba805b22566f8b6%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%227cf72faf220841aabcfdfab81c43c4f6%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22workers_kv_storage%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22queues%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22query_cache%22%2C%22type%22%3A%22read%22%7D%5D&name=polaris) to create the token with all seven permissions already selected.
-
-### 2. Configure and Deploy
-
-Install dependencies and copy the configuration templates:
+### 2. Clone and Install
 
 ```bash
+git clone https://github.com/etak64n/polaris.git
+cd polaris
+git checkout latest
 pnpm install
-cp polaris.config.example.ts polaris.config.ts
+```
+
+### 3. Configure
+
+Copy the configuration templates:
+
+```bash
 cp .env.example .env
+cp polaris.config.example.ts polaris.config.ts
+```
+
+Set your account ID and API token in `.env`:
+
+```ini
+CLOUDFLARE_ACCOUNT_ID=your_account_id
+ANALYTICS_API_TOKEN=your_api_token
 ```
 
 Edit `polaris.config.ts` with your billing plan and Cloudflare Access settings:
@@ -78,40 +90,30 @@ import { definePolarisConfig } from "./config/settings.ts";
 
 export default definePolarisConfig({
   workerName: "polaris",
-  // Optional custom domain in your Cloudflare account.
-  // When omitted, polaris runs on <workerName>.<subdomain>.workers.dev.
-  // domain: "usage.example.com",
+  // domain: "usage.example.com", // Optional; defaults to <workerName>.<subdomain>.workers.dev
   billing: {
-    // "free" or "paid": the Workers plan of the account
-    plan: "free",
-    // The day of the month on which the billing cycle starts, as shown on your invoices
+    plan: "free", // "free" or "paid"
     cycleStartDay: 1,
   },
-  // Cloudflare Access settings that control who can open polaris
   access: {
-    // The team domain of your Zero Trust organization
     teamDomain: "https://example.cloudflareaccess.com",
-    // The email addresses allowed to sign in
     allow: ["you@example.com"],
-    // The login methods enabled in your Zero Trust organization,
-    // such as "onetimepin", "github", or "passkeys"
     loginMethods: ["onetimepin"],
   },
-  // Whether the dashboard charts draw lines at the Free plan limits
   freeLimitLines: true,
 });
 ```
 
-Set `CLOUDFLARE_ACCOUNT_ID` and `ANALYTICS_API_TOKEN` in `.env`, then authenticate and deploy:
+### 4. Deploy
 
 ```bash
 pnpm exec cf auth login
 pnpm stack:deploy
 ```
 
-### 3. Update or Delete
+## Updating and Uninstalling
 
-- **Update to the latest release**: Check the [release notes](https://github.com/etak64n/polaris/releases) for any configuration changes, then check out `latest` and redeploy:
+Check the [release notes](https://github.com/etak64n/polaris/releases) for any configuration changes before updating:
 
 ```bash
 git fetch --tags --force
@@ -120,7 +122,7 @@ pnpm install
 pnpm stack:deploy
 ```
 
-- **Delete the deployment**: Remove the Cloudflare Access application and the Worker from your account:
+To remove the Cloudflare Access application and the Worker from your account:
 
 ```bash
 pnpm stack:delete
