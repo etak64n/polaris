@@ -3,6 +3,7 @@
 
 import type { ReactNode } from "react";
 import { HelpTip } from "@/components/HelpTip.tsx";
+import { Skeleton } from "@/components/ui/skeleton";
 
 /**
  * A part of a page under a heading, with its controls on the right of the heading.
@@ -18,6 +19,17 @@ export function Section({ title, aside, large = false, children }: { title: stri
       </div>
       {children}
     </section>
+  );
+}
+
+/** The shape of a page while its data loads: the heading, the filters, and a block. */
+export function LoadingPanels() {
+  return (
+    <div className="grid gap-4">
+      <Skeleton className="h-9 w-48" />
+      <Skeleton className="h-6 w-80 rounded-full" />
+      <Skeleton className="h-80 rounded-2xl" />
+    </div>
   );
 }
 

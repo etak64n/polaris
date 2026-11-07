@@ -4,10 +4,11 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import { ZoomOut } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import type { UsageResponse } from "../../shared/api.ts";
+import type { SettingsResponse } from "../../shared/api.ts";
 import { billingPeriod } from "../../shared/dates.ts";
 import { refreshSeconds, type MetricProduct, type MetricRange, type MetricResource, type MetricsResponse, type Period } from "../../shared/metrics.ts";
 import { DataTable } from "@/components/DataTable.tsx";
+import { ErrorMessage } from "@/components/ErrorMessage.tsx";
 import { AutoRefreshPill } from "@/components/FilterPill.tsx";
 import { Card, Tray } from "@/components/Layout.tsx";
 import { MetricChart, type ChartSeries } from "@/components/MetricChart.tsx";
@@ -23,6 +24,7 @@ import { freeLine, type ChartMetric, type FreeLine } from "@/lib/free.ts";
 import { PERIOD_LABELS, resourceSeries, statisticSeries, timeLabel } from "@/lib/metrics.ts";
 import { MAX_PICKED, productColors, type ProductColors } from "@/lib/series.ts";
 import { useMetrics } from "@/lib/useMetrics.ts";
+import { cn } from "cn";
 
 export interface ChartDefinition {
   title: string;
@@ -45,7 +47,7 @@ export interface ColumnDefinition {
 }
 
 export interface DashboardProps {
-  usage: UsageResponse;
+  settings: SettingsResponse;
   range: MetricRange;
   onRangeChange: (range: MetricRange) => void;
   autoRefresh: boolean;
@@ -58,7 +60,7 @@ function gaugePeriod(period: Period): Period {
 }
 
 export function MetricsDashboard({
-  usage,
+  settings,
   range,
   onRangeChange,
   autoRefresh,
@@ -92,17 +94,25 @@ export function MetricsDashboard({
   // Resources that the legend of the page hides in every chart.
   const [hidden, setHidden] = useState<ReadonlySet<string>>(() => new Set());
   const interval = refreshSeconds(range);
-  const { metrics, error, loading, refreshCount } = useMetrics(product, range, picked, autoRefresh ? interval : null);
+  const { metrics, metricsPicked, current, error, loading, refreshCount, reload } = useMetrics(product, range, picked, autoRefresh ? interval : null);
   const { group, zoomed } = useChartGroup();
-  const cycleDays = billingPeriod(usage.today, usage.cycleStartDay).days;
+  const cycleDays = billingPeriod(settings.today, settings.cycleStartDay).days;
+  // Metrics of an earlier range or pick stay, dimmed, while the new ones load. After a
+  // failure they go, since they would stand under filters that they do not answer.
+  const showMetrics = metrics !== null && (current || error === null);
 
   // A new range brings other times, so the charts show all of them again.
   useEffect(() => group.resetZoom(), [group, range]);
   const label = useMemo(() => (key: string): string => (metrics === null ? key : labelOf(key, metrics)), [metrics, labelOf]);
+  // The colors follow the pick that the metrics answer, so that the charts and the table
+  // agree with each other while new metrics load.
   const colors = useMemo(
-    () => productColors(metrics?.resources.map((resource) => resource.key) ?? [], label, picked),
-    [metrics, label, picked],
+    () => productColors(metrics?.resources.map((resource) => resource.key) ?? [], label, metricsPicked),
+    [metrics, label, metricsPicked],
   );
+  // The page has one legend when the charts show more than one resource. Without the
+  // legend, nothing on the page could show a hidden resource again, so none is hidden.
+  const legendShown = colors.series.length > 1;
   const rows = metrics?.resources ?? [];
 
   function toggleHidden(key: string) {
@@ -144,9 +154,9 @@ export function MetricsDashboard({
   // that a refresh of the page that changes nothing does not draw the charts again.
   const views = useMemo(() => {
     if (metrics === null) return [];
-    const shown = picked.length === 0 ? metrics.resources : metrics.resources.filter((resource) => picked.includes(resource.key));
+    const shown = metricsPicked.length === 0 ? metrics.resources : metrics.resources.filter((resource) => metricsPicked.includes(resource.key));
     return charts.map((chart): ChartView => {
-      const free = chart.free === undefined || !usage.freeLimitLines ? null : freeLine(chart.free, cycleDays);
+      const free = chart.free === undefined || !settings.freeLimitLines ? null : freeLine(chart.free, cycleDays);
       // A daily limit compares with the sum of a day, but a level such as storage compares at any period.
       const line = chart.kind === "sum" && metrics.period !== "1d" ? null : free;
       // The line shows on the chart once the usage comes near it. Far under it, the
@@ -199,7 +209,7 @@ export function MetricsDashboard({
         note: at === null ? undefined : `As of ${timeLabel(metrics.times[at] ?? "", metrics.period)}`,
       };
     });
-  }, [metrics, charts, colors, picked, usage.freeLimitLines, cycleDays]);
+  }, [metrics, charts, colors, metricsPicked, settings.freeLimitLines, cycleDays]);
 
   return (
     <>
@@ -222,8 +232,8 @@ export function MetricsDashboard({
             ) : undefined
           }
         />
-        {error !== null && <p className="error-box break-words">{error}</p>}
-        {metrics === null ? (
+        {error !== null && <ErrorMessage message={error} onRetry={reload} />}
+        {!showMetrics ? (
           error === null && (
             <Tray>
               {charts.map((chart) => (
@@ -232,8 +242,8 @@ export function MetricsDashboard({
             </Tray>
           )
         ) : (
-          <>
-            <SeriesLegend series={colors.series} hidden={hidden} onToggle={toggleHidden} onPoint={(key) => group.highlight(key)} />
+          <div aria-busy={!current} className={cn("grid min-w-0 gap-2 transition-opacity duration-150", !current && "opacity-50")}>
+            {legendShown && <SeriesLegend series={colors.series} hidden={hidden} onToggle={toggleHidden} onPoint={(key) => group.highlight(key)} />}
             <Tray>
               {views.map(({ chart, series, line, figure, note }) => (
                 <Card key={`${chart.metric}/${chart.kind}`} title={chart.title} help={chart.help} figure={figure} note={note}>
@@ -249,31 +259,33 @@ export function MetricsDashboard({
                     group={group}
                     // Charts of resources follow the legend of the page; the figure of a chart of
                     // p50 and p99 names the colors of its lines.
-                    hidden={chart.kind === "quantile" ? NONE_HIDDEN : hidden}
+                    hidden={chart.kind === "quantile" || !legendShown ? NONE_HIDDEN : hidden}
                   />
                 </Card>
               ))}
             </Tray>
-          </>
+          </div>
         )}
       </div>
-      {metrics !== null && (
+      {showMetrics && (
         // Every resource with its totals over the range. A checked resource shows in the
         // charts on its own, as in the picker; with none checked, the charts show all.
-        <DataTable
-          caption={tableTitle}
-          data={rows}
-          columns={tableColumns}
-          searchText={(row) => `${label(row.key)} ${row.key}`}
-          initialSort={[{ id: initialSort, desc: true }]}
-          selection={{
-            label: `Show in the charts`,
-            isSelected: (row) => picked.includes(row.key),
-            canSelect: () => picked.length < MAX_PICKED,
-            toggle: (row) => togglePicked(row.key),
-            rowLabel: (row) => `Show ${label(row.key)} in the charts`,
-          }}
-        />
+        <div aria-busy={!current} className={cn("min-w-0 transition-opacity duration-150", !current && "opacity-50")}>
+          <DataTable
+            caption={tableTitle}
+            data={rows}
+            columns={tableColumns}
+            searchText={(row) => `${label(row.key)} ${row.key}`}
+            initialSort={[{ id: initialSort, desc: true }]}
+            selection={{
+              label: `Show in the charts`,
+              isSelected: (row) => picked.includes(row.key),
+              canSelect: () => picked.length < MAX_PICKED,
+              toggle: (row) => togglePicked(row.key),
+              rowLabel: (row) => `Show ${label(row.key)} in the charts`,
+            }}
+          />
+        </div>
       )}
       {children?.({ colors, picked, label, refreshCount })}
     </>

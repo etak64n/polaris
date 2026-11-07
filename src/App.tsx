@@ -1,14 +1,17 @@
-// The app: loads the usage of the billing cycle, and shows the page that the URL names.
-// The product pages load their own metrics for the time range that they share.
+// The app: loads the settings that every page needs, and shows the page that the URL
+// names. The overview loads the usage of the billing cycle, and the product pages load
+// their own metrics for the time range that they share.
 
 import { lazy, Suspense, useEffect, useState, type ComponentType, type LazyExoticComponent, type ReactNode } from "react";
-import type { UsageResponse } from "../shared/api.ts";
+import type { SettingsResponse } from "../shared/api.ts";
 import type { MetricProduct, MetricRange } from "../shared/metrics.ts";
 import type { DashboardProps } from "@/components/MetricsDashboard.tsx";
 import { PRODUCT_NAMES } from "@/lib/products.ts";
-import { fetchUsage } from "@/api.ts";
+import { fetchSettings } from "@/api.ts";
+import { ErrorBoundary } from "@/components/ErrorBoundary.tsx";
+import { ErrorMessage } from "@/components/ErrorMessage.tsx";
+import { LoadingPanels } from "@/components/Layout.tsx";
 import { Shell } from "@/components/Shell.tsx";
-import { Skeleton } from "@/components/ui/skeleton";
 import { NotFoundPage } from "@/pages/NotFoundPage.tsx";
 import { OverviewPage } from "@/pages/OverviewPage.tsx";
 import { matchRoute, usePathname, type Route } from "@/router.tsx";
@@ -33,8 +36,9 @@ export function App() {
   const route = matchRoute(usePathname());
   const [range, setRange] = useState<MetricRange>("1d");
   const [autoRefresh, setAutoRefresh] = useState(false);
-  const [usage, setUsage] = useState<UsageResponse | null>(null);
+  const [settings, setSettings] = useState<SettingsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     document.title = `${TITLES[route]} - polaris`;
@@ -43,42 +47,35 @@ export function App() {
   useEffect(() => {
     const controller = new AbortController();
     setError(null);
-    // The billing cycle, which the cost estimate and the free lines need.
-    fetchUsage(controller.signal)
-      .then(setUsage)
+    // The plan, the billing cycle, and the free lines, which the pages need.
+    fetchSettings(controller.signal)
+      .then(setSettings)
       .catch((reason: unknown) => {
         if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : String(reason));
       });
     return () => controller.abort();
-  }, []);
+  }, [attempt]);
 
   let page: ReactNode;
   if (route === "not-found") page = <NotFoundPage />;
-  else if (usage === null) page = error === null ? <LoadingPanels /> : null;
-  else if (route === "overview") page = <OverviewPage usage={usage} />;
+  else if (settings === null) page = error === null ? <LoadingPanels /> : null;
+  else if (route === "overview") page = <OverviewPage />;
   else {
     const Page = PAGES[route];
     page = (
       <Suspense fallback={<LoadingPanels />}>
-        <Page usage={usage} range={range} onRangeChange={setRange} autoRefresh={autoRefresh} onAutoRefreshChange={setAutoRefresh} />
+        <Page settings={settings} range={range} onRangeChange={setRange} autoRefresh={autoRefresh} onAutoRefreshChange={setAutoRefresh} />
       </Suspense>
     );
   }
 
   return (
-    <Shell plan={usage?.plan ?? null}>
-      {error !== null && <p className="error-box break-words">{error}</p>}
-      {page}
+    <Shell plan={settings?.plan ?? null}>
+      {error !== null && <ErrorMessage message={error} onRetry={() => setAttempt((count) => count + 1)} />}
+      {/* A page that crashes leaves the sidebar, and opening another page starts afresh. */}
+      <ErrorBoundary key={route} area="page">
+        {page}
+      </ErrorBoundary>
     </Shell>
-  );
-}
-
-function LoadingPanels() {
-  return (
-    <div className="grid gap-4">
-      <Skeleton className="h-9 w-48" />
-      <Skeleton className="h-6 w-80 rounded-full" />
-      <Skeleton className="h-80 rounded-2xl" />
-    </div>
   );
 }

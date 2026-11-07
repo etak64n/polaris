@@ -10,7 +10,7 @@ if (root === null) throw new Error("index.html has no element with the ID root."
 
 createRoot(root).render(
   <StrictMode>
-    <ErrorBoundary>
+    <ErrorBoundary area="screen">
       <TooltipProvider>
         <App />
       </TooltipProvider>

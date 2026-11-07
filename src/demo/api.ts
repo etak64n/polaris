@@ -7,6 +7,7 @@ import {
   USAGE_DAYS,
   type MeResponse,
   type QueryOrder,
+  type SettingsResponse,
   type TopQueriesResponse,
   type TopQuery,
   type UsageResponse,
@@ -147,14 +148,15 @@ function dayUsage(date: string, share: number, today: string): DailyUsage {
   };
 }
 
+function settings(now: Date): SettingsResponse {
+  return { plan: "free", cycleStartDay: 1, freeLimitLines: true, today: utcDate(now) };
+}
+
 function usage(now: Date): UsageResponse {
   const today = utcDate(now);
   const todayShare = (now.getTime() - Date.parse(`${today}T00:00:00Z`)) / DAY_MS;
   return {
-    plan: "free",
-    cycleStartDay: 1,
-    freeLimitLines: true,
-    today,
+    ...settings(now),
     days: datesBetween(addDays(today, -(USAGE_DAYS - 1)), today).map((date) => dayUsage(date, date === today ? todayShare : 1, today)),
     databaseNames: Object.fromEntries(DATABASES.map((database) => [database.id, database.name])),
     cronTriggers: 2,
@@ -437,6 +439,8 @@ export function demoResponse(path: string): unknown {
   switch (url.pathname) {
     case "/api/me":
       return me(now);
+    case "/api/settings":
+      return settings(now);
     case "/api/usage":
       return usage(now);
     case "/api/metrics": {

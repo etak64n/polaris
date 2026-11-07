@@ -13,6 +13,6 @@ export interface Env {
   BILLING_CYCLE_START_DAY: string;
   /** "true" or "false": whether the charts draw the limits of the Free plan. */
   FREE_LIMIT_LINES: string;
-  /** API token with Account Analytics Read and D1 Read on the account. */
+  /** A read-only API token of the account, with the permissions that .env.example lists. */
   ANALYTICS_API_TOKEN: string;
 }

@@ -58,8 +58,11 @@ export type GaugeMetric<P extends MetricProduct> = (typeof PRODUCT_METRICS)[P]["
 export const STATISTICS = ["p50", "p99"] as const;
 export type Statistic = (typeof STATISTICS)[number];
 
-/** The series key of the resources that are not shown one by one. */
-export const OTHER_SERIES = "other";
+/**
+ * The series key of the resources that are not shown one by one. The names and IDs of
+ * resources never hold parentheses, so a resource named "other" keeps its own series.
+ */
+export const OTHER_SERIES = "(other)";
 
 /** The most resources that a request can pick. */
 export const MAX_PICKED_RESOURCES = 5;

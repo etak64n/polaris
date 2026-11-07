@@ -17,7 +17,7 @@ import { axisEndLabel, periodLabel } from "@/lib/metrics.ts";
 import { cn } from "cn";
 
 export interface ChartSeries {
-  /** The resource, such as a Worker name, "other", or a statistic such as p99. */
+  /** The resource, such as a Worker name, OTHER_SERIES, or a statistic such as p99. */
   key: string;
   label: string;
   /** A CSS color, such as var(--chart-1). */
@@ -26,8 +26,11 @@ export interface ChartSeries {
   values: (number | null)[];
 }
 
-/** The series that draws the free line. It has no legend and no row in the tooltip. */
-const FREE_SERIES = "free";
+/**
+ * The series that draws the free line. It has no legend and no row in the tooltip. The
+ * names and IDs of resources never hold parentheses, so no resource takes this key.
+ */
+const FREE_SERIES = "(free)";
 
 interface OptionInput {
   kind: "stacked" | "lines";
@@ -162,7 +165,10 @@ export function MetricChart({
           })}
         </ul>
       )}
-      <div ref={container} className="h-48 w-full" />
+      {/* min-w-0 lets the box narrow below the width of the canvas that ECharts drew, so the
+          chart follows a window that shrinks: otherwise the column of the grid keeps the
+          width of the canvas, the box never narrows, and the chart spills over its card. */}
+      <div ref={container} className="h-48 w-full min-w-0" />
     </figure>
   );
 }
@@ -175,6 +181,8 @@ function chartOption({ kind, times, period, series, format, tickFormat, line, zo
   const last = stamps.at(-1) ?? first;
   const [from, to] = zoom ?? [first, last];
   const keys = new Map(series.map((item) => [item.key, item]));
+  // Counts, such as requests, step by whole numbers on the value axis, not by 0.25.
+  const whole = series.every((item) => item.values.every((value) => value === null || Number.isInteger(value)));
 
   const surface = canvasColor("var(--ds-surface)");
   const lines: LineSeries[] = series.map((item) => {
@@ -302,6 +310,7 @@ function chartOption({ kind, times, period, series, format, tickFormat, line, zo
       position: "right",
       min: 0,
       splitNumber: 4,
+      ...(whole ? { minInterval: 1 } : {}),
       axisLine: { show: false },
       axisTick: { show: false },
       splitLine: { lineStyle: { color: canvasColor("var(--ds-chart-grid)"), width: 1 } },

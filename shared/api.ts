@@ -6,6 +6,17 @@ import type { DailyUsage } from "./usage.ts";
 /** The days that /api/usage returns: today and the days before it, which cover the current billing cycle. */
 export const USAGE_DAYS = 31;
 
+/** The settings of the deployment that every page needs, and today in UTC. */
+export interface SettingsResponse {
+  plan: PlanType;
+  /** The day of the month on which the billing cycle starts. */
+  cycleStartDay: number;
+  /** Whether the charts draw a line at the limits of the Free plan. */
+  freeLimitLines: boolean;
+  /** Today in UTC. */
+  today: string;
+}
+
 export interface UsageResponse {
   plan: PlanType;
   /** The day of the month on which the billing cycle starts. */

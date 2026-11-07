@@ -3,17 +3,41 @@
 // on the Free plan it tells when to pay for Workers Paid, and on Workers Paid whether
 // the usage would fit the Free plan again. The estimated bill of the billing cycle follows.
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { UsageResponse } from "../../shared/api.ts";
 import { estimateCost } from "../../shared/cost.ts";
 import { freeLimits } from "../../shared/limits.ts";
+import { fetchUsage } from "@/api.ts";
 import { CostSummary } from "@/components/CostSummary.tsx";
+import { ErrorMessage } from "@/components/ErrorMessage.tsx";
 import { FreeLimits } from "@/components/FreeLimits.tsx";
 import { Subscriptions } from "@/components/Subscriptions.tsx";
-import { Section } from "@/components/Layout.tsx";
+import { LoadingPanels, Section } from "@/components/Layout.tsx";
 import { formatDate } from "@/lib/format.ts";
 
-export function OverviewPage({ usage }: { usage: UsageResponse }) {
+/** Loads the usage of the billing cycle, which only the overview needs, each time it opens. */
+export function OverviewPage() {
+  const [usage, setUsage] = useState<UsageResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setError(null);
+    fetchUsage(controller.signal)
+      .then(setUsage)
+      .catch((reason: unknown) => {
+        if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : String(reason));
+      });
+    return () => controller.abort();
+  }, [attempt]);
+
+  if (error !== null) return <ErrorMessage message={error} onRetry={() => setAttempt((count) => count + 1)} />;
+  if (usage === null) return <LoadingPanels />;
+  return <Overview usage={usage} />;
+}
+
+function Overview({ usage }: { usage: UsageResponse }) {
   const free = usage.plan === "free";
   const estimate = useMemo(() => estimateCost(usage.days, usage.plan, usage.cycleStartDay, usage.today), [usage]);
   const paidEstimate = useMemo(
