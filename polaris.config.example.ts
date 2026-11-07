@@ -8,7 +8,9 @@ import { definePolarisConfig } from "./config/settings.ts";
 
 export default definePolarisConfig({
   workerName: "polaris",
-  domain: "usage.example.com",
+  // Optional custom domain in your Cloudflare account.
+  // When omitted, polaris runs on <workerName>.<subdomain>.workers.dev.
+  // domain: "usage.example.com",
   billing: {
     // "free" or "paid": the Workers plan of the account
     plan: "free",

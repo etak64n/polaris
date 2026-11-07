@@ -5,7 +5,7 @@ import { CfError, type Cf } from "../stack/cf.ts";
 import { parseEnvFile } from "../stack/env-file.ts";
 import { deleteStack, deployStack, loginMethodIds, STACK_TAG, stackResources, type LoginMethod, type StackResource } from "../stack/stack.ts";
 
-const settings = validateSettings(example);
+const settings = validateSettings({ ...example, domain: "usage.example.com" });
 const SECRETS = { accountId: "0123456789abcdef0123456789abcdef", analyticsApiToken: "token" };
 // The login methods of the organization. The example settings name "onetimepin".
 const LOGIN_METHODS: LoginMethod[] = [
@@ -93,6 +93,46 @@ describe("deployStack", () => {
       { resource_type: "worker", resource_id: "worker-1", tags: { [STACK_TAG]: "polaris" } },
     ]);
     expect(resources.map((resource) => resource.type)).toEqual(["access_application", "worker"]);
+  });
+
+  it("resolves the workers.dev hostname when domain is omitted", () => {
+    let deployed = false;
+    const cf = new FakeCf((args) => {
+      const command = args.slice(0, 3).join(" ");
+      if (command === "zero-trust identity-providers list") return LOGIN_METHODS;
+      if (command === "zero-trust access applications") {
+        if (args[3] === "list") return [];
+        if (args[3] === "create") return { id: "app-1", aud: "aud-1", domain: "polaris.acct.workers.dev" };
+      }
+      if (command === "workers get polaris") {
+        return deployed
+          ? { id: "worker-1", name: "polaris", subdomain: { url: "https://polaris.acct.workers.dev" } }
+          : notFound(args);
+      }
+      if (command === "workers list --per-page") {
+        return [{ id: "worker-0", name: "other", subdomain: { url: "https://other.acct.workers.dev" } }];
+      }
+      if (command === "tags account-resources get") return untagged(args);
+      return {};
+    });
+    const run = cf.run.bind(cf);
+    cf.run = (args) => {
+      run(args);
+      deployed = true;
+    };
+    const lines: string[] = [];
+
+    deployStack({
+      settings: validateSettings(example),
+      secrets: SECRETS,
+      cf,
+      log: (line) => lines.push(line),
+      writeSecretsFile: writeSecretsFile([], []),
+    });
+
+    const created = cf.callsOf("zero-trust", "access", "applications", "create")[0] ?? [];
+    expect(JSON.parse(created[created.indexOf("--body") + 1] ?? "{}").domain).toBe("polaris.acct.workers.dev");
+    expect(lines.at(-1)).toBe("\npolaris runs at https://polaris.acct.workers.dev/");
   });
 
   it("updates the Access application of the domain and keeps the other tags", () => {

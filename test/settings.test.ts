@@ -17,8 +17,18 @@ function problemsOf(input: unknown): string[] {
 }
 
 describe("validateSettings", () => {
-  it("accepts the example settings as they are", () => {
+  it("accepts the example settings without a custom domain", () => {
     expect(validateSettings(settings())).toEqual(example);
+  });
+
+  it("accepts an optional custom domain", () => {
+    const input = { ...settings(), domain: "usage.example.com" };
+    expect(validateSettings(input).domain).toBe("usage.example.com");
+  });
+
+  it("rejects an invalid custom domain", () => {
+    const input = { ...settings(), domain: "https://usage.example.com" };
+    expect(problemsOf(input)).toEqual(["domain must be a lowercase hostname without a scheme or path."]);
   });
 
   it("accepts the Paid plan and the last days of a month", () => {
@@ -46,7 +56,6 @@ describe("validateSettings", () => {
   it("reports missing settings instead of using defaults", () => {
     expect(problemsOf({})).toEqual([
       "workerName is missing.",
-      "domain is missing.",
       "billing is missing.",
       "access is missing.",
       "freeLimitLines is missing.",
