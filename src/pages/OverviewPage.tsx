@@ -1,7 +1,7 @@
-// The overview, in the manner of the home of the Stripe Dashboard. On the Free plan
-// it starts with the limits of the plan and the share of each that the usage leaves,
-// which decides whether to pay for Workers Paid, and then the estimated bill of the
-// billing cycle.
+// The overview, in the manner of the home of the Stripe Dashboard. It starts with the
+// limits of the Free plan and the share of each that the usage leaves, on either plan:
+// on the Free plan it tells when to pay for Workers Paid, and on Workers Paid whether
+// the usage would fit the Free plan again. The estimated bill of the billing cycle follows.
 
 import { useMemo } from "react";
 import type { UsageResponse } from "../../shared/api.ts";
@@ -29,11 +29,9 @@ export function OverviewPage({ usage }: { usage: UsageResponse }) {
     <>
       {/* The sections carry the large headings, as on the home of the Stripe Dashboard. */}
       <h1 className="sr-only">Overview</h1>
-      {free && (
-        <Section large title="Free plan limits">
-          <FreeLimits limits={limits} />
-        </Section>
-      )}
+      <Section large title="Free plan limits">
+        <FreeLimits limits={limits} />
+      </Section>
       <Section
         large
         title="Cost"
