@@ -21,7 +21,7 @@
   · <a href="https://github.com/etak64n/polaris/issues">Issues</a>
 </p>
 
-[![The overview of polaris, with the sample data of the demo](images/overview.png)](https://etak64n.github.io/polaris/)
+[![A tour of polaris, with the sample data of the demo](images/tour.gif)](https://etak64n.github.io/polaris/)
 
 polaris tracks how much of each Cloudflare Free plan limit remains in your account. On the Free plan, it shows when to upgrade to Workers Paid; on Workers Paid, it shows whether your usage fits the Free plan again. It also estimates your current billing-cycle cost and charts metrics across Workers, D1, R2, KV, Durable Objects, Queues, Workflows, Hyperdrive, Browser Run, and Workers AI.
 
