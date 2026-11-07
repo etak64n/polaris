@@ -1,7 +1,7 @@
 # Records the tour of the demo that the README shows at its top, from the demo on GitHub
 # Pages: the Free plan limits with a help frame, the cost, and the dashboard of Workers,
-# zooming in on the details, between a card that opens it and a card that closes it. Run
-# it by hand after the screens change, then put the artifact at images/tour.gif.
+# zooming in on the details, with the logo at its start and its end. Run it by hand after
+# the screens change, then put the artifact at images/tour.gif.
 name: Tour
 
 on:
@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      # The logo of the cards that open and close the tour.
+      # The logo that opens and closes the tour.
       - uses: actions/checkout@v7
         with:
           path: repo
@@ -101,25 +101,17 @@ jobs:
             return locator;
           };
 
-          // The cards that open and close the tour, so that its start and its end show when the
-          // GIF plays again and again: the logo, and a line or two under it.
+          // The card of the logo that opens and closes the tour, so that its start and its end
+          // show when the GIF plays again and again.
           const logo = readFileSync("repo/images/polaris-wordmark.png").toString("base64");
           mkdirSync("frames", { recursive: true });
-          const card = async (lines, file) => {
-            const sheet = await context.newPage();
-            const text = lines
-              .map(([size, color, line]) => `<p style="margin:0;font-size:${size}px;color:${color}">${line}</p>`)
-              .join("");
-            await sheet.setContent(
-              `<body style="margin:0;height:100vh;display:grid;place-items:center;background:#fff;font-family:system-ui,sans-serif">` +
-                `<div style="display:grid;justify-items:center;gap:22px"><img src="data:image/png;base64,${logo}" style="width:460px" alt="">${text}</div></body>`,
-            );
-            await sheet.screenshot({ path: file, scale: "css", type: "jpeg", quality: 92 });
-            await sheet.close();
-          };
-          const demo = process.env.DEMO_URL.replace(/^https:\/\//, "").replace(/\/$/, "");
-          await card([[30, "#3c4f69", "A tour of the demo"]], "frames/start.jpg");
-          await card([[30, "#3c4f69", "Try the live demo"], [24, "#a85800", demo]], "frames/end.jpg");
+          const sheet = await context.newPage();
+          await sheet.setContent(
+            `<body style="margin:0;height:100vh;display:grid;place-items:center;background:#fff">` +
+              `<img src="data:image/png;base64,${logo}" style="width:460px" alt=""></body>`,
+          );
+          await sheet.screenshot({ path: "frames/logo.jpg", scale: "css", type: "jpeg", quality: 92 });
+          await sheet.close();
 
           await page.goto(process.env.DEMO_URL);
           await page.getByRole("heading", { name: "Free plan limits" }).waitFor();
@@ -173,6 +165,8 @@ jobs:
           await zoom({ x: table.x, y: table.y, width: table.width, height: Math.min(table.height, 300) }, 1.6, () => pause(3600));
           await pause(1200);
 
+          // The browser sends a frame only when the page changes, so the last frame lasts until here.
+          const stopped = seconds();
           await client.send("Page.stopScreencast");
           await context.close();
           await browser.close();
@@ -180,17 +174,18 @@ jobs:
           // The frames, each shown until the next one, between the cards, and the zooms on the
           // same clock. The concat demuxer keeps the duration of the last file only when the file
           // comes again after it.
-          const OPENING = 2.2;
-          const CLOSING = 3;
+          const OPENING = 1.5;
+          const CLOSING = 1.5;
           const start = frames[0].time - OPENING;
-          const lines = ["ffconcat version 1.0", "file 'frames/start.jpg'", `duration ${OPENING}`];
+          const lines = ["ffconcat version 1.0", "file 'frames/logo.jpg'", `duration ${OPENING}`];
           frames.forEach((frame, index) => {
             const file = `frames/${String(index).padStart(5, "0")}.jpg`;
             writeFileSync(file, Buffer.from(frame.data, "base64"));
             const next = frames[index + 1];
-            lines.push(`file '${file}'`, `duration ${next === undefined ? 1 : Math.max(0.001, next.time - frame.time).toFixed(3)}`);
+            const until = next === undefined ? Math.max(stopped, frame.time + 0.1) : next.time;
+            lines.push(`file '${file}'`, `duration ${Math.max(0.001, until - frame.time).toFixed(3)}`);
           });
-          lines.push("file 'frames/end.jpg'", `duration ${CLOSING}`, "file 'frames/end.jpg'");
+          lines.push("file 'frames/logo.jpg'", `duration ${CLOSING}`, "file 'frames/logo.jpg'");
           writeFileSync("tour.ffconcat", lines.join("\n") + "\n");
 
           // zoompan reads the time from the number of the output frame, at FPS frames a second.
@@ -210,7 +205,7 @@ jobs:
             "split[a][b];[a]palettegen=max_colors=96:stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle",
           ].join(",");
           writeFileSync("filter.txt", filter);
-          const total = frames.at(-1).time - start + 1 + CLOSING;
+          const total = Math.max(stopped, frames.at(-1).time + 0.1) - start + CLOSING;
           writeFileSync("previews.txt", [1, ...windows.map((w) => (w.from + w.to) / 2), total - 1].map((time) => time.toFixed(2)).join("\n") + "\n");
           // The size of a JPEG frame, from its start-of-frame segment.
           const sizeOf = (jpeg) => {
