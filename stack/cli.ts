@@ -95,11 +95,16 @@ async function askForToken(accountId: string): Promise<string> {
   }
 }
 
-/** Whether Cloudflare accepts the token, as an account API token of the account or as a user API token. */
+/**
+ * Whether Cloudflare accepts the token, as an account API token of the account or as a
+ * user API token. An expired or disabled token answers with a status other than active.
+ */
 async function tokenIsActive(accountId: string, token: string): Promise<boolean> {
   for (const url of [`${API}/accounts/${accountId}/tokens/verify`, `${API}/user/tokens/verify`]) {
     const response = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-    if (response.ok) return true;
+    if (!response.ok) continue;
+    const body = (await response.json()) as { result?: { status?: unknown } };
+    if (body.result?.status === "active") return true;
   }
   return false;
 }
