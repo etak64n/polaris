@@ -4,7 +4,6 @@ import { validateSettings } from "../config/settings.ts";
 import example from "../polaris.config.example.ts";
 import { CfError, type Cf } from "../stack/cf.ts";
 import { parseEnvFile } from "../stack/env-file.ts";
-import { TOKEN_PERMISSIONS, tokenFormUrl } from "../stack/token-form.ts";
 import { deleteStack, deployStack, STACK_TAG, stackResources, type StackResource } from "../stack/stack.ts";
 
 const settings = validateSettings({ ...example, domain: "usage.example.com" });
@@ -256,20 +255,14 @@ describe("parseEnvFile", () => {
   });
 });
 
-describe("tokenFormUrl", () => {
-  const ACCOUNT = "0123456789abcdef0123456789abcdef";
-
-  it("opens the token form of the account in .env, with the name and the permissions of polaris", () => {
-    const url = new URL(tokenFormUrl(ACCOUNT));
-    expect(`${url.origin}${url.pathname}`).toBe(`https://dash.cloudflare.com/${ACCOUNT}/api-tokens/create`);
-    expect(url.searchParams.get("name")).toBe("polaris");
-    expect(JSON.parse(url.searchParams.get("permissionGroupKeys") ?? "[]")).toEqual(TOKEN_PERMISSIONS);
-  });
-
-  it("selects the same permissions as the quick link of the README", () => {
-    const readme = readFileSync(new URL("../README.md", import.meta.url), "utf8");
-    const link = /\((https:\/\/dash\.cloudflare\.com\/\?to=\/:account\/api-tokens[^)]*)\)/.exec(readme)?.[1];
-    expect(link).toBeDefined();
-    expect(JSON.parse(new URL(link ?? "https://invalid").searchParams.get("permissionGroupKeys") ?? "[]")).toEqual(TOKEN_PERMISSIONS);
+describe("the link to the token form", () => {
+  it("selects the same permissions in the README and in .env.example", () => {
+    const linkIn = (file: string): string => {
+      const text = readFileSync(new URL(file, import.meta.url), "utf8");
+      return /https:\/\/dash\.cloudflare\.com\/\?to=\/:account\/api-tokens[^\s)]*/.exec(text)?.[0] ?? "";
+    };
+    const readme = linkIn("../README.md");
+    expect(readme).toContain("permissionGroupKeys=");
+    expect(linkIn("../.env.example")).toBe(readme);
   });
 });
