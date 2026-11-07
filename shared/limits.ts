@@ -22,7 +22,7 @@
 
 import type { CostLine } from "./cost.ts";
 import { FREE_D1_STORAGE_BYTES, FREE_DAILY_LIMITS, GB } from "./pricing.ts";
-import type { DailyUsage } from "./usage.ts";
+import { throughLastSample, type DailyUsage } from "./usage.ts";
 
 /** The largest D1 database that the Workers Free plan allows. */
 export const FREE_D1_DATABASE_BYTES = 500_000_000;
@@ -70,7 +70,7 @@ export interface FreeLimit {
 export interface FreeLimits {
   /** The limits per day, against the usage of today, the UTC day that ends the days. They reset at 00:00 UTC. */
   daily: FreeLimit[];
-  /** The limits on sizes and counts, against the usage now. */
+  /** The limits on sizes and counts, against the usage now: the last sample of the sizes. */
   sizes: FreeLimit[];
   /** The free amounts of R2 per month, against the usage projected to the end of the cycle. */
   monthly: FreeLimit[];
@@ -112,13 +112,16 @@ export function freeLimits(days: DailyUsage[], databases: number, cronTriggers: 
     ofToday(latest, "browser-run-time", "Browser Run", "Browser time", FREE_OTHER_DAILY_LIMITS.browserRunMinutes, (day) => day.browserRunMs / 60_000, "minutes"),
     ofToday(latest, "workflows-steps", "Workflows", "Steps", FREE_OTHER_DAILY_LIMITS.workflowsSteps, (day) => day.workflowsSteps),
   ];
-  const sizes = (latest?.d1 ?? []).map((database) => database.storageBytes);
+  // A size is that of the last day with a sample, so a new UTC day does not read as empty.
+  const d1Day = throughLastSample(days, (day) => sum(day.d1.map((database) => database.storageBytes))).at(-1);
+  const sizes = (d1Day?.d1 ?? []).map((database) => database.storageBytes);
+  const durableObjectsDay = throughLastSample(days, (day) => day.durableObjects.storageBytes).at(-1);
   const now = [
     current("workers-cron-triggers", "Workers", "Cron Triggers", cronTriggers, FREE_CRON_TRIGGERS, "count"),
     current("d1-storage", "D1", "Storage", sum(sizes), FREE_D1_STORAGE_BYTES, "bytes"),
     current("d1-largest", "D1", "Largest database", Math.max(0, ...sizes), FREE_D1_DATABASE_BYTES, "bytes"),
     current("d1-databases", "D1", "Databases", databases, FREE_D1_DATABASES, "count"),
-    current("do-storage", "Durable Objects", "Storage", latest?.durableObjects.storageBytes ?? 0, FREE_DURABLE_OBJECTS_STORAGE_BYTES, "bytes"),
+    current("do-storage", "Durable Objects", "Storage", durableObjectsDay?.durableObjects.storageBytes ?? 0, FREE_DURABLE_OBJECTS_STORAGE_BYTES, "bytes"),
   ];
   const monthly: FreeLimit[] = [];
   for (const line of r2Lines) {

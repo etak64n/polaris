@@ -8,6 +8,7 @@ import {
   type ApiErrorBody,
   type MeResponse,
   type QueryOrder,
+  type SettingsResponse,
   type TopQueriesResponse,
   type UsageResponse,
   type WorkerHandlersResponse,
@@ -44,17 +45,12 @@ export interface AppDependencies {
   /** Asks Access for the full identity of the session behind a token. */
   fetchIdentity: IdentityFetcher;
   usageSourceFor: (config: RuntimeConfig) => UsageSource;
-  /** The cache for one request. */
-  cacheFor: () => JsonCache;
+  /** Keeps the answers of Cloudflare for a few minutes. */
+  cache: JsonCache;
   now: () => Date;
 }
 
 const USAGE_CACHE_SECONDS = 300;
-/**
- * The shape of the cached days. It changes with DailyUsage, so a newly deployed
- * Worker never reads days that an older one cached in another shape.
- */
-const USAGE_SHAPE = "v3";
 const NAMES_CACHE_SECONDS = 3600;
 const TOP_QUERY_COUNT = 20;
 /**
@@ -117,15 +113,28 @@ export function createApp(dependencies: AppDependencies) {
     return c.json(body);
   });
 
+  // The settings that every page needs. They come from the bindings of the Worker, so this
+  // answers without asking Cloudflare, and a page can open while the usage still loads.
+  app.get("/api/settings", (c) => {
+    const config = c.get("config");
+    const body: SettingsResponse = {
+      plan: config.plan,
+      cycleStartDay: config.cycleStartDay,
+      freeLimitLines: config.freeLimitLines,
+      today: utcDate(dependencies.now()),
+    };
+    return c.json(body);
+  });
+
   app.get("/api/usage", async (c) => {
     const config = c.get("config");
     const today = utcDate(dependencies.now());
     const from = addDays(today, -(USAGE_DAYS - 1));
     const source = dependencies.usageSourceFor(config);
-    const cache = dependencies.cacheFor();
+    const cache = dependencies.cache;
 
     const [days, databaseNames, cronTriggers, subscriptions] = await Promise.all([
-      cache.get(`usage/${USAGE_SHAPE}/${config.accountId}/${from}/${today}`, USAGE_CACHE_SECONDS, () => source.dailyUsage(from, today)),
+      cache.get(`usage/${config.accountId}/${from}/${today}`, USAGE_CACHE_SECONDS, () => source.dailyUsage(from, today)),
       cache.get(`d1-names/${config.accountId}`, NAMES_CACHE_SECONDS, () => source.databaseNames()),
       cache.get(`cron-triggers/${config.accountId}`, USAGE_CACHE_SECONDS, () => source.cronTriggers(CRON_LOOKUPS[config.plan])),
       cache.get(`subscriptions/${config.accountId}`, USAGE_CACHE_SECONDS, () => source.subscriptions()),
@@ -151,12 +160,13 @@ export function createApp(dependencies: AppDependencies) {
     const picked = readPicked(product, c.req.queries("resource"));
     const now = dependencies.now();
     const source = dependencies.usageSourceFor(config);
-    const cache = dependencies.cacheFor();
+    const cache = dependencies.cache;
     const seconds = refreshSeconds(range);
-    // One key per cache lifetime, so a cached answer never outlives its periods.
+    // One key per cache lifetime, so a cached answer never outlives its periods. JSON keeps
+    // a pick of the resource without a name, "", apart from no pick at all.
     const slot = Math.floor(now.getTime() / (seconds * 1000));
     const [metrics, names] = await Promise.all([
-      cache.get(`metrics/${config.accountId}/${product}/${range}/${picked.join(",")}/${slot}`, seconds, () =>
+      cache.get(`metrics/${config.accountId}/${product}/${range}/${JSON.stringify(picked)}/${slot}`, seconds, () =>
         source.metrics(product, range, picked, now),
       ),
       product === "d1"
@@ -177,7 +187,7 @@ export function createApp(dependencies: AppDependencies) {
     const databaseIds = readDatabaseIds(c.req.queries("database"));
     const today = utcDate(dependencies.now());
     const from = addDays(today, -(dayCount - 1));
-    const queries = await dependencies.cacheFor().get(
+    const queries = await dependencies.cache.get(
       `top-queries/${config.accountId}/${from}/${today}/${order}/${databaseIds.join(",")}`,
       USAGE_CACHE_SECONDS,
       () => dependencies.usageSourceFor(config).topQueries(from, today, order, TOP_QUERY_COUNT, databaseIds),
@@ -193,7 +203,7 @@ export function createApp(dependencies: AppDependencies) {
     const scriptNames = readWorkerNames(c.req.queries("worker"));
     const today = utcDate(dependencies.now());
     const from = addDays(today, -(dayCount - 1));
-    const handlers = await dependencies.cacheFor().get(
+    const handlers = await dependencies.cache.get(
       `worker-handlers/${config.accountId}/${from}/${today}/${scriptNames.join(",")}`,
       USAGE_CACHE_SECONDS,
       () => dependencies.usageSourceFor(config).workerHandlers(from, today, WORKER_HANDLER_COUNT, scriptNames),

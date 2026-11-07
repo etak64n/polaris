@@ -7,7 +7,7 @@
 import { billingPeriod, type BillingPeriod } from "./dates.ts";
 import type { PlanType } from "./plan.ts";
 import { GB, PAID_PRICES, PAID_SUBSCRIPTION, R2_PRICES, type CountPrice, type StoragePrice } from "./pricing.ts";
-import { totalsOf, type DailyUsage, type Metric } from "./usage.ts";
+import { throughLastSample, totalsOf, type DailyUsage, type Metric } from "./usage.ts";
 
 export type Product = "Workers" | "D1" | "R2";
 
@@ -106,10 +106,12 @@ class CycleUsage {
 
   /**
    * Storage, which Cloudflare bills by the average of the daily peak over the cycle.
-   * The cost so far is the share of the cycle that has passed.
+   * The cost so far is the share of the cycle that has passed. A day that Cloudflare has
+   * not sampled yet stays out of the average, rather than count as empty.
    */
   storage(product: Product, item: string, metric: Metric, price: StoragePrice | null): CostLine {
-    const averageGb = this.#days.length === 0 ? 0 : sum(this.#days.map((day) => day[metric] / GB)) / this.#days.length;
+    const sampled = throughLastSample(this.#days, (day) => day[metric]);
+    const averageGb = sampled.length === 0 ? 0 : sum(sampled.map((day) => day[metric] / GB)) / sampled.length;
     const cycleCost = price === null ? 0 : Math.max(0, averageGb - price.includedGb) * price.perGbMonth;
     return {
       product,

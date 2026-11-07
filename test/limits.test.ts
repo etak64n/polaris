@@ -46,6 +46,16 @@ describe("freeLimits", () => {
     expect(byId.get("d1-databases")).toMatchObject({ used: 4, limit: 10 });
   });
 
+  it("takes the sizes of the day before until Cloudflare samples today", () => {
+    const yesterday = { ...day("2026-11-03", 30_000, 0, [450_000_000, 50_000_000]), durableObjects: { ...emptyDay("2026-11-03").durableObjects, storageBytes: 2_000_000_000 } };
+    // Shortly after 00:00 UTC, today has queries but no sample of the sizes yet.
+    const today = day("2026-11-04", 100, 0, [0]);
+    const sizes = new Map(freeLimits([yesterday, today], 2, 0, []).sizes.map((limit) => [limit.id, limit.used]));
+    expect(sizes.get("d1-storage")).toBe(500_000_000);
+    expect(sizes.get("d1-largest")).toBe(450_000_000);
+    expect(sizes.get("do-storage")).toBe(2_000_000_000);
+  });
+
   it("compares the KV operations of today with their daily limits", () => {
     expect(byId.get("kv-writes")).toMatchObject({ used: 50, limit: 1_000 });
     expect(byId.get("kv-writes")?.left).toBeCloseTo(0.95);

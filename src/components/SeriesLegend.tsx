@@ -1,6 +1,7 @@
 // The one legend of the resources on a page. Every chart of resources takes the
 // same colors, so one legend explains them all: pressing a name hides or shows that
-// resource in every chart, and pointing at it brings it out in every chart.
+// resource in every chart, and pointing at it brings it out in every chart. The page
+// shows it only when the charts have more than one resource.
 
 import type { Series } from "@/lib/series.ts";
 import { cn } from "cn";
@@ -17,7 +18,6 @@ export function SeriesLegend({
   /** The resource under the pointer, or null when the pointer leaves the legend. */
   onPoint: (key: string | null) => void;
 }) {
-  if (series.length < 2) return null;
   return (
     <ul className="flex flex-wrap gap-x-4 gap-y-1 py-1" aria-label="Resources in the charts">
       {series.map((item) => {

@@ -15,19 +15,19 @@ export function CostSummary({ estimate, paidEstimate }: { estimate: CostEstimate
         <Figure
           label="This cycle so far"
           value={formatMoney(estimate.total)}
-          help="The cost of the usage from the first day of the billing cycle to today, on the current plan."
+          help="The cost of the usage of Workers, D1, and R2 from the first day of the billing cycle to today, on the current plan."
         />
         <Figure
           label="Projected"
           value={estimate.projectedTotal === null ? "—" : formatMoney(estimate.projectedTotal)}
-          help="The cost that the billing cycle reaches on its last day if the usage goes on at its pace so far."
+          help="The cost of Workers, D1, and R2 that the billing cycle reaches on its last day if the usage goes on at its pace so far."
         />
         {paidEstimate !== null && (
           <Figure
             label="On Workers Paid"
-            value={formatMoney(paidEstimate.projectedTotal ?? paidEstimate.total)}
+            value={paidEstimate.projectedTotal === null ? "—" : formatMoney(paidEstimate.projectedTotal)}
             tone="muted"
-            help="The projected cost of this billing cycle if the account were on Workers Paid: $5 a month, plus the usage past what the plan includes."
+            help="The projected cost of this billing cycle if the account were on Workers Paid: $5 a month, plus the usage of Workers, D1, and R2 past what the plan includes. It leaves out the other products, such as KV and Durable Objects."
           />
         )}
       </div>

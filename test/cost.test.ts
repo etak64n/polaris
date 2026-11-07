@@ -91,6 +91,15 @@ describe("estimateCost of storage", () => {
   });
 });
 
+describe("estimateCost of storage before today is sampled", () => {
+  it("averages the sizes of the days that Cloudflare has sampled", () => {
+    // 20 GB every day from the 1st to the 4th; the 5th has no sample yet.
+    const days = [...every("2026-11-01", "2026-11-04", { r2Bytes: 20 * GB }), day("2026-11-05")];
+    const storage = line(estimateCost(days, "free", 1, "2026-11-05"), "R2", "Storage");
+    expect(storage.used).toBeCloseTo(20);
+  });
+});
+
 describe("estimateCost of the cycle", () => {
   it("counts only the days of the current billing cycle", () => {
     const days = [day("2026-10-31", { classA: 50_000_000 }), ...every("2026-11-01", "2026-11-02", { classA: 10 })];

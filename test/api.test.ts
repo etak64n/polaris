@@ -1,9 +1,9 @@
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
-import type { MeResponse, TopQueriesResponse, UsageResponse, WorkerHandlersResponse } from "../shared/api.ts";
+import type { MeResponse, SettingsResponse, TopQueriesResponse, UsageResponse, WorkerHandlersResponse } from "../shared/api.ts";
 import type { MetricsResponse } from "../shared/metrics.ts";
 import { AnalyticsError } from "../worker/analytics.ts";
 import { createApp } from "../worker/app.ts";
-import { noCache } from "../worker/cache.ts";
+import { memoryCache, noCache, type JsonCache } from "../worker/cache.ts";
 import type { Env } from "../worker/env.ts";
 import type { IdentityFetcher } from "../worker/access.ts";
 import { AUD, createAccessKeys, TEAM_DOMAIN, VIEWER_EMAIL, type AccessKeys } from "./support/access.ts";
@@ -45,7 +45,7 @@ function env(overrides: Partial<Env> = {}): Env {
   };
 }
 
-function app() {
+function app(cache: JsonCache) {
   return createApp({
     keySetFor: () => keys.keySet,
     fetchIdentity: (teamDomain, token) => {
@@ -53,15 +53,15 @@ function app() {
       return identity(teamDomain, token);
     },
     usageSourceFor: () => source,
-    cacheFor: () => noCache,
+    cache,
     now: () => NOW,
   });
 }
 
-async function get(path: string, options: { token?: string | null; env?: Env; origin?: string } = {}): Promise<Response> {
+async function get(path: string, options: { token?: string | null; env?: Env; origin?: string; cache?: JsonCache } = {}): Promise<Response> {
   const token = options.token === undefined ? await keys.sign() : options.token;
   const headers: Record<string, string> = token === null ? {} : { "Cf-Access-Jwt-Assertion": token };
-  return app().request(`${options.origin ?? "https://usage.example.com"}${path}`, { headers }, options.env ?? env());
+  return app(options.cache ?? noCache).request(`${options.origin ?? "https://usage.example.com"}${path}`, { headers }, options.env ?? env());
 }
 
 describe("Cloudflare Access", () => {
@@ -75,6 +75,25 @@ describe("Cloudflare Access", () => {
   it("answers nothing to a token for another application", async () => {
     const response = await get("/api/usage", { token: await keys.sign({ audience: "another-app" }) });
     expect(response.status).toBe(403);
+  });
+
+  it("answers nothing to a token that has expired", async () => {
+    const response = await get("/api/usage", { token: await keys.sign({ expiresAt: Math.floor(Date.now() / 1000) - 60 }) });
+    expect(response.status).toBe(403);
+    expect(source.usageCalls).toHaveLength(0);
+  });
+
+  it("answers nothing to a token from another Access team", async () => {
+    const response = await get("/api/usage", { token: await keys.sign({ issuer: "https://another.cloudflareaccess.com" }) });
+    expect(response.status).toBe(403);
+    expect(source.usageCalls).toHaveLength(0);
+  });
+
+  it("answers nothing to a token that another key signed", async () => {
+    const forged = await createAccessKeys();
+    const response = await get("/api/usage", { token: await forged.sign() });
+    expect(response.status).toBe(403);
+    expect(source.usageCalls).toHaveLength(0);
   });
 
   it("answers localhost without a token in the local development mode, and nothing else", async () => {
@@ -123,6 +142,20 @@ describe("GET /api/me", () => {
     expect(response.status).toBe(200);
     expect((await response.json()) as MeResponse).toEqual({ me: null });
     expect(identityCalls).toEqual([]);
+  });
+});
+
+describe("GET /api/settings", () => {
+  it("returns the settings of the deployment and today, without asking Cloudflare", async () => {
+    const response = await get("/api/settings", { env: env({ BILLING_PLAN: "paid", BILLING_CYCLE_START_DAY: "13", FREE_LIMIT_LINES: "false" }) });
+    expect(response.status).toBe(200);
+    expect((await response.json()) as SettingsResponse).toEqual({ plan: "paid", cycleStartDay: 13, freeLimitLines: false, today: "2026-11-05" });
+    expect(source.usageCalls).toHaveLength(0);
+    expect(source.cronCalls).toHaveLength(0);
+  });
+
+  it("answers nothing without an Access token", async () => {
+    expect((await get("/api/settings", { token: null })).status).toBe(403);
   });
 });
 
@@ -251,6 +284,14 @@ describe("GET /api/metrics", () => {
   it("takes the account as the only resource of Browser Run", async () => {
     expect((await get("/api/metrics?product=browserRun&range=1d&resource=")).status).toBe(200);
     expect((await get("/api/metrics?product=browserRun&range=1d&resource=session")).status).toBe(400);
+  });
+
+  it("keeps the answer for a pick of the bucket without a name apart from the answer for no pick", async () => {
+    const cache = memoryCache(() => NOW.getTime());
+    expect((await get("/api/metrics?product=r2&range=1d", { cache })).status).toBe(200);
+    expect((await get("/api/metrics?product=r2&range=1d&resource=", { cache })).status).toBe(200);
+    expect((await get("/api/metrics?product=r2&range=1d", { cache })).status).toBe(200);
+    expect(source.metricCalls.map((call) => call.picked)).toEqual([[], [""]]);
   });
 
   it("refuses an unknown product, range, or resource, and more resources than the most", async () => {

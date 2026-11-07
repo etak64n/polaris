@@ -1,6 +1,6 @@
 // Calls the polaris API and turns its errors into messages for the screen.
 
-import type { ApiErrorBody, MeResponse, QueryOrder, TopQueriesResponse, UsageResponse, WorkerHandlersResponse } from "../shared/api.ts";
+import type { ApiErrorBody, MeResponse, QueryOrder, SettingsResponse, TopQueriesResponse, UsageResponse, WorkerHandlersResponse } from "../shared/api.ts";
 import type { MetricProduct, MetricRange, MetricsResponse } from "../shared/metrics.ts";
 
 export class ApiError extends Error {
@@ -37,6 +37,11 @@ async function getJson<T>(path: string, signal: AbortSignal): Promise<T> {
 /** Who signed in through Access, and how and when, or nobody under `cf dev`. */
 export function fetchMe(signal: AbortSignal): Promise<MeResponse> {
   return getJson("/api/me", signal);
+}
+
+/** The settings that every page needs, such as the plan and the day the billing cycle starts. */
+export function fetchSettings(signal: AbortSignal): Promise<SettingsResponse> {
+  return getJson("/api/settings", signal);
 }
 
 /** The usage of the last days, which cover the current billing cycle. */

@@ -87,6 +87,19 @@ export function emptyDay(date: string): DailyUsage {
   };
 }
 
+/**
+ * The days through the last one whose storage Cloudflare has sampled. Cloudflare samples
+ * storage during the day, so a new UTC day has no size until its first sample arrives,
+ * shortly after 00:00 UTC. A last day without any size, after a day with one, is such a
+ * day, and is left out until its sample arrives.
+ */
+export function throughLastSample<T>(days: readonly T[], bytesOf: (day: T) => number): T[] {
+  const last = days.at(-1);
+  const before = days.at(-2);
+  if (last !== undefined && before !== undefined && bytesOf(last) === 0 && bytesOf(before) > 0) return days.slice(0, -1);
+  return [...days];
+}
+
 /** The usage of every resource of a day, added up per metric. */
 export interface UsageTotals {
   workerRequests: number;

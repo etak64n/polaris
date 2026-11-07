@@ -15,6 +15,14 @@ describe("productColors", () => {
     expect(colors.seriesOf("unknown")).toBeNull();
   });
 
+  it("keeps a resource named other apart from Other", () => {
+    const colors = productColors(["other", "b", "c", "d", "e", "f"], label, []);
+    expect(colors.series.map((series) => series.key)).toEqual(["other", "b", "c", "d", "e", OTHER_KEY]);
+    expect(new Set(colors.series.map((series) => series.key)).size).toBe(6);
+    expect(colors.seriesOf("other")?.label).toBe("OTHER");
+    expect(colors.seriesOf("f")?.key).toBe(OTHER_KEY);
+  });
+
   it("leaves Other out when every resource has a color", () => {
     const colors = productColors(["a", "b"], label, []);
     expect(colors.series.map((series) => series.key)).toEqual(["a", "b"]);

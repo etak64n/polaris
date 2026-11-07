@@ -70,6 +70,21 @@ describe("productMetrics", () => {
     expect(metrics.quantiles["cpuTimeMs"]?.p50.at(-2)).toBeNull();
   });
 
+  it("keeps a Worker named other apart from the series of the rest", async () => {
+    const names = ["other", "b", "c", "d", "e", "f"];
+    const { graphql } = graphqlAnswering(() => ({
+      sums: names.map((key, rank) => workerRow(key, "2026-11-06T10:30:00Z", 60 - rank * 10)),
+      stats: [],
+    }));
+
+    const metrics = await productMetrics(graphql, "workers", "1h", [], NOW);
+
+    const requests = metrics.sums["requests"] ?? {};
+    expect(metrics.shown).toContain("other");
+    expect(requests["other"]?.at(-1)).toBe(60);
+    expect(requests[OTHER_SERIES]?.at(-1)).toBe(10);
+  });
+
   it("shows only the picked resources and computes their quantiles together", async () => {
     const { graphql, calls } = graphqlAnswering(() => ({
       sums: [workerRow("api", "2026-11-06T10:30:00Z", 5), workerRow("web", "2026-11-06T10:30:00Z", 9)],
