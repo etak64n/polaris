@@ -4,7 +4,7 @@ import { MetricsDashboard, type ChartDefinition, type ColumnDefinition, type Das
 import { formatCount } from "@/lib/format.ts";
 
 const CHARTS: ChartDefinition[] = [
-  { title: "Neurons", metric: "neurons", kind: "sum", format: formatCount },
+  { title: "Neurons", help: "The unit in which Workers AI measures the work of its models. The Free plan allows 10,000 a day.", metric: "neurons", kind: "sum", format: formatCount },
   { title: "Requests", metric: "requests", kind: "sum", format: formatCount },
 ];
 

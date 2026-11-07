@@ -9,6 +9,7 @@ import type { WorkerHandlersResponse } from "../../shared/api.ts";
 import { FREE_CPU_MS_PER_INVOCATION } from "../../shared/limits.ts";
 import { fetchWorkerHandlers } from "@/api.ts";
 import { SelectPill } from "@/components/FilterPill.tsx";
+import { WithHelp } from "@/components/HelpTip.tsx";
 import { ResourceName } from "@/components/ResourceName.tsx";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -77,12 +78,23 @@ export function WorkerHandlers({
           <TableHeader>
             <TableRow>
               <TableHead>Worker</TableHead>
-              <TableHead className="w-24">Handler</TableHead>
+              <TableHead className="w-24">
+                <WithHelp label="Handler" help="The kind of invocation that the Worker handled: HTTP for requests, Cron for Cron Triggers, Queue for the messages of a queue, and so on." />
+              </TableHead>
               <TableHead className="w-28 text-right">Invocations</TableHead>
               <TableHead className="w-28 text-right">CPU time</TableHead>
-              <TableHead className="w-24 text-right">p50</TableHead>
-              <TableHead className="w-24 text-right">p99</TableHead>
-              <TableHead className="w-24 text-right">Free limit</TableHead>
+              <TableHead className="w-24 text-right">
+                <WithHelp label="p50" help="Half of the invocations used less CPU time than this." />
+              </TableHead>
+              <TableHead className="w-24 text-right">
+                <WithHelp label="p99" help="99 in 100 invocations used less CPU time than this." />
+              </TableHead>
+              <TableHead className="w-28 text-right">
+                <WithHelp
+                  label="Free limit"
+                  help="The CPU time that the Free plan allows each HTTP request and each Cron Trigger. A Worker may go past it now and then, but one that goes past it again and again is stopped."
+                />
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

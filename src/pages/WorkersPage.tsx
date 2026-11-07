@@ -7,12 +7,12 @@ import { WorkerHandlers } from "@/components/WorkerHandlers.tsx";
 import { formatCount, formatDuration } from "@/lib/format.ts";
 
 const CHARTS: ChartDefinition[] = [
-  { title: "Requests", metric: "requests", kind: "sum", format: formatCount, free: "workerRequests" },
-  { title: "Errors", metric: "errors", kind: "sum", format: formatCount },
-  { title: "CPU time per request", metric: "cpuTimeMs", kind: "quantile", format: formatDuration, tickFormat: formatDuration },
-  { title: "Wall time per request", metric: "wallTimeMs", kind: "quantile", format: formatDuration, tickFormat: formatDuration },
-  { title: "Subrequests", metric: "subrequests", kind: "sum", format: formatCount },
-  { title: "CPU time", metric: "cpuTimeMs", kind: "sum", format: formatDuration, tickFormat: formatDuration, free: "workerCpuMs" },
+  { title: "Requests", help: "The invocations of the Workers: the HTTP requests, and the runs of Cron Triggers and the other handlers.", metric: "requests", kind: "sum", format: formatCount, free: "workerRequests" },
+  { title: "Errors", help: "The invocations that failed, such as those that threw an exception or went past a limit.", metric: "errors", kind: "sum", format: formatCount },
+  { title: "CPU time per request", help: "The CPU time of one invocation: half of the invocations use less than p50, and 99 in 100 less than p99. CPU time leaves out the time spent waiting, such as for a fetch.", metric: "cpuTimeMs", kind: "quantile", format: formatDuration, tickFormat: formatDuration },
+  { title: "Wall time per request", help: "The time from the start to the end of one invocation, at p50 and p99. Unlike CPU time, it counts the time spent waiting, such as for a fetch.", metric: "wallTimeMs", kind: "quantile", format: formatDuration, tickFormat: formatDuration },
+  { title: "Subrequests", help: "The requests that the Workers sent while they ran, such as with fetch().", metric: "subrequests", kind: "sum", format: formatCount },
+  { title: "CPU time", help: "The CPU time of all the invocations. Workers Paid bills it past 30 million ms a month, and the Free plan limits each invocation to 10 ms instead.", metric: "cpuTimeMs", kind: "sum", format: formatDuration, tickFormat: formatDuration, free: "workerCpuMs" },
 ];
 
 const COLUMNS: ColumnDefinition[] = [

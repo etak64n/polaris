@@ -11,10 +11,10 @@ const formatGbSeconds = (value: number): string => `${formatCompact(value)} GB-s
 const CHARTS: ChartDefinition[] = [
   { title: "Requests", metric: "requests", kind: "sum", format: formatCount },
   { title: "Errors", metric: "errors", kind: "sum", format: formatCount },
-  { title: "Duration", metric: "gbSeconds", kind: "sum", format: formatGbSeconds, tickFormat: formatGbSeconds },
+  { title: "Duration", help: "The time that the Durable Objects were active, in GB-seconds: each second counts the 128 MB of memory of an object. The Free plan allows 13,000 GB-s a day.", metric: "gbSeconds", kind: "sum", format: formatGbSeconds, tickFormat: formatGbSeconds },
   { title: "Storage", metric: "storageBytes", kind: "gauge", format: formatBytes, tickFormat: formatBytes },
-  { title: "Rows read", metric: "rowsRead", kind: "sum", format: formatCount },
-  { title: "Rows written", metric: "rowsWritten", kind: "sum", format: formatCount },
+  { title: "Rows read", help: "The rows that the storage of the Durable Objects read. The key-value methods, such as get(), read rows too.", metric: "rowsRead", kind: "sum", format: formatCount },
+  { title: "Rows written", help: "The rows that the storage of the Durable Objects wrote. Deletes and the key-value methods, such as put(), write rows too.", metric: "rowsWritten", kind: "sum", format: formatCount },
 ];
 
 const COLUMNS: ColumnDefinition[] = [

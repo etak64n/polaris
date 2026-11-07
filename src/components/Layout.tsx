@@ -31,11 +31,27 @@ export function Tray({ children }: { children: ReactNode }) {
  * the name, the figure large under it, a note such as the time of the figure, and
  * the chart.
  */
-export function Card({ title, figure, note, children }: { title: string; figure?: ReactNode; note?: string; children: ReactNode }) {
+export function Card({
+  title,
+  help,
+  figure,
+  note,
+  children,
+}: {
+  title: string;
+  /** What the card shows, behind an ⓘ after the title. */
+  help?: ReactNode;
+  figure?: ReactNode;
+  note?: string;
+  children: ReactNode;
+}) {
   return (
     <article className="grid min-w-0 content-start gap-3 rounded-lg bg-card p-5">
       <header className="grid gap-0.5">
-        <h2 className="text-sm font-semibold text-heading">{title}</h2>
+        <h2 className="flex items-center gap-1 text-sm font-semibold text-heading">
+          {title}
+          {help !== undefined && <HelpTip title={title}>{help}</HelpTip>}
+        </h2>
         {figure !== undefined && <div className="numeric flex flex-wrap items-baseline gap-x-2 text-figure font-bold text-foreground">{figure}</div>}
         {note !== undefined && <p className="text-xs text-subdued">{note}</p>}
       </header>

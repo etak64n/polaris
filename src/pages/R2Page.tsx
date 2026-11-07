@@ -5,8 +5,8 @@ import { formatBytes, formatCount } from "@/lib/format.ts";
 import { bucketLabel } from "@/lib/labels.ts";
 
 const CHARTS: ChartDefinition[] = [
-  { title: "Class A operations", metric: "classA", kind: "sum", format: formatCount, free: "r2ClassA" },
-  { title: "Class B operations", metric: "classB", kind: "sum", format: formatCount, free: "r2ClassB" },
+  { title: "Class A operations", help: "The operations that change a bucket or list it, such as PutObject and ListObjects. They cost more than Class B operations.", metric: "classA", kind: "sum", format: formatCount, free: "r2ClassA" },
+  { title: "Class B operations", help: "The operations that read, such as GetObject and HeadObject.", metric: "classB", kind: "sum", format: formatCount, free: "r2ClassB" },
   { title: "Storage", metric: "storageBytes", kind: "gauge", format: formatBytes, tickFormat: formatBytes, free: "r2StorageBytes" },
   { title: "Objects", metric: "objects", kind: "gauge", format: formatCount },
 ];

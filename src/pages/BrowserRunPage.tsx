@@ -4,7 +4,7 @@ import { MetricsDashboard, type ChartDefinition, type ColumnDefinition, type Das
 import { formatCount, formatDuration } from "@/lib/format.ts";
 
 const CHARTS: ChartDefinition[] = [
-  { title: "Browser time", metric: "browserMs", kind: "sum", format: formatDuration, tickFormat: formatDuration },
+  { title: "Browser time", help: "The time that the browsers ran. The Free plan allows 10 minutes a day.", metric: "browserMs", kind: "sum", format: formatDuration, tickFormat: formatDuration },
   { title: "Sessions", metric: "sessions", kind: "sum", format: formatCount },
 ];
 

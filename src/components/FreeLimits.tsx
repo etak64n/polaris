@@ -5,7 +5,7 @@
 
 import { USAGE_DAYS } from "../../shared/api.ts";
 import type { FreeLimit, FreeLimits as Limits } from "../../shared/limits.ts";
-import { HelpTip } from "@/components/HelpTip.tsx";
+import { WithHelp } from "@/components/HelpTip.tsx";
 import { Figure, Section } from "@/components/Layout.tsx";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatBytes, formatCompact, formatCount } from "@/lib/format.ts";
@@ -21,6 +21,7 @@ export function FreeLimits({ limits }: { limits: Limits }) {
       <Figure
         label="Workers requests stopped by a limit"
         value={formatCount(limits.stopped)}
+        help="The invocations of the Workers that a limit stopped, such as the CPU time of an invocation or the requests of a day on the Free plan."
         note={`Last ${USAGE_DAYS} days`}
         tone={limits.stopped > 0 ? "critical" : "default"}
       />
@@ -84,7 +85,9 @@ export function FreeLimits({ limits }: { limits: Limits }) {
                 <TableHead className="w-36">Product</TableHead>
                 <TableHead className="w-40">Item</TableHead>
                 <TableHead className="w-28 text-right">Free amount</TableHead>
-                <TableHead className="w-28 text-right">Projected</TableHead>
+                <TableHead className="w-28 text-right">
+                  <WithHelp label="Projected" help="The usage that the billing cycle reaches on its last day if the usage goes on at its pace so far." />
+                </TableHead>
                 <TableHead className="w-44 text-right">
                 <LeftHeading />
               </TableHead>
@@ -110,12 +113,7 @@ export function FreeLimits({ limits }: { limits: Limits }) {
 
 /** The heading of the Left column, whose ⓘ tells what the share is and how the table is ordered. */
 function LeftHeading() {
-  return (
-    <span className="inline-flex items-center gap-1">
-      Left
-      <HelpTip title="Left">The share of the limit that the usage leaves. Each table puts the limit with the least left first.</HelpTip>
-    </span>
-  );
+  return <WithHelp label="Left" help="The share of the limit that the usage leaves. Each table puts the limit with the least left first." />;
 }
 
 function Note({ children }: { children: string }) {

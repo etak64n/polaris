@@ -4,9 +4,9 @@ import { MetricsDashboard, type ChartDefinition, type ColumnDefinition, type Das
 import { formatCount, formatDuration } from "@/lib/format.ts";
 
 const CHARTS: ChartDefinition[] = [
-  { title: "Steps", metric: "steps", kind: "sum", format: formatCount },
-  { title: "CPU time", metric: "cpuTimeMs", kind: "sum", format: formatDuration, tickFormat: formatDuration },
-  { title: "Retries", metric: "retries", kind: "sum", format: formatCount },
+  { title: "Steps", help: "The steps that the instances of the Workflows ran. The Free plan allows 3,000 a day.", metric: "steps", kind: "sum", format: formatCount },
+  { title: "CPU time", help: "The CPU time that the steps of the Workflows used.", metric: "cpuTimeMs", kind: "sum", format: formatDuration, tickFormat: formatDuration },
+  { title: "Retries", help: "The steps that ran again after they failed.", metric: "retries", kind: "sum", format: formatCount },
 ];
 
 const COLUMNS: ColumnDefinition[] = [
