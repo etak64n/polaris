@@ -12,6 +12,8 @@ import { formatBytes, formatCompact, formatCount } from "@/lib/format.ts";
 /** The share left under which a limit needs attention. */
 const LOW = 0.2;
 
+// Every column has a width, so that a narrow screen scrolls the table sideways rather than
+// squeezing the gauge of the Left column: the gauge keeps at least 96px.
 export function FreeLimits({ limits }: { limits: Limits }) {
   return (
     <div className="grid gap-8">
@@ -22,14 +24,14 @@ export function FreeLimits({ limits }: { limits: Limits }) {
         tone={limits.stopped > 0 ? "critical" : "default"}
       />
       <Section title="Per day" aside={<Note>Resets at 00:00 UTC</Note>}>
-        <Table className="table-fixed min-w-[560px]">
+        <Table className="table-fixed min-w-[704px]">
           <TableHeader>
             <TableRow>
               <TableHead className="w-36">Product</TableHead>
-              <TableHead className="w-48">Item</TableHead>
-              <TableHead className="text-right">Free limit</TableHead>
-              <TableHead className="text-right">Used today</TableHead>
-              <TableHead className="text-right">Left</TableHead>
+              <TableHead className="w-40">Item</TableHead>
+              <TableHead className="w-28 text-right">Free limit</TableHead>
+              <TableHead className="w-28 text-right">Used today</TableHead>
+              <TableHead className="w-44 text-right">Left</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -46,14 +48,14 @@ export function FreeLimits({ limits }: { limits: Limits }) {
         </Table>
       </Section>
       <Section title="Size and count">
-        <Table className="table-fixed min-w-[560px]">
+        <Table className="table-fixed min-w-[704px]">
           <TableHeader>
             <TableRow>
               <TableHead className="w-36">Product</TableHead>
-              <TableHead className="w-48">Item</TableHead>
-              <TableHead className="text-right">Free limit</TableHead>
-              <TableHead className="text-right">Now</TableHead>
-              <TableHead className="text-right">Left</TableHead>
+              <TableHead className="w-40">Item</TableHead>
+              <TableHead className="w-28 text-right">Free limit</TableHead>
+              <TableHead className="w-28 text-right">Now</TableHead>
+              <TableHead className="w-44 text-right">Left</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -71,14 +73,14 @@ export function FreeLimits({ limits }: { limits: Limits }) {
       </Section>
       {limits.monthly.length > 0 && (
         <Section title="Per month" aside={<Note>Billed past the free amount</Note>}>
-          <Table className="table-fixed min-w-[560px]">
+          <Table className="table-fixed min-w-[704px]">
             <TableHeader>
               <TableRow>
                 <TableHead className="w-36">Product</TableHead>
-                <TableHead className="w-48">Item</TableHead>
-                <TableHead className="text-right">Free amount</TableHead>
-                <TableHead className="text-right">Projected</TableHead>
-                <TableHead className="text-right">Left</TableHead>
+                <TableHead className="w-40">Item</TableHead>
+                <TableHead className="w-28 text-right">Free amount</TableHead>
+                <TableHead className="w-28 text-right">Projected</TableHead>
+                <TableHead className="w-44 text-right">Left</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -122,7 +124,7 @@ function LeftCell({ limit }: { limit: FreeLimit }) {
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={percent}
-          className="h-2 w-full max-w-32 overflow-hidden rounded-sm bg-hairline"
+          className="h-2 w-full min-w-24 max-w-32 overflow-hidden rounded-sm bg-hairline"
         >
           <div className={`h-full ${low ? "bg-warning" : "bg-[var(--ds-series-muted)]"}`} style={{ width: `${percent}%` }} />
         </div>
