@@ -21,7 +21,7 @@ describe("freeLimits", () => {
     day("2026-11-03", 30_000, 2_000_000, [450_000_000, 50_000_000], 50),
   ];
   const estimate = estimateCost(days, "free", 1, "2026-11-03");
-  const limits = freeLimits(days, 4, estimate.lines);
+  const limits = freeLimits(days, 4, 3, estimate.lines);
   const byId = new Map([...limits.daily, ...limits.sizes, ...limits.monthly].map((limit) => [limit.id, limit]));
 
   it("compares the usage of today, the last day, with each daily limit", () => {
@@ -33,11 +33,13 @@ describe("freeLimits", () => {
   });
 
   it("leaves every daily limit whole without any day", () => {
-    expect(freeLimits([], 0, []).daily.every((limit) => limit.used === 0 && limit.left === 1)).toBe(true);
+    expect(freeLimits([], 0, 0, []).daily.every((limit) => limit.used === 0 && limit.left === 1)).toBe(true);
   });
 
-  it("compares the sizes and the number of databases now", () => {
-    expect(limits.sizes.map((limit) => limit.id).sort()).toEqual(["d1-databases", "d1-largest", "d1-storage", "do-storage"]);
+  it("compares the sizes, the number of databases, and the number of Cron Triggers now", () => {
+    expect(limits.sizes.map((limit) => limit.id).sort()).toEqual(["d1-databases", "d1-largest", "d1-storage", "do-storage", "workers-cron-triggers"]);
+    expect(byId.get("workers-cron-triggers")).toMatchObject({ used: 3, limit: 5 });
+    expect(byId.get("workers-cron-triggers")?.left).toBeCloseTo(0.4);
     expect(byId.get("d1-storage")).toMatchObject({ used: 500_000_000, limit: 5_000_000_000 });
     expect(byId.get("d1-largest")).toMatchObject({ used: 450_000_000, limit: 500_000_000 });
     expect(byId.get("d1-largest")?.left).toBeCloseTo(0.1);
@@ -51,7 +53,7 @@ describe("freeLimits", () => {
 
   it("counts the requests to Pages Functions toward the requests of Workers", () => {
     const today = { ...day("2026-11-03", 30_000, 0, []), pagesFunctionsRequests: 20_000 };
-    const workers = freeLimits([today], 0, []).daily.find((limit) => limit.id === "workers-requests");
+    const workers = freeLimits([today], 0, 0, []).daily.find((limit) => limit.id === "workers-requests");
     expect(workers).toMatchObject({ used: 50_000, limit: 100_000, left: 0.5 });
   });
 
@@ -65,7 +67,7 @@ describe("freeLimits", () => {
       browserRunMs: 3 * 60_000,
       workflowsSteps: 300,
     };
-    const limits = freeLimits([today], 0, []);
+    const limits = freeLimits([today], 0, 0, []);
     const of = (id: string) => [...limits.daily, ...limits.sizes].find((limit) => limit.id === id);
     expect(of("do-requests")).toMatchObject({ product: "Durable Objects", used: 50_000, left: 0.5 });
     expect(of("do-duration")).toMatchObject({ unit: "GB-s", used: 13_000, left: 0 });
@@ -83,7 +85,7 @@ describe("freeLimits", () => {
   it("counts the requests that a limit stopped on any of the days", () => {
     expect(limits.stopped).toBe(0);
     const stoppedDays = [day("2026-11-01", 10, 0, [], 0, 2), day("2026-11-02", 10, 0, [], 0, 3)];
-    expect(freeLimits(stoppedDays, 0, []).stopped).toBe(5);
+    expect(freeLimits(stoppedDays, 0, 0, []).stopped).toBe(5);
   });
 
   it("projects the free amounts of R2 to the end of the cycle", () => {

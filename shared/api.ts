@@ -18,6 +18,8 @@ export interface UsageResponse {
   days: DailyUsage[];
   /** D1 database names by database ID. Deleted databases have no name. */
   databaseNames: Record<string, string>;
+  /** The Cron Triggers of all the Workers of the account now. */
+  cronTriggers: number;
 }
 
 export type QueryOrder = "rowsRead" | "rowsWritten";
@@ -42,6 +44,27 @@ export interface TopQueriesResponse {
   to: string;
   order: QueryOrder;
   queries: TopQuery[];
+}
+
+/** The invocations of one handler of one Worker, such as its fetch or cron handler, and their CPU time. */
+export interface WorkerHandler {
+  scriptName: string;
+  /** The handler as Cloudflare analytics names it, such as fetch, cron, or queue. */
+  handler: string;
+  invocations: number;
+  /** CPU time of all the invocations, in milliseconds. */
+  cpuTimeMs: number;
+  /** CPU time of one invocation at the 50th and the 99th percentile, in milliseconds. */
+  cpuTimeP50Ms: number;
+  cpuTimeP99Ms: number;
+}
+
+export interface WorkerHandlersResponse {
+  /** First and last UTC date of the invocations. */
+  from: string;
+  to: string;
+  /** The handlers with the most CPU time first. */
+  handlers: WorkerHandler[];
 }
 
 /** The person who signed in through Cloudflare Access, and how and when they signed in. */

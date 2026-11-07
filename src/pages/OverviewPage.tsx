@@ -20,7 +20,7 @@ export function OverviewPage({ usage }: { usage: UsageResponse }) {
     [usage, free],
   );
   const limits = useMemo(
-    () => freeLimits(usage.days, Object.keys(usage.databaseNames).length, estimate.lines),
+    () => freeLimits(usage.days, Object.keys(usage.databaseNames).length, usage.cronTriggers, estimate.lines),
     [usage, estimate],
   );
   const { period } = estimate;

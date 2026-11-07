@@ -218,6 +218,68 @@ describe("CloudflareAnalytics.topQueries", () => {
   });
 });
 
+describe("CloudflareAnalytics.workerHandlers", () => {
+  it("orders the handlers of the Workers by their CPU time, in milliseconds", async () => {
+    const { analytics, calls } = analyticsAnswering(() =>
+      graphql({
+        handlers: [
+          {
+            sum: { requests: 288, cpuTimeUs: 9_000_000 },
+            quantiles: { cpuTimeP50: 30_000, cpuTimeP99: 70_500 },
+            dimensions: { scriptName: "jobs", eventType: "cron" },
+          },
+        ],
+      }),
+    );
+    expect(await analytics.workerHandlers("2026-10-30", "2026-11-05", 50, [])).toEqual([
+      { scriptName: "jobs", handler: "cron", invocations: 288, cpuTimeMs: 9_000, cpuTimeP50Ms: 30, cpuTimeP99Ms: 70.5 },
+    ]);
+    const body = JSON.parse(String(calls[0]?.init.body)) as { query: string; variables: unknown };
+    expect(body.query).toContain("orderBy: [sum_cpuTimeUs_DESC]");
+    expect(body.query).toContain("dimensions { scriptName eventType }");
+    expect(body.query).toContain("limit: 50");
+    expect(body.query).not.toContain("scriptName_in");
+    expect(body.variables).toEqual({ accountTag: ACCOUNT, start: "2026-10-30T00:00:00Z", end: "2026-11-06T00:00:00Z" });
+  });
+
+  it("narrows the handlers to the given Workers", async () => {
+    const { analytics, calls } = analyticsAnswering(() => graphql({ handlers: [] }));
+    await analytics.workerHandlers("2026-11-05", "2026-11-05", 50, ["api", "web"]);
+    const body = JSON.parse(String(calls[0]?.init.body)) as { query: string; variables: Record<string, unknown> };
+    expect(body.query).toContain("scriptName_in: $scriptNames");
+    expect(body.variables["scriptNames"]).toEqual(["api", "web"]);
+  });
+});
+
+describe("CloudflareAnalytics.cronTriggers", () => {
+  const scripts = `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT}/workers/scripts`;
+
+  it("counts the Cron Triggers of the Workers with a scheduled handler", async () => {
+    const { analytics, calls } = analyticsAnswering((url) => {
+      if (url === scripts) {
+        return Response.json({
+          success: true,
+          result: [
+            { id: "web", handlers: ["fetch"] },
+            { id: "jobs", handlers: ["fetch", "scheduled"] },
+            { id: "old" },
+          ],
+        });
+      }
+      const schedules = url.includes("/jobs/") ? [{ cron: "*/5 * * * *" }, { cron: "0 0 * * *" }] : [{ cron: "0 3 * * *" }];
+      return Response.json({ success: true, result: { schedules } });
+    });
+    expect(await analytics.cronTriggers()).toBe(3);
+    // A Worker without the handlers in the list is asked for its Cron Triggers too.
+    expect(calls.map((call) => call.url).sort()).toEqual([scripts, `${scripts}/jobs/schedules`, `${scripts}/old/schedules`]);
+  });
+
+  it("reports a token that may not read the Workers, which lists none", async () => {
+    const { analytics } = analyticsAnswering(() => Response.json({ success: true, result: [] }));
+    await expect(analytics.cronTriggers()).rejects.toThrow(/Workers Scripts Read/);
+  });
+});
+
 describe("CloudflareAnalytics.databaseNames", () => {
   it("reads every page of the D1 databases", async () => {
     const page = (start: number, count: number) =>

@@ -6,7 +6,7 @@
 // answer with Error 1027, and the queries, operations, and invocations of the other
 // products fail until 00:00 UTC. R2 bills past its free amounts on both plans.
 //
-// Sources, checked on 2026-11-06:
+// Sources, checked on 2026-11-07:
 //   https://developers.cloudflare.com/workers/platform/limits/
 //   https://developers.cloudflare.com/workers/platform/pricing/
 //   https://developers.cloudflare.com/d1/platform/limits/
@@ -29,6 +29,12 @@ export const FREE_D1_DATABASE_BYTES = 500_000_000;
 
 /** D1 databases that the Workers Free plan allows in an account. */
 export const FREE_D1_DATABASES = 10;
+
+/** Cron Triggers that the Workers Free plan allows in an account. */
+export const FREE_CRON_TRIGGERS = 5;
+
+/** CPU time that the Workers Free plan allows each HTTP request and each Cron Trigger, in milliseconds. */
+export const FREE_CPU_MS_PER_INVOCATION = 10;
 
 /** Daily limits of Workers KV on the Free plan, for the whole account. */
 export const FREE_KV_DAILY_LIMITS = { reads: 100_000, writes: 1_000, deletes: 1_000, lists: 1_000 } as const;
@@ -75,9 +81,10 @@ export interface FreeLimits {
 /**
  * The Free plan limits of the account, each group with the least left first. `days`
  * are the days of the overview, oldest first; `databases` is the number of D1
- * databases; `r2Lines` are the R2 lines of the cost estimate of the cycle.
+ * databases; `cronTriggers` is the number of Cron Triggers of the Workers; `r2Lines`
+ * are the R2 lines of the cost estimate of the cycle.
  */
-export function freeLimits(days: DailyUsage[], databases: number, r2Lines: CostLine[]): FreeLimits {
+export function freeLimits(days: DailyUsage[], databases: number, cronTriggers: number, r2Lines: CostLine[]): FreeLimits {
   const latest = days.at(-1);
   const byLeft = (a: FreeLimit, b: FreeLimit): number => a.left - b.left;
   const daily = [
@@ -107,6 +114,7 @@ export function freeLimits(days: DailyUsage[], databases: number, r2Lines: CostL
   ];
   const sizes = (latest?.d1 ?? []).map((database) => database.storageBytes);
   const now = [
+    current("workers-cron-triggers", "Workers", "Cron Triggers", cronTriggers, FREE_CRON_TRIGGERS, "count"),
     current("d1-storage", "D1", "Storage", sum(sizes), FREE_D1_STORAGE_BYTES, "bytes"),
     current("d1-largest", "D1", "Largest database", Math.max(0, ...sizes), FREE_D1_DATABASE_BYTES, "bytes"),
     current("d1-databases", "D1", "Databases", databases, FREE_D1_DATABASES, "count"),
