@@ -133,7 +133,7 @@ function Sidebar({ plan, pathname, account }: { plan: PlanType | null; pathname:
 function Brand({ plan }: { plan: PlanType | null }) {
   return (
     <Link to={ROUTE_PATHS.overview} className="flex min-w-0 items-center gap-2 rounded-md py-1">
-      <img src="/favicon.svg" alt="" className="size-6 shrink-0" />
+      <img src={`${import.meta.env.BASE_URL}favicon.svg`} alt="" className="size-6 shrink-0" />
       <span className="grid min-w-0">
         <span className="truncate text-sm font-semibold text-heading">polaris</span>
         {plan !== null && <span className="truncate text-xs text-subdued">{plan === "paid" ? "Workers Paid" : "Workers Free"}</span>}
