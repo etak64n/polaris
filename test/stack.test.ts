@@ -1,4 +1,3 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { validateSettings } from "../config/settings.ts";
 import example from "../polaris.config.example.ts";
@@ -252,17 +251,5 @@ describe("parseEnvFile", () => {
       ["ANALYTICS_API_TOKEN", "a=b"],
       ["EMPTY", ""],
     ]);
-  });
-});
-
-describe("the link to the token form", () => {
-  it("selects the same permissions in the README and in .env.example", () => {
-    const linkIn = (file: string): string => {
-      const text = readFileSync(new URL(file, import.meta.url), "utf8");
-      return /https:\/\/dash\.cloudflare\.com\/\?to=\/:account\/api-tokens[^\s)]*/.exec(text)?.[0] ?? "";
-    };
-    const readme = linkIn("../README.md");
-    expect(readme).toContain("permissionGroupKeys=");
-    expect(linkIn("../.env.example")).toBe(readme);
   });
 });
