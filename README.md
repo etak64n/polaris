@@ -12,16 +12,6 @@ You deploy polaris as a single Worker in your own account without a database, pr
 
 Try the [live demo](https://etak64n.github.io/polaris/) to explore every page with sample data.
 
-## Contents
-
-- [Architecture](#architecture)
-- [Quick start](#quick-start)
-  - [Prerequisites](#prerequisites)
-  - [Create an API token](#create-an-api-token)
-  - [Configure and deploy](#configure-and-deploy)
-  - [Update or delete](#update-or-delete)
-- [License](#license)
-
 ## Architecture
 
 ![Architecture of polaris](images/architecture.svg)
