@@ -5,7 +5,7 @@
   </picture>
 </h1>
 
-<p align="center">polaris is a Cloudflare usage, limit, and cost dashboard built on Cloudflare Workers.</p>
+<p align="center">A dashboard that shows how much of the Cloudflare Free plan your account has left, with usage charts and a cost estimate.</p>
 
 <p align="center">
   <a href="https://github.com/etak64n/polaris/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/etak64n/polaris/actions/workflows/ci.yml/badge.svg" /></a>
