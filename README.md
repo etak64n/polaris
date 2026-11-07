@@ -5,44 +5,55 @@
   </picture>
 </h1>
 
-polaris is a dashboard that tracks how much of each Cloudflare Free plan limit remains in your account.
-On the Free plan, it shows when to upgrade to Workers Paid; on Workers Paid, it shows whether your usage fits the Free plan again.
-It also estimates your current billing-cycle cost and charts metrics for Workers, D1, R2, KV, Durable Objects, Queues, Workflows, Hyperdrive, Browser Run, and Workers AI.
-You deploy polaris as a single Worker in your own account without a database, protected by Cloudflare Access.
+<p align="center">A Cloudflare Workers dashboard that tracks your Free plan limits, estimated billing-cycle cost, and product metrics.</p>
 
-Try the [live demo](https://etak64n.github.io/polaris/) to explore every page with sample data.
+<p align="center">
+  <a href="https://github.com/etak64n/polaris/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/etak64n/polaris/actions/workflows/ci.yml/badge.svg" /></a>
+  <a href="https://github.com/etak64n/polaris/actions/workflows/demo.yml"><img alt="Demo" src="https://github.com/etak64n/polaris/actions/workflows/demo.yml/badge.svg" /></a>
+  <a href="https://github.com/etak64n/polaris/releases"><img alt="Release" src="https://img.shields.io/github/v/release/etak64n/polaris" /></a>
+  <a href="https://github.com/etak64n/polaris/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/github/license/etak64n/polaris" /></a>
+</p>
+
+<p align="center">
+  <a href="https://etak64n.github.io/polaris/">Live Demo</a>
+  · <a href="#quickstart">Quickstart</a>
+  · <a href="https://github.com/etak64n/polaris/releases">Releases</a>
+  · <a href="https://github.com/etak64n/polaris/issues">Issues</a>
+</p>
+
+polaris shows how much of each Cloudflare Free plan limit remains in your account today and in the current billing cycle. On the Free plan, it tells you when to upgrade to Workers Paid; on Workers Paid, it tells you whether your usage would fit the Free plan again.
+
+Alongside Free plan limits, polaris estimates your current billing-cycle cost from published Cloudflare pricing and charts usage across Workers, D1, R2, KV, Durable Objects, Queues, Workflows, Hyperdrive, Browser Run, and Workers AI. You deploy it as a single Worker in your own Cloudflare account without a database, protected by Cloudflare Access.
 
 ## Architecture
 
 ![Architecture of polaris](images/architecture.svg)
 
-- **Cloudflare Access** authenticates your browser and restricts sign-in to your allowed email addresses and login methods.
-- **Cloudflare Workers** serves the static dashboard and verifies the Access token on `/api/*` routes.
-- **GraphQL Analytics API** provides account usage and product metrics when you open a page.
-- **Cloudflare API** provides resource names for D1, KV, Durable Objects, Queues, and Hyperdrive using a read-only API token.
-- **Cache API** caches responses for a few minutes so reloading a page does not query upstream APIs every time.
-- **Resource Tagging** tags the Access application and the Worker so `pnpm stack:deploy` and `pnpm stack:delete` can manage them as a single stack.
+- **Cloudflare Access**: Authenticates your browser and restricts sign-in to your allowed email addresses and login methods.
+- **Cloudflare Workers**: Serves the static dashboard application and verifies the Access token on `/api/*` routes.
+- **GraphQL Analytics API**: Provides account usage and product metrics when you open a page.
+- **Cloudflare API**: Provides resource names for D1, KV, Durable Objects, Queues, and Hyperdrive using a read-only API token.
+- **Cache API**: Caches API responses for a few minutes so reloading a page does not query upstream APIs every time.
+- **Resource Tagging**: Tags the Access application and the Worker so they can be deployed and deleted as a single stack.
 
-## Quick start
+## Quickstart
 
 ### Prerequisites
 
-- A Cloudflare account that manages the zone for your deployment domain
-- A Cloudflare Zero Trust organization in that account (for your Cloudflare Access team domain)
-- Node.js (`^22.23.0 || ^24.22.0 || ^26.12.0`)
-- pnpm (`pnpm@12.16.1`)
+- **Cloudflare Account**: Manages the DNS zone for your deployment domain.
+- **Cloudflare Zero Trust**: Configured in the same account to provide your Cloudflare Access team domain.
+- **Node.js**: `^22.23.0 || ^24.22.0 || ^26.12.0`
+- **pnpm**: `pnpm@12.16.1`
 
-### 1. Create an API token
+### 1. Create an API Token
 
-polaris uses a read-only account API token (`ANALYTICS_API_TOKEN`) to read metrics and resource names.
+1. **Open the token creation form**: Visit the [Cloudflare Account API Tokens page](https://dash.cloudflare.com/?to=/:account/api-tokens&permissionGroupKeys=%5B%7B%22key%22%3A%22account_analytics%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22d1%22%2C%22type%22%3A%22read%22%7D%5D&name=polaris), which pre-fills the token name `polaris` and the required `Account Analytics Read` and `D1 Read` permissions.
+2. **Add optional permissions**: Include `Workers KV Storage Read`, `Workers Scripts Read`, `Queues Read`, and `Hyperdrive Read` to display resource names instead of raw IDs.
+3. **Copy the token**: Create the token and save its value for `ANALYTICS_API_TOKEN` in `.env`.
 
-1. Open the [Cloudflare Account API Tokens form](https://dash.cloudflare.com/?to=/:account/api-tokens&permissionGroupKeys=%5B%7B%22key%22%3A%22account_analytics%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22d1%22%2C%22type%22%3A%22read%22%7D%5D&name=polaris), which pre-fills the token name `polaris` and the required `Account Analytics Read` and `D1 Read` permissions.
-2. (Optional) Add `Workers KV Storage Read`, `Workers Scripts Read`, `Queues Read`, and `Hyperdrive Read` to display resource names instead of raw IDs.
-3. Create the token and copy its value for `.env`.
+### 2. Configure and Deploy
 
-### 2. Configure and deploy
-
-Install dependencies and create your configuration files from the templates:
+Install dependencies and copy the configuration templates:
 
 ```bash
 pnpm install
@@ -77,18 +88,16 @@ export default definePolarisConfig({
 });
 ```
 
-Set `CLOUDFLARE_ACCOUNT_ID` and `ANALYTICS_API_TOKEN` in `.env`, then log in to Cloudflare and deploy:
+Set `CLOUDFLARE_ACCOUNT_ID` and `ANALYTICS_API_TOKEN` in `.env`, then authenticate and deploy:
 
 ```bash
 pnpm exec cf auth login
 pnpm stack:deploy
 ```
 
-### Update or delete
+### 3. Update or Delete
 
-Each version of polaris is published as a [GitHub release](https://github.com/etak64n/polaris/releases) with release notes describing any required configuration changes.
-
-To update to a newer release:
+- **Update to a new release**: Check the [release notes](https://github.com/etak64n/polaris/releases) for any configuration changes, then check out the tag and redeploy:
 
 ```bash
 git fetch --tags
@@ -97,7 +106,7 @@ pnpm install
 pnpm stack:deploy
 ```
 
-To delete the Access application and the Worker from your Cloudflare account:
+- **Delete the deployment**: Remove the Cloudflare Access application and the Worker from your account:
 
 ```bash
 pnpm stack:delete
