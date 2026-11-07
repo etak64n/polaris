@@ -48,8 +48,8 @@ flowchart TD
   Access -->|"Page request"| Assets["Worker static assets"]
   Assets -->|"Static assets"| Browser
   Access -->|"/api/usage, /api/metrics, /api/d1/top-queries, /api/me (Cf-Access-Jwt-Assertion)"| Worker["Worker (/api/*)"]
-  Worker -->|"1. Verify JWT"| Certs["<team domain>/cdn-cgi/access/certs"]
-  Worker -->|"Read login method and time for /api/me"| Identity["<team domain>/cdn-cgi/access/get-identity"]
+  Worker -->|"1. Verify JWT"| Certs["#60;team domain#62;/cdn-cgi/access/certs"]
+  Worker -->|"Read login method and time for /api/me"| Identity["#60;team domain#62;/cdn-cgi/access/get-identity"]
   Worker -->|"2. Check or store response"| Cache["Workers Cache API (caches.default)"]
   Worker -->|"3. On cache miss, query with ANALYTICS_API_TOKEN"| GraphQL["GraphQL Analytics API"]
   Worker -->|"3. On cache miss, query with ANALYTICS_API_TOKEN"| RestApi["Cloudflare API (REST)"]
@@ -234,9 +234,9 @@ flowchart TD
   CheckTag -->|"No"| CheckIdp["Find access.loginMethods in Zero Trust organization"]
   CheckIdp -->|"Missing"| StopIdp["Stop without changing anything"]
   CheckIdp -->|"Found"| UpsertAccess["Create or update Access application"]
-  UpsertAccess --> TagAccess["Tag Access application with polaris.stack=<Worker name>"]
+  UpsertAccess --> TagAccess["Tag Access application with polaris.stack=#60;Worker name#62;"]
   TagAccess --> DeployWorker["Run cf deploy with secrets in a temporary file"]
-  DeployWorker --> TagWorker["Tag Worker with polaris.stack=<Worker name>"]
+  DeployWorker --> TagWorker["Tag Worker with polaris.stack=#60;Worker name#62;"]
 ```
 
 `pnpm stack:deploy` runs 6 steps in order (`deployStack` in `stack/stack.ts`):
