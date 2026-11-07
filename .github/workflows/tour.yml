@@ -1,6 +1,7 @@
 # Records the tour of the demo that the README shows at its top, from the demo on GitHub
-# Pages: the Free plan limits with a help frame, the cost, and the dashboard of Workers.
-# Run it by hand after the screens change, then put the artifact at images/tour.gif.
+# Pages: the Free plan limits with a help frame, the cost, and the dashboard of Workers,
+# zooming in on the details. Run it by hand after the screens change, then put the
+# artifact at images/tour.gif.
 name: Tour
 
 on:
@@ -24,17 +25,21 @@ jobs:
           npx playwright install --with-deps chromium
           command -v ffmpeg || { sudo apt-get update && sudo apt-get install -y ffmpeg; }
 
-      # The recording has no mouse pointer, so the page draws one where the mouse moves.
+      # The tour captures the frames that the browser paints, at twice the density of pixels,
+      # and notes where and when to zoom. The page draws the mouse pointer, which the
+      # frames would not show.
       - name: Record the tour
         env:
           DEMO_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
         run: |
           cat > tour.mjs <<'SCRIPT'
+          import { mkdirSync, writeFileSync } from "node:fs";
           import { chromium } from "playwright";
 
-          const size = { width: 1440, height: 900 };
+          const VIEW = { width: 1440, height: 900 };
+          const SCALE = 2;
           const browser = await chromium.launch();
-          const context = await browser.newContext({ viewport: size, recordVideo: { dir: "video", size } });
+          const context = await browser.newContext({ viewport: VIEW, deviceScaleFactor: SCALE });
           await context.addInitScript(() => {
             addEventListener("DOMContentLoaded", () => {
               const pointer = document.createElement("div");
@@ -48,56 +53,128 @@ jobs:
             });
           });
           const page = await context.newPage();
+          const client = await context.newCDPSession(page);
+          const frames = [];
+          client.on("Page.screencastFrame", ({ data, metadata, sessionId }) => {
+            frames.push({ data, time: metadata.timestamp });
+            client.send("Page.screencastFrameAck", { sessionId }).catch(() => {});
+          });
+
           const pause = (ms) => page.waitForTimeout(ms);
+          const seconds = () => Date.now() / 1000;
+          const center = (box) => ({ x: box.x + box.width / 2, y: box.y + box.height / 2 });
           const pointAt = async (locator, steps = 30) => {
-            const box = await locator.boundingBox();
-            await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps });
+            const { x, y } = center(await locator.boundingBox());
+            await page.mouse.move(x, y, { steps });
           };
           const scrollTo = async (locator) => {
             await locator.evaluate((element) => element.scrollIntoView({ behavior: "smooth", block: "start" }));
             await pause(1400);
           };
+          // The box around several elements, such as an ⓘ and the frame that it opened.
+          const around = async (...locators) => {
+            const boxes = await Promise.all(locators.map((locator) => locator.boundingBox()));
+            const left = Math.min(...boxes.map((box) => box.x));
+            const top = Math.min(...boxes.map((box) => box.y));
+            const right = Math.max(...boxes.map((box) => box.x + box.width));
+            const bottom = Math.max(...boxes.map((box) => box.y + box.height));
+            return { x: left, y: top, width: right - left, height: bottom - top };
+          };
+          // Zooms in on a box of the viewport while the steps run, and out again after them.
+          const zooms = [];
+          const zoom = async (box, factor, steps) => {
+            const from = seconds();
+            await steps();
+            const { x, y } = center(box);
+            zooms.push({ from, to: seconds(), x: x * SCALE, y: y * SCALE, factor });
+          };
 
           await page.goto(process.env.DEMO_URL);
           await page.getByRole("heading", { name: "Free plan limits" }).waitFor();
+          await pause(1000);
+          await client.send("Page.startScreencast", { format: "jpeg", quality: 92, everyNthFrame: 1 });
           await page.mouse.move(760, 520);
-          await pause(1800);
-          await pointAt(page.getByRole("button", { name: "About Left" }).first());
-          await pause(2600);
-          await page.mouse.move(760, 640, { steps: 15 });
-          await scrollTo(page.getByRole("heading", { name: "Cost", exact: true }));
-          // The ⓘ of the figure, rather than those of the Projected columns of the tables.
-          await pointAt(page.locator('div > span > button[aria-label="About Projected"]'));
-          await pause(2600);
-          await page.mouse.move(760, 640, { steps: 15 });
-          await pause(800);
+          await pause(1500);
 
+          // The ⓘ of the Left column and the frame that it opens.
+          const left = page.getByRole("button", { name: "About Left" }).first();
+          await pointAt(left);
+          const frame = page.locator('[data-slot="popover-content"]');
+          await frame.waitFor();
+          await zoom(await around(left, frame), 2.2, () => pause(3200));
+          await page.mouse.move(760, 640, { steps: 15 });
+
+          // The cost, and the ⓘ of its projection.
+          await scrollTo(page.getByRole("heading", { name: "Cost", exact: true }));
+          const projected = page.locator('div > span > button[aria-label="About Projected"]');
+          await pointAt(projected);
+          await frame.waitFor();
+          await zoom(await around(projected, frame), 2.2, () => pause(3200));
+          await page.mouse.move(760, 640, { steps: 15 });
+          await pause(600);
+
+          // The dashboard of Workers, and the values of a chart under the pointer.
           const workers = page.getByRole("link", { name: "Workers", exact: true });
           await pointAt(workers);
           await workers.click();
           await page.getByRole("heading", { name: "CPU time by handler" }).waitFor();
-          await pause(2200);
-          const chart = page.locator("article", { has: page.getByRole("heading", { name: "Requests", exact: true }) }).locator("canvas").first();
-          const box = await chart.boundingBox();
-          await page.mouse.move(box.x + box.width * 0.15, box.y + box.height * 0.5, { steps: 20 });
-          await page.mouse.move(box.x + box.width * 0.8, box.y + box.height * 0.5, { steps: 60 });
-          await pause(1200);
+          await pause(2000);
+          const chart = page.getByRole("figure", { name: "Requests", exact: true });
+          const canvas = chart.locator("canvas").first();
+          const box = await canvas.boundingBox();
+          await page.mouse.move(box.x + box.width * 0.2, box.y + box.height * 0.5, { steps: 20 });
+          await zoom(await chart.boundingBox(), 1.6, async () => {
+            await pause(500);
+            await page.mouse.move(box.x + box.width * 0.75, box.y + box.height * 0.5, { steps: 50 });
+            await pause(1800);
+          });
           await page.mouse.move(1380, 450, { steps: 15 });
-          await scrollTo(page.getByRole("heading", { name: "CPU time by handler" }));
-          await pause(3000);
 
+          // The handlers with the most CPU time, against the limit of the Free plan.
+          await scrollTo(page.getByRole("heading", { name: "CPU time by handler" }));
+          await pause(800);
+          const table = await page.locator("table").last().boundingBox();
+          await zoom({ x: table.x, y: table.y, width: table.width, height: Math.min(table.height, 300) }, 1.6, () => pause(3600));
+          await pause(1200);
+
+          await client.send("Page.stopScreencast");
           await context.close();
           await browser.close();
+
+          // The frames, each shown until the next one, and the zooms on the same clock.
+          mkdirSync("frames", { recursive: true });
+          const start = frames[0].time;
+          const lines = ["ffconcat version 1.0"];
+          frames.forEach((frame, index) => {
+            const file = `frames/${String(index).padStart(5, "0")}.jpg`;
+            writeFileSync(file, Buffer.from(frame.data, "base64"));
+            const next = frames[index + 1];
+            lines.push(`file '${file}'`, `duration ${next === undefined ? 1 : Math.max(0.001, next.time - frame.time).toFixed(3)}`);
+          });
+          writeFileSync("tour.ffconcat", lines.join("\n") + "\n");
+
+          // zoompan reads the time from the number of the output frame, at FPS frames a second.
+          const FPS = 10;
+          const RAMP = 0.6;
+          const t = `(on/${FPS})`;
+          const windows = zooms.map((zoom) => ({ ...zoom, from: zoom.from - start, to: zoom.to - start }));
+          const factor = windows
+            .map((w) => `${w.factor - 1}*clip(min((${t}-${w.from.toFixed(2)})/${RAMP},(${w.to.toFixed(2)}-${t})/${RAMP}),0,1)`)
+            .join("+");
+          const pick = (key, fallback) =>
+            windows.reduceRight((rest, w) => `if(between(${t},${w.from.toFixed(2)},${w.to.toFixed(2)}),${Math.round(w[key])},${rest})`, fallback);
+          const filter = [
+            `fps=${FPS}`,
+            `zoompan=z='1+${factor}':x='clip(${pick("x", "iw/2")}-iw/zoom/2,0,iw-iw/zoom)':y='clip(${pick("y", "ih/2")}-ih/zoom/2,0,ih-ih/zoom)':d=1:s=1200x750:fps=${FPS}`,
+            "split[a][b];[a]palettegen=max_colors=128:stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=4:diff_mode=rectangle",
+          ].join(",");
+          writeFileSync("filter.txt", filter);
+          console.log(`${frames.length} frames over ${(frames.at(-1).time - start).toFixed(1)} s, ${zooms.length} zooms`);
           SCRIPT
           node tour.mjs
 
-      # A palette made from the frames keeps the colors of the screens, and drawing only what
-      # changes between frames keeps the file small.
       - name: Make the GIF
-        run: >-
-          ffmpeg -y -i video/*.webm
-          -vf "fps=10,scale=1200:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=128:stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=4:diff_mode=rectangle"
-          tour.gif
+        run: ffmpeg -y -loglevel error -f concat -safe 0 -i tour.ffconcat -filter_complex "$(cat filter.txt)" tour.gif && ls -la tour.gif
 
       - uses: actions/upload-artifact@v5
         with:
