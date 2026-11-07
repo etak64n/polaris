@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { validateSettings } from "../config/settings.ts";
 import example from "../polaris.config.example.ts";
 import { CfError, type Cf } from "../stack/cf.ts";
-import { parseEnvFile } from "../stack/env-file.ts";
+import { parseEnvFile, withEnvValue } from "../stack/env-file.ts";
 import { TOKEN_PERMISSIONS, tokenFormUrl } from "../stack/token-form.ts";
 import { deleteStack, deployStack, STACK_TAG, stackResources, type StackResource } from "../stack/stack.ts";
 
@@ -271,5 +271,25 @@ describe("tokenFormUrl", () => {
     const link = /\((https:\/\/dash\.cloudflare\.com\/\?to=\/:account\/api-tokens[^)]*)\)/.exec(readme)?.[1];
     expect(link).toBeDefined();
     expect(JSON.parse(new URL(link ?? "https://invalid").searchParams.get("permissionGroupKeys") ?? "[]")).toEqual(TOKEN_PERMISSIONS);
+  });
+});
+
+describe("withEnvValue", () => {
+  it("fills in the line of the key, and keeps the comments and the other values", () => {
+    const text = "# The account\nCLOUDFLARE_ACCOUNT_ID=abc\n\n# The token\nANALYTICS_API_TOKEN=\n";
+    expect(withEnvValue(text, "ANALYTICS_API_TOKEN", "cfat_new")).toBe(
+      "# The account\nCLOUDFLARE_ACCOUNT_ID=abc\n\n# The token\nANALYTICS_API_TOKEN=cfat_new\n",
+    );
+  });
+
+  it("adds the line when .env has no such key, after a last line without a newline too", () => {
+    expect(withEnvValue("CLOUDFLARE_ACCOUNT_ID=abc\n", "ANALYTICS_API_TOKEN", "cfat_new")).toBe("CLOUDFLARE_ACCOUNT_ID=abc\nANALYTICS_API_TOKEN=cfat_new\n");
+    expect(withEnvValue("CLOUDFLARE_ACCOUNT_ID=abc", "ANALYTICS_API_TOKEN", "cfat_new")).toBe("CLOUDFLARE_ACCOUNT_ID=abc\nANALYTICS_API_TOKEN=cfat_new\n");
+  });
+
+  it("keeps the line endings of Windows", () => {
+    expect(withEnvValue("CLOUDFLARE_ACCOUNT_ID=abc\r\nANALYTICS_API_TOKEN=\r\n", "ANALYTICS_API_TOKEN", "cfat_new")).toBe(
+      "CLOUDFLARE_ACCOUNT_ID=abc\r\nANALYTICS_API_TOKEN=cfat_new\r\n",
+    );
   });
 });

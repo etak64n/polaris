@@ -12,12 +12,14 @@ import { createInterface } from "node:readline/promises";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { validateSettings, type PolarisSettings } from "../config/settings.ts";
 import { projectCf } from "./cf.ts";
-import { parseEnvFile } from "./env-file.ts";
+import { parseEnvFile, withEnvValue } from "./env-file.ts";
 import { deleteStack, deployStack, describe, stackResources, STACK_TAG, type SecretsFile } from "./stack.ts";
 import { tokenFormUrl } from "./token-form.ts";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
+const ENV_FILE = join(ROOT, ".env");
 const ACCOUNT_ID = /^[0-9a-f]{32}$/;
+const API = "https://api.cloudflare.com/client/v4";
 
 const USAGE = "Usage: pnpm stack:deploy | pnpm stack:delete [--confirm <stack name>]";
 
@@ -32,13 +34,7 @@ async function main(args: string[]): Promise<void> {
   if (command === "deploy") {
     if (options.length > 0) throw new Error(USAGE);
     const accountId = accountIdOf(env);
-    const analyticsApiToken = env.get("ANALYTICS_API_TOKEN") ?? "";
-    if (analyticsApiToken === "") {
-      throw new Error(
-        "ANALYTICS_API_TOKEN in .env is empty. This link opens the form for the token in the account of CLOUDFLARE_ACCOUNT_ID, " +
-          `with its permissions selected. Create the token, and paste it after ANALYTICS_API_TOKEN= in .env.\n${tokenFormUrl(accountId)}`,
-      );
-    }
+    const analyticsApiToken = env.get("ANALYTICS_API_TOKEN") || (await askForToken(accountId));
     console.log(`Deploying the stack ${settings.workerName}.`);
     deployStack({ settings, secrets: { accountId, analyticsApiToken }, cf, log, writeSecretsFile });
     return;
@@ -72,9 +68,69 @@ async function readSettings(): Promise<PolarisSettings> {
 }
 
 function readEnv(): Map<string, string> {
-  const file = join(ROOT, ".env");
-  if (!existsSync(file)) throw new Error(".env does not exist. Copy .env.example to it and fill in the values.");
-  return parseEnvFile(readFileSync(file, "utf8"));
+  if (!existsSync(ENV_FILE)) throw new Error(".env does not exist. Copy .env.example to it and fill in the values.");
+  return parseEnvFile(readFileSync(ENV_FILE, "utf8"));
+}
+
+/**
+ * The API token when .env has none: prints the link to the token form of the account,
+ * reads the token that the person pastes without showing it, checks it with Cloudflare,
+ * and saves it in .env, so that the deploy goes on in the same run. Where nobody can
+ * type, the deploy stops with the link instead.
+ */
+async function askForToken(accountId: string): Promise<string> {
+  const link = tokenFormUrl(accountId);
+  if (!process.stdin.isTTY) {
+    throw new Error(`ANALYTICS_API_TOKEN in .env is empty. Create the token with this link, and paste it after ANALYTICS_API_TOKEN= in .env:\n${link}`);
+  }
+  console.log(`ANALYTICS_API_TOKEN in .env is empty. Create the token with this link, which opens the form of your account with its permissions selected:\n\n${link}\n`);
+  for (;;) {
+    const token = (await readSecret("Paste the token: ")).trim();
+    if (token !== "" && (await tokenIsActive(accountId, token))) {
+      writeFileSync(ENV_FILE, withEnvValue(readFileSync(ENV_FILE, "utf8"), "ANALYTICS_API_TOKEN", token));
+      console.log("Saved the token in .env.\n");
+      return token;
+    }
+    console.log("Cloudflare does not accept that token. Paste it again, or press Ctrl-C to stop.");
+  }
+}
+
+/** Whether Cloudflare accepts the token, as an account API token of the account or as a user API token. */
+async function tokenIsActive(accountId: string, token: string): Promise<boolean> {
+  for (const url of [`${API}/accounts/${accountId}/tokens/verify`, `${API}/user/tokens/verify`]) {
+    const response = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    if (response.ok) return true;
+  }
+  return false;
+}
+
+/** Reads a line from the terminal without showing what the person types or pastes. */
+function readSecret(question: string): Promise<string> {
+  const input = process.stdin;
+  process.stdout.write(question);
+  input.setRawMode(true);
+  input.setEncoding("utf8");
+  input.resume();
+  return new Promise((resolve, reject) => {
+    let value = "";
+    const finish = (done: () => void) => {
+      input.off("data", onData);
+      input.setRawMode(false);
+      input.pause();
+      process.stdout.write("\n");
+      done();
+    };
+    const onData = (chunk: string) => {
+      for (const character of chunk) {
+        if (character === "\r" || character === "\n") return finish(() => resolve(value));
+        // Ctrl-C and Ctrl-D stop the deploy, as they would at a prompt of the shell.
+        if (character === "\u0003" || character === "\u0004") return finish(() => reject(new Error("Stopped before the deploy.")));
+        if (character === "\u007f" || character === "\b") value = value.slice(0, -1);
+        else value += character;
+      }
+    };
+    input.on("data", onData);
+  });
 }
 
 function accountIdOf(env: Map<string, string>): string {

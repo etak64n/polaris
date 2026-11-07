@@ -1,6 +1,6 @@
-// Reads .env, the file of the account and the secrets. Each line is KEY=VALUE;
-// blank lines and lines that start with # are skipped, and quotes around a value
-// are removed.
+// Reads and writes .env, the file of the account and the secrets. Each line is
+// KEY=VALUE; blank lines and lines that start with # are skipped, and quotes around a
+// value are removed.
 
 export function parseEnvFile(text: string): Map<string, string> {
   const values = new Map<string, string>();
@@ -16,4 +16,15 @@ export function parseEnvFile(text: string): Map<string, string> {
     values.set(key, value);
   }
   return values;
+}
+
+/** The text of .env with KEY=value: the line of the key replaced, or a line added at the end. */
+export function withEnvValue(text: string, key: string, value: string): string {
+  const lines = text.split("\n");
+  const index = lines.findIndex((line) => line.trim().startsWith(`${key}=`));
+  if (index !== -1) {
+    lines[index] = `${key}=${value}${lines[index]?.endsWith("\r") ? "\r" : ""}`;
+    return lines.join("\n");
+  }
+  return `${text}${text === "" || text.endsWith("\n") ? "" : "\n"}${key}=${value}\n`;
 }
