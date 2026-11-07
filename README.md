@@ -68,8 +68,8 @@ Add `Workers KV Storage Read`, `Workers Scripts Read`, `Queues Read`, and `Hyper
 Run these 5 commands in order to configure and deploy polaris:
 
 ```bash
-# Install the exact dependency versions recorded in pnpm-lock.yaml
-pnpm install --frozen-lockfile
+# Install the dependency versions recorded in pnpm-lock.yaml
+pnpm install
 
 # Create polaris.config.ts from the example and replace every value
 cp polaris.config.example.ts polaris.config.ts
@@ -126,7 +126,7 @@ git fetch --tags
 git checkout v0.2.0
 
 # Install the dependency versions of that release, and deploy it
-pnpm install --frozen-lockfile
+pnpm install
 pnpm stack:deploy
 ```
 
