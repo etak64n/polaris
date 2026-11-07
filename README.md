@@ -5,14 +5,15 @@
   </picture>
 </h1>
 
-polaris is a self-hosted dashboard that shows how much of each Cloudflare Free plan limit your account uses today and in the current billing cycle, along with your estimated cost and product metrics.
-You deploy polaris as a single Cloudflare Worker in your own account without a database, protected by Cloudflare Access.
+polaris is a self-hosted dashboard that tracks how much of each Cloudflare Free plan limit remains in your account.
+On the Free plan, it shows when to upgrade to Workers Paid; on Workers Paid, it shows whether your usage fits the Free plan again.
+It also estimates your current billing-cycle cost and charts metrics for Workers, D1, R2, KV, Durable Objects, Queues, Workflows, Hyperdrive, Browser Run, and Workers AI.
+You deploy polaris as a single Worker in your own account without a database, protected by Cloudflare Access.
 
 Try the [live demo](https://etak64n.github.io/polaris/) to explore every page with sample data.
 
 ## Contents
 
-- [Features](#features)
 - [Architecture](#architecture)
 - [Quick start](#quick-start)
   - [Prerequisites](#prerequisites)
@@ -20,28 +21,6 @@ Try the [live demo](https://etak64n.github.io/polaris/) to explore every page wi
   - [Configure and deploy](#configure-and-deploy)
   - [Update or delete](#update-or-delete)
 - [License](#license)
-
-## Features
-
-polaris helps you decide when to upgrade from the Free plan to Workers Paid, or whether your Workers Paid usage would fit the Free plan again.
-
-It displays 5 views of your Cloudflare account:
-
-1. Free plan limits
-   - Remaining share of each Free plan limit as a gauge (on both Free and Paid plans)
-   - Number of Workers requests stopped by a limit
-2. Cost estimate
-   - Estimated cost for the current billing cycle (spend so far and projected cycle total)
-   - Simulated Workers Paid cost when your account is on the Free plan
-3. Product dashboards
-   - Charts for Workers, Durable Objects, Queues, Workflows, Browser Run, D1, R2, KV, Hyperdrive, and Workers AI
-   - Selectable time range from 1 hour to 90 days, with optional auto-reload
-4. D1 top queries
-   - Queries that read or wrote the most rows in your D1 databases
-5. Signed-in user
-   - Your email address, login method, sign-in timestamp, and log-out link in the sidebar footer
-
-> Note: polaris calculates estimated cost by applying published Cloudflare pricing to your usage metrics, so estimates can differ slightly from your invoice.
 
 ## Architecture
 
