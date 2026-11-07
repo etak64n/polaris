@@ -5,7 +5,7 @@ import { MetricsDashboard, type ChartDefinition, type ColumnDefinition, type Das
 import { formatCount } from "@/lib/format.ts";
 
 const CHARTS: ChartDefinition[] = [
-  { title: "Queries", metric: "queries", kind: "sum", format: formatCount },
+  { title: "Queries", help: "The queries that went through Hyperdrive to the databases. The Free plan allows 100,000 a day.", metric: "queries", kind: "sum", format: formatCount },
   { title: "Errors", metric: "errors", kind: "sum", format: formatCount },
 ];
 

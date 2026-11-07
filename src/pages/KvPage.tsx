@@ -10,7 +10,7 @@ const CHARTS: ChartDefinition[] = [
   { title: "Writes", metric: "writes", kind: "sum", format: formatCount },
   { title: "Deletes", metric: "deletes", kind: "sum", format: formatCount },
   { title: "Lists", metric: "lists", kind: "sum", format: formatCount },
-  { title: "Latency", metric: "latencyMs", kind: "quantile", format: formatDuration, tickFormat: formatDuration },
+  { title: "Latency", help: "The time that KV took to answer an operation, at p50 and p99.", metric: "latencyMs", kind: "quantile", format: formatDuration, tickFormat: formatDuration },
   { title: "Storage", metric: "storageBytes", kind: "gauge", format: formatBytes, tickFormat: formatBytes },
   { title: "Keys", metric: "keys", kind: "gauge", format: formatCount },
 ];

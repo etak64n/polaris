@@ -26,6 +26,8 @@ import { useMetrics } from "@/lib/useMetrics.ts";
 
 export interface ChartDefinition {
   title: string;
+  /** What the chart shows, behind an ⓘ after its title. */
+  help?: string;
   metric: string;
   /** A sum adds up over a period, a quantile shows p50 and p99, and a gauge is a level such as storage. */
   kind: "sum" | "quantile" | "gauge";
@@ -173,8 +175,8 @@ export function MetricsDashboard({
           note: [asOf, freeNote].filter((part) => part !== undefined).join(" · ") || undefined,
         };
       }
-      // A quantile does not add up over a range, so the figure is the latest p99, with p50
-      // beside it. Each carries the color of its line, so the figure is the legend too.
+      // A quantile does not add up over a range, so the figure is the latest p50 and p99, side
+      // by side and alike. Each sits under the color of its line, so the figure is the legend too.
       const values = metrics.quantiles[chart.metric];
       const series = statisticSeries(values);
       const at = lastIndex(metrics.times.length, (index) => values?.p99[index] != null);
@@ -189,19 +191,10 @@ export function MetricsDashboard({
           p99 === null ? (
             "—"
           ) : (
-            <>
-              <span className="inline-flex items-baseline gap-1.5">
-                <span aria-hidden="true" className="size-2.5 self-center" style={{ backgroundColor: p99Line?.color }} />
-                {chart.format(p99)}
-                <span className="text-sm font-semibold text-label">p99</span>
-              </span>
-              {p50 !== null && (
-                <span className="inline-flex items-baseline gap-1.5 text-sm font-normal text-label">
-                  <span aria-hidden="true" className="size-2.5 self-center" style={{ backgroundColor: p50Line?.color }} />
-                  {chart.format(p50)} p50
-                </span>
-              )}
-            </>
+            <span className="flex gap-x-8">
+              {p50 !== null && <QuantileFigure name="p50" color={p50Line?.color} value={chart.format(p50)} />}
+              <QuantileFigure name="p99" color={p99Line?.color} value={chart.format(p99)} />
+            </span>
           ),
         note: at === null ? undefined : `As of ${timeLabel(metrics.times[at] ?? "", metrics.period)}`,
       };
@@ -243,7 +236,7 @@ export function MetricsDashboard({
             <SeriesLegend series={colors.series} hidden={hidden} onToggle={toggleHidden} onPoint={(key) => group.highlight(key)} />
             <Tray>
               {views.map(({ chart, series, line, figure, note }) => (
-                <Card key={`${chart.metric}/${chart.kind}`} title={chart.title} figure={figure} note={note}>
+                <Card key={`${chart.metric}/${chart.kind}`} title={chart.title} help={chart.help} figure={figure} note={note}>
                   <MetricChart
                     label={chart.title}
                     kind={chart.kind === "quantile" ? "lines" : "stacked"}
@@ -316,4 +309,17 @@ interface ChartView {
   figure: ReactNode;
   /** The time of a latest value. */
   note?: string;
+}
+
+/** One quantile of a chart: its name after the color of its line, and its value under them. */
+function QuantileFigure({ name, color, value }: { name: string; color: string | undefined; value: string }) {
+  return (
+    <span className="grid gap-0.5">
+      <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-label">
+        <span aria-hidden="true" className="size-2.5" style={{ backgroundColor: color }} />
+        {name}
+      </span>
+      <span>{value}</span>
+    </span>
+  );
 }

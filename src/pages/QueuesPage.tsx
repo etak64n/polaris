@@ -5,8 +5,8 @@ import { MetricsDashboard, type ChartDefinition, type ColumnDefinition, type Das
 import { formatCompact, formatCount } from "@/lib/format.ts";
 
 const CHARTS: ChartDefinition[] = [
-  { title: "Operations", metric: "operations", kind: "sum", format: formatCount },
-  { title: "Backlog", metric: "backlog", kind: "gauge", format: formatCompact },
+  { title: "Operations", help: "One operation for each 64 KB of a message that is written, read, or deleted. Delivering a message usually takes three: a write, a read, and a delete.", metric: "operations", kind: "sum", format: formatCount },
+  { title: "Backlog", help: "The messages that wait in the queues for a consumer.", metric: "backlog", kind: "gauge", format: formatCompact },
 ];
 
 const COLUMNS: ColumnDefinition[] = [

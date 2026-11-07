@@ -8,6 +8,16 @@ import { useRef, useState, type ReactNode } from "react";
 import { Info } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
+/** A label followed by its ⓘ, such as the heading of a table column. */
+export function WithHelp({ label, help }: { label: string; help: ReactNode }) {
+  return (
+    <span className="inline-flex items-center gap-1">
+      {label}
+      <HelpTip title={label}>{help}</HelpTip>
+    </span>
+  );
+}
+
 export function HelpTip({ title, children }: { title: string; children: ReactNode }) {
   const [open, setOpen] = useState(false);
   // A mouse opens the frame on hover, so its click must not close the frame again.

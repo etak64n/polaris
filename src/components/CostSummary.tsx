@@ -3,6 +3,7 @@
 
 import type { CostEstimate, CostLine } from "../../shared/cost.ts";
 import { FREE_D1_STORAGE_BYTES, FREE_DAILY_LIMITS, GB } from "../../shared/pricing.ts";
+import { WithHelp } from "@/components/HelpTip.tsx";
 import { Figure } from "@/components/Layout.tsx";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatCount, formatDuration, formatMoney } from "@/lib/format.ts";
@@ -36,9 +37,15 @@ export function CostSummary({ estimate, paidEstimate }: { estimate: CostEstimate
             <TableHead className="w-36">Product</TableHead>
             <TableHead className="w-48">Item</TableHead>
             <TableHead className="text-right">Used</TableHead>
-            <TableHead className="text-right">Included</TableHead>
-            <TableHead className="text-right">Cost</TableHead>
-            <TableHead className="text-right">Projected</TableHead>
+            <TableHead className="text-right">
+              <WithHelp label="Included" help="The usage that the plan includes at no cost: per day on the Free plan, and per month on Workers Paid." />
+            </TableHead>
+            <TableHead className="text-right">
+              <WithHelp label="Cost" help="The cost of the usage from the first day of the billing cycle to today." />
+            </TableHead>
+            <TableHead className="text-right">
+              <WithHelp label="Projected" help="The cost that the billing cycle reaches on its last day if the usage goes on at its pace so far." />
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>

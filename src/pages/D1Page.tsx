@@ -8,11 +8,11 @@ import { TopQueries } from "@/components/TopQueries.tsx";
 import { formatBytes, formatCount, formatDuration } from "@/lib/format.ts";
 
 const CHARTS: ChartDefinition[] = [
-  { title: "Rows read", metric: "rowsRead", kind: "sum", format: formatCount, free: "d1RowsRead" },
-  { title: "Rows written", metric: "rowsWritten", kind: "sum", format: formatCount, free: "d1RowsWritten" },
+  { title: "Rows read", help: "The rows that the queries read. A query that scans a table reads every row of it, so an index can lower this.", metric: "rowsRead", kind: "sum", format: formatCount, free: "d1RowsRead" },
+  { title: "Rows written", help: "The rows that the queries wrote, with the rows of the indexes that the writes updated.", metric: "rowsWritten", kind: "sum", format: formatCount, free: "d1RowsWritten" },
   { title: "Read queries", metric: "readQueries", kind: "sum", format: formatCount },
   { title: "Write queries", metric: "writeQueries", kind: "sum", format: formatCount },
-  { title: "Query time", metric: "queryTimeMs", kind: "quantile", format: formatDuration, tickFormat: formatDuration },
+  { title: "Query time", help: "The time that the database spent running each batch of queries, at p50 and p99. It leaves out the time on the network.", metric: "queryTimeMs", kind: "quantile", format: formatDuration, tickFormat: formatDuration },
   { title: "Storage", metric: "storageBytes", kind: "gauge", format: formatBytes, tickFormat: formatBytes, free: "d1StorageBytes" },
 ];
 
