@@ -44,7 +44,7 @@ polaris requires no database or storage of its own. `pnpm stack:deploy` provisio
 
 ### 1. Create a Read-Only API Token
 
-Open the [Cloudflare Account API Tokens form](https://dash.cloudflare.com/?to=/:account/api-tokens&permissionGroupKeys=%5B%7B%22key%22%3A%22account_analytics%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22d1%22%2C%22type%22%3A%22read%22%7D%5D&name=polaris) and create an account token for `ANALYTICS_API_TOKEN` with the following permissions:
+Open the [Cloudflare Account API Tokens form](https://dash.cloudflare.com/?to=/:account/api-tokens&permissionGroupKeys=%5B%7B%22key%22%3A%22account_analytics%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22d1%22%2C%22type%22%3A%22read%22%7D%5D&name=polaris) to create an account token for `ANALYTICS_API_TOKEN`. The link pre-fills the required permissions below, and you can add the optional permissions before creating the token:
 
 | Scope | Permissions | Purpose |
 | :--- | :--- | :--- |
