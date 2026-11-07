@@ -169,6 +169,8 @@ jobs:
             "split[a][b];[a]palettegen=max_colors=128:stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=4:diff_mode=rectangle",
           ].join(",");
           writeFileSync("filter.txt", filter);
+          writeFileSync("zoom.txt", filter.split(",split")[0]);
+          writeFileSync("previews.txt", [1, ...windows.map((w) => (w.from + w.to) / 2)].map((time) => time.toFixed(2)).join("\n") + "\n");
           console.log(`${frames.length} frames over ${(frames.at(-1).time - start).toFixed(1)} s, ${zooms.length} zooms`);
           SCRIPT
           node tour.mjs
@@ -176,8 +178,23 @@ jobs:
       - name: Make the GIF
         run: ffmpeg -y -loglevel error -f concat -safe 0 -i tour.ffconcat -filter_complex "$(cat filter.txt)" tour.gif && ls -la tour.gif
 
+      # An animated WebP of the same tour, to compare its size, and still frames of the
+      # start and of the middle of each zoom, to check them without playing the GIF.
+      - name: Make the WebP and the previews
+        run: |
+          ffmpeg -y -loglevel error -f concat -safe 0 -i tour.ffconcat -vf "$(cat zoom.txt)" -c:v libwebp_anim -q:v 80 -loop 0 tour.webp && ls -la tour.webp
+          number=0
+          while read -r time; do
+            number=$((number + 1))
+            ffmpeg -y -loglevel error -ss "$time" -i tour.gif -frames:v 1 "preview-$number.png"
+          done < previews.txt
+          ls -la preview-*.png
+
       - uses: actions/upload-artifact@v5
         with:
           name: tour
-          path: tour.gif
+          path: |
+            tour.gif
+            tour.webp
+            preview-*.png
           if-no-files-found: error
