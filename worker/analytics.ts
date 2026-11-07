@@ -44,8 +44,11 @@ export interface UsageSource {
    * of the given Workers, or of every Worker when none is given.
    */
   workerHandlers(from: string, to: string, limit: number, scriptNames: readonly string[]): Promise<WorkerHandler[]>;
-  /** The Cron Triggers of all the Workers of the account now. */
-  cronTriggers(): Promise<number>;
+  /**
+   * The Cron Triggers of all the Workers of the account now, asking for those of at most
+   * `maxWorkers` Workers, one subrequest each.
+   */
+  cronTriggers(maxWorkers: number): Promise<number>;
   /** The subscriptions of the account, as Cloudflare bills them. */
   subscriptions(): Promise<Subscription[]>;
   /** D1 database names by database ID. */
@@ -373,7 +376,7 @@ export class CloudflareAnalytics implements UsageSource {
    * runs them. polaris is itself a Worker of the account, so a list without Workers means
    * that the token may not read them.
    */
-  async cronTriggers(): Promise<number> {
+  async cronTriggers(maxWorkers: number): Promise<number> {
     const body = await this.#request(`${API}/accounts/${this.#accountId}/workers/scripts`, { method: "GET" });
     const result = (body as { result?: unknown }).result;
     if (!Array.isArray(result) || result.length === 0) {
@@ -384,6 +387,12 @@ export class CloudflareAnalytics implements UsageSource {
         // A list without the handlers of a Worker leaves its Cron Triggers to the question below.
         typeof script.id === "string" && (!Array.isArray(script.handlers) || script.handlers.includes("scheduled")),
     );
+    // Rather than run past the subrequests of a request and fail without a reason, say why.
+    if (scheduled.length > maxWorkers) {
+      throw new AnalyticsError(
+        `${scheduled.length} Workers have a scheduled handler, more than the ${maxWorkers} whose Cron Triggers one request of polaris can ask for.`,
+      );
+    }
     const counts = await Promise.all(
       scheduled.map(async (script) => {
         const url = `${API}/accounts/${this.#accountId}/workers/scripts/${encodeURIComponent(script.id)}/schedules`;

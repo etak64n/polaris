@@ -57,6 +57,13 @@ const USAGE_CACHE_SECONDS = 300;
 const USAGE_SHAPE = "v3";
 const NAMES_CACHE_SECONDS = 3600;
 const TOP_QUERY_COUNT = 20;
+/**
+ * The most Workers whose Cron Triggers /api/usage asks for, one subrequest each. A Worker
+ * on the Free plan may send 50 subrequests in a request, and /api/usage needs a few more
+ * for the usage, the names of the databases, the list of the Workers, and the
+ * subscriptions. Workers Paid allows 10,000.
+ */
+const CRON_LOOKUPS = { free: 40, paid: 1_000 } as const;
 const WORKER_HANDLER_COUNT = 50;
 // The periods of the top queries and of the handlers of the Workers: today and the last 7 days.
 const RECENT_DAYS = [1, 7];
@@ -120,7 +127,7 @@ export function createApp(dependencies: AppDependencies) {
     const [days, databaseNames, cronTriggers, subscriptions] = await Promise.all([
       cache.get(`usage/${USAGE_SHAPE}/${config.accountId}/${from}/${today}`, USAGE_CACHE_SECONDS, () => source.dailyUsage(from, today)),
       cache.get(`d1-names/${config.accountId}`, NAMES_CACHE_SECONDS, () => source.databaseNames()),
-      cache.get(`cron-triggers/${config.accountId}`, USAGE_CACHE_SECONDS, () => source.cronTriggers()),
+      cache.get(`cron-triggers/${config.accountId}`, USAGE_CACHE_SECONDS, () => source.cronTriggers(CRON_LOOKUPS[config.plan])),
       cache.get(`subscriptions/${config.accountId}`, USAGE_CACHE_SECONDS, () => source.subscriptions()),
     ]);
     const byDate = new Map(days.map((day) => [day.date, day]));

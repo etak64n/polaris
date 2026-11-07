@@ -269,14 +269,21 @@ describe("CloudflareAnalytics.cronTriggers", () => {
       const schedules = url.includes("/jobs/") ? [{ cron: "*/5 * * * *" }, { cron: "0 0 * * *" }] : [{ cron: "0 3 * * *" }];
       return Response.json({ success: true, result: { schedules } });
     });
-    expect(await analytics.cronTriggers()).toBe(3);
+    expect(await analytics.cronTriggers(40)).toBe(3);
     // A Worker without the handlers in the list is asked for its Cron Triggers too.
     expect(calls.map((call) => call.url).sort()).toEqual([scripts, `${scripts}/jobs/schedules`, `${scripts}/old/schedules`]);
   });
 
+  it("says so rather than ask for the Cron Triggers of more Workers than a request may", async () => {
+    const workers = Array.from({ length: 41 }, (_, index) => ({ id: `job-${index}`, handlers: ["scheduled"] }));
+    const { analytics, calls } = analyticsAnswering(() => Response.json({ success: true, result: workers }));
+    await expect(analytics.cronTriggers(40)).rejects.toThrow(/41 Workers have a scheduled handler, more than the 40/);
+    expect(calls).toHaveLength(1);
+  });
+
   it("reports a token that may not read the Workers, which lists none", async () => {
     const { analytics } = analyticsAnswering(() => Response.json({ success: true, result: [] }));
-    await expect(analytics.cronTriggers()).rejects.toThrow(/Workers Metadata Read-Only/);
+    await expect(analytics.cronTriggers(40)).rejects.toThrow(/Workers Metadata Read-Only/);
   });
 });
 

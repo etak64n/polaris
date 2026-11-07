@@ -26,6 +26,7 @@ export class FakeUsageSource implements UsageSource {
   queries: TopQuery[] = [];
   handlers: WorkerHandler[] = [];
   cronTriggerCount = 0;
+  readonly cronCalls: number[] = [];
   subscriptionList: Subscription[] = [];
   names: Record<string, string> = {};
   failure: Error | null = null;
@@ -48,7 +49,8 @@ export class FakeUsageSource implements UsageSource {
     return this.handlers;
   }
 
-  async cronTriggers(): Promise<number> {
+  async cronTriggers(maxWorkers: number): Promise<number> {
+    this.cronCalls.push(maxWorkers);
     if (this.failure !== null) throw this.failure;
     return this.cronTriggerCount;
   }
