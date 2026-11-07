@@ -21,5 +21,8 @@ export default definePolarisConfig({
     teamDomain: "https://example.cloudflareaccess.com",
     // The email addresses that may sign in
     allow: ["you@example.com"],
+    // The login methods of your Zero Trust organization that the sign-in page offers,
+    // by type, such as "onetimepin", "github", or "passkeys"
+    loginMethods: ["onetimepin"],
   },
 });

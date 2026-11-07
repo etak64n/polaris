@@ -29,6 +29,12 @@ export interface AccessSettings {
    * the domain an Access application whose only policy allows these addresses.
    */
   allow: string[];
+  /**
+   * The login methods of the Zero Trust organization that the sign-in page of the
+   * domain offers, each by its type, such as "onetimepin", "github", or "passkeys",
+   * or by its ID. The Access application allows these login methods only.
+   */
+  loginMethods: string[];
 }
 
 /**
@@ -66,6 +72,7 @@ const WORKER_NAME = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 const HOSTNAME = /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z][a-z0-9-]{0,61}[a-z0-9]$/;
 // A practical check of an email address: one @, no spaces, and a dot in the domain.
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const NO_WHITESPACE = /^\S+$/;
 
 type Problems = string[];
 type Fields = Record<string, unknown>;
@@ -107,10 +114,30 @@ function readBilling(input: unknown, problems: Problems): BillingSettings | null
 function readAccess(input: unknown, problems: Problems): AccessSettings | null {
   const access = readObject(input, "access", problems);
   if (access === null) return null;
-  checkKeys(access, "access.", ["teamDomain", "allow"], problems);
+  checkKeys(access, "access.", ["teamDomain", "allow", "loginMethods"], problems);
   const teamDomain = readOrigin(access, "teamDomain", "access.", problems);
   const allow = readEmails(access, "allow", "access.", problems);
-  return { teamDomain, allow };
+  const loginMethods = readLoginMethods(access, problems);
+  return { teamDomain, allow, loginMethods };
+}
+
+// Reads the login methods of the Access application. `pnpm stack:deploy` looks them up
+// in the Zero Trust organization, because only Cloudflare knows which ones exist.
+function readLoginMethods(access: Fields, problems: Problems): string[] {
+  const path = "access.loginMethods";
+  if (!("loginMethods" in access)) {
+    problems.push(`${path} is missing.`);
+    return [];
+  }
+  const value = access["loginMethods"];
+  if (!Array.isArray(value) || !value.every((item) => typeof item === "string" && NO_WHITESPACE.test(item))) {
+    problems.push(`${path} must be a list of login method types or IDs, such as "onetimepin".`);
+    return [];
+  }
+  if (value.length === 0) problems.push(`${path} must name at least one login method.`);
+  const repeated = value.filter((item, index) => value.indexOf(item) !== index);
+  if (repeated.length > 0) problems.push(`${path} must name each login method once: ${[...new Set(repeated)].join(", ")}.`);
+  return value as string[];
 }
 
 function readEmails(fields: Fields, key: string, prefix: string, problems: Problems): string[] {

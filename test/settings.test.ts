@@ -52,6 +52,24 @@ describe("validateSettings", () => {
     ]);
   });
 
+  it("offers at least one login method", () => {
+    const input = settings();
+    input.access.loginMethods = [];
+    expect(problemsOf(input)).toEqual(["access.loginMethods must name at least one login method."]);
+  });
+
+  it("names each login method once", () => {
+    const input = settings();
+    input.access.loginMethods = ["onetimepin", "github", "onetimepin"];
+    expect(problemsOf(input)).toEqual(["access.loginMethods must name each login method once: onetimepin."]);
+  });
+
+  it("names login methods by a type or an ID without spaces", () => {
+    const input = settings();
+    input.access.loginMethods = ["one-time pin"];
+    expect(problemsOf(input)).toEqual(['access.loginMethods must be a list of login method types or IDs, such as "onetimepin".']);
+  });
+
   it("asks for at least one email address that may sign in", () => {
     const input = settings();
     input.access.allow = [];
