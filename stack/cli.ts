@@ -32,12 +32,7 @@ async function main(args: string[]): Promise<void> {
     if (options.length > 0) throw new Error(USAGE);
     const accountId = accountIdOf(env);
     const analyticsApiToken = env.get("ANALYTICS_API_TOKEN") ?? "";
-    if (analyticsApiToken === "") {
-      throw new Error(
-        "ANALYTICS_API_TOKEN in .env is empty. polaris reads the usage of the account in CLOUDFLARE_ACCOUNT_ID with an account API token of that account. " +
-          "Create the token with the permissions that .env.example lists, and write it after ANALYTICS_API_TOKEN= in .env.",
-      );
-    }
+    if (analyticsApiToken === "") throw new Error("ANALYTICS_API_TOKEN in .env is empty. .env.example tells how to create the token.");
     console.log(`Deploying the stack ${settings.workerName}.`);
     deployStack({ settings, secrets: { accountId, analyticsApiToken }, cf, log, writeSecretsFile });
     return;
