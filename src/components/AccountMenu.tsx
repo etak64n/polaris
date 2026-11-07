@@ -1,8 +1,10 @@
-// The person who signed in, at the foot of the sidebar: their email, and a menu with
-// how and when they signed in and the way to sign out.
+// The person who signed in, at the foot of the sidebar: their email with the Workers plan
+// of the account under it, and a menu with how and when they signed in and the way to
+// sign out.
 
 import { LogOut, UserRound } from "lucide-react";
 import type { Me } from "../../shared/api.ts";
+import type { PlanType } from "../../shared/plan.ts";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDateTime } from "@/lib/format.ts";
@@ -32,7 +34,7 @@ export interface Account {
   error: string | null;
 }
 
-export function AccountMenu({ account }: { account: Account }) {
+export function AccountMenu({ account, plan }: { account: Account; plan: PlanType | null }) {
   const { me, error } = account;
   if (me === undefined && error === null) return <Skeleton className="h-8 w-full" />;
   return (
@@ -40,12 +42,15 @@ export function AccountMenu({ account }: { account: Account }) {
       <PopoverTrigger asChild>
         <button
           type="button"
-          className="flex h-(--ds-nav-item-height) w-full min-w-0 items-center gap-3 rounded-md px-2 text-left text-sm text-strong transition-colors duration-150 hover:bg-surface-hover aria-expanded:bg-surface-hover pointer-coarse:h-11"
+          className="flex min-h-(--ds-nav-item-height) w-full min-w-0 items-center gap-3 rounded-md px-2 py-1 text-left text-sm text-strong transition-colors duration-150 hover:bg-surface-hover aria-expanded:bg-surface-hover pointer-coarse:min-h-11"
         >
           <span aria-hidden="true" className="grid size-6 shrink-0 place-items-center rounded-full bg-surface-subdued text-xs font-semibold text-label">
             {me ? me.email.charAt(0).toUpperCase() : <UserRound className="size-3.5" />}
           </span>
-          <span className="truncate">{me ? me.email : me === null ? "Local development" : "Account"}</span>
+          <span className="grid min-w-0">
+            <span className="truncate">{me ? me.email : me === null ? "Local development" : "Account"}</span>
+            {plan !== null && <span className="truncate text-xs text-subdued">{plan === "paid" ? "Workers Paid" : "Workers Free"}</span>}
+          </span>
         </button>
       </PopoverTrigger>
       <PopoverContent side="top" align="start" className="w-64 gap-0 p-0">
