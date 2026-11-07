@@ -117,6 +117,8 @@ pnpm stack:deploy
 
 ## Updating and Uninstalling
 
+To change a setting, edit `polaris.config.ts` and run `pnpm stack:deploy` again.
+
 Check the [release notes](https://github.com/etak64n/polaris/releases) for any configuration changes before updating:
 
 ```bash

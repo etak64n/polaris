@@ -2,7 +2,8 @@
 //
 // Copy this file to polaris.config.ts and replace every value. Git ignores
 // polaris.config.ts. The account and the API token go in .env instead:
-// see .env.example.
+// see .env.example. pnpm stack:deploy applies the settings to the Worker and
+// the Access application: run it again after you change one.
 
 import { definePolarisConfig } from "./config/settings.ts";
 
@@ -20,7 +21,8 @@ export default definePolarisConfig({
   // Cloudflare Access, which asks for a sign-in before polaris opens. pnpm stack:deploy
   // reads the team domain from the Zero Trust organization of the account.
   access: {
-    // The email addresses of the people who may open polaris
+    // The email addresses of the people who may open polaris. Access checks them when
+    // someone signs in; a person whom you remove keeps a session until it ends, 24 hours.
     allow: ["you@example.com"],
     // The login methods that the sign-in page offers: "all" for every login method of your
     // Zero Trust organization, or a list such as ["onetimepin", "github"].
