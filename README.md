@@ -21,7 +21,7 @@
   · <a href="https://github.com/etak64n/polaris/issues">Issues</a>
 </p>
 
-polaris tracks how much of each Cloudflare Free plan limit remains in your account—showing when to upgrade to Workers Paid, or whether a Workers Paid account fits the Free plan again. It also estimates your current billing-cycle cost and charts metrics across Workers, D1, R2, KV, Durable Objects, Queues, Workflows, Hyperdrive, Browser Run, and Workers AI.
+polaris tracks how much of each Cloudflare Free plan limit remains in your account. On the Free plan, it shows when to upgrade to Workers Paid; on Workers Paid, it shows whether your usage fits the Free plan again. It also estimates your current billing-cycle cost and charts metrics across Workers, D1, R2, KV, Durable Objects, Queues, Workflows, Hyperdrive, Browser Run, and Workers AI.
 
 ## Architecture
 
@@ -38,14 +38,14 @@ polaris requires no database or storage of its own. `pnpm stack:deploy` provisio
 
 | Requirement | Details |
 | :--- | :--- |
-| **Custom Domain on Cloudflare** | A domain active in your Cloudflare account (e.g., `example.com`) so polaris can be hosted on a subdomain such as `usage.example.com`. |
-| **Cloudflare Zero Trust** | Enabled on the same account (the Free plan works) to provide your team domain (`https://<team>.cloudflareaccess.com`). |
+| **Custom Domain on Cloudflare** | An active domain in your Cloudflare account so polaris can be hosted on a subdomain such as `usage.example.com`. |
+| **Cloudflare Zero Trust** | A Zero Trust organization on the same account, which provides your `https://<team>.cloudflareaccess.com` team domain on the Free plan. |
 | **Node.js** | `^22.23.0 \|\| ^24.22.0 \|\| ^26.12.0` |
-| **pnpm** | `12.16.1` (`corepack enable` or `pnpm@12.16.1`) |
+| **pnpm** | `12.16.1` |
 
 ### 1. Create a Read-Only API Token
 
-Open the [Cloudflare Account API Tokens form](https://dash.cloudflare.com/?to=/:account/api-tokens&permissionGroupKeys=%5B%7B%22key%22%3A%22account_analytics%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22d1%22%2C%22type%22%3A%22read%22%7D%5D&name=polaris) (pre-filled with the required permissions) and create an account token for `ANALYTICS_API_TOKEN`:
+Open the [Cloudflare Account API Tokens form](https://dash.cloudflare.com/?to=/:account/api-tokens&permissionGroupKeys=%5B%7B%22key%22%3A%22account_analytics%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22d1%22%2C%22type%22%3A%22read%22%7D%5D&name=polaris) and create an account token for `ANALYTICS_API_TOKEN` with the following permissions:
 
 | Scope | Permissions | Purpose |
 | :--- | :--- | :--- |
