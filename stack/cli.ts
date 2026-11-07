@@ -32,7 +32,7 @@ async function main(args: string[]): Promise<void> {
     if (options.length > 0) throw new Error(USAGE);
     const accountId = accountIdOf(env);
     const analyticsApiToken = env.get("ANALYTICS_API_TOKEN") ?? "";
-    if (analyticsApiToken === "") throw new Error("ANALYTICS_API_TOKEN in .env is empty. .env.example tells how to create the token.");
+    if (analyticsApiToken === "") throw new Error("Please set ANALYTICS_API_TOKEN in .env. See .env.example for how to create the token.");
     console.log(`Deploying the stack ${settings.workerName}.`);
     deployStack({ settings, secrets: { accountId, analyticsApiToken }, cf, log, writeSecretsFile });
     return;
