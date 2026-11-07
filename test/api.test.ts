@@ -1,5 +1,5 @@
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
-import type { MeResponse, TopQueriesResponse, UsageResponse } from "../shared/api.ts";
+import type { MeResponse, TopQueriesResponse, UsageResponse, WorkerHandlersResponse } from "../shared/api.ts";
 import type { MetricsResponse } from "../shared/metrics.ts";
 import { AnalyticsError } from "../worker/analytics.ts";
 import { createApp } from "../worker/app.ts";
@@ -130,6 +130,7 @@ describe("GET /api/usage", () => {
   it("returns the last 31 days, today last, from Cloudflare analytics", async () => {
     source.usage = (date) => usageOf(date, 1);
     source.names = { "db-1": "blog" };
+    source.cronTriggerCount = 2;
     const response = await get("/api/usage");
     expect(response.status).toBe(200);
     const body = (await response.json()) as UsageResponse;
@@ -141,6 +142,7 @@ describe("GET /api/usage", () => {
     expect(body.days[0]?.date).toBe("2026-10-06");
     expect(body.days.at(-1)).toEqual(usageOf("2026-11-05", 1));
     expect(body.databaseNames).toEqual({ "db-1": "blog" });
+    expect(body.cronTriggers).toBe(2);
     expect(source.usageCalls).toEqual([{ from: "2026-10-06", to: "2026-11-05" }]);
   });
 
@@ -188,6 +190,30 @@ describe("GET /api/d1/top-queries", () => {
     const ids = Array.from({ length: 6 }, (_, index) => `database=0000000${index}-0000-0000-0000-000000000000`).join("&");
     expect((await get(`/api/d1/top-queries?days=1&order=rowsRead&${ids}`)).status).toBe(400);
     expect(source.queryCalls).toHaveLength(0);
+  });
+});
+
+describe("GET /api/workers/handlers", () => {
+  it("returns the handlers of the last days with the most CPU time", async () => {
+    source.handlers = [{ scriptName: "api", handler: "cron", invocations: 288, cpuTimeMs: 9_000, cpuTimeP50Ms: 30, cpuTimeP99Ms: 70 }];
+    const response = await get("/api/workers/handlers?days=7");
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as WorkerHandlersResponse;
+    expect(body).toEqual({ from: "2026-10-30", to: "2026-11-05", handlers: source.handlers });
+    expect(source.handlerCalls).toEqual([{ from: "2026-10-30", to: "2026-11-05", limit: 50, scriptNames: [] }]);
+  });
+
+  it("narrows the handlers to the given Workers", async () => {
+    const response = await get("/api/workers/handlers?days=1&worker=web&worker=api&worker=web");
+    expect(response.status).toBe(200);
+    expect(source.handlerCalls[0]).toMatchObject({ from: "2026-11-05", to: "2026-11-05", scriptNames: ["api", "web"] });
+  });
+
+  it("accepts only the offered periods and the names of Workers", async () => {
+    expect((await get("/api/workers/handlers?days=3")).status).toBe(400);
+    expect((await get("/api/workers/handlers")).status).toBe(400);
+    expect((await get("/api/workers/handlers?days=1&worker=no%20worker")).status).toBe(400);
+    expect(source.handlerCalls).toHaveLength(0);
   });
 });
 

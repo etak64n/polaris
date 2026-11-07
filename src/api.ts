@@ -1,6 +1,6 @@
 // Calls the polaris API and turns its errors into messages for the screen.
 
-import type { ApiErrorBody, MeResponse, QueryOrder, TopQueriesResponse, UsageResponse } from "../shared/api.ts";
+import type { ApiErrorBody, MeResponse, QueryOrder, TopQueriesResponse, UsageResponse, WorkerHandlersResponse } from "../shared/api.ts";
 import type { MetricProduct, MetricRange, MetricsResponse } from "../shared/metrics.ts";
 
 export class ApiError extends Error {
@@ -56,4 +56,11 @@ export function fetchTopQueries(days: number, order: QueryOrder, databaseIds: re
   const params = new URLSearchParams({ days: String(days), order });
   for (const id of databaseIds) params.append("database", id);
   return getJson(`/api/d1/top-queries?${params}`, signal);
+}
+
+/** The handlers of the given Workers, or of every Worker when none is given, with the most CPU time first. */
+export function fetchWorkerHandlers(days: number, scriptNames: readonly string[], signal: AbortSignal): Promise<WorkerHandlersResponse> {
+  const params = new URLSearchParams({ days: String(days) });
+  for (const name of scriptNames) params.append("worker", name);
+  return getJson(`/api/workers/handlers?${params}`, signal);
 }

@@ -1,12 +1,13 @@
 // Reads the usage of the account from the Cloudflare GraphQL Analytics API, and
 // the names of the resources from the Cloudflare API.
 //
-// The token needs Account Analytics Read for the usage and D1 Read for the names of
-// the databases. The names of the other resources need Workers KV Storage Read,
-// Workers Scripts Read (Durable Objects), Queues Read, and Hyperdrive Read: without
-// one of them, the dashboard of that product shows the IDs of its resources.
+// The token needs Account Analytics Read for the usage, D1 Read for the names of the
+// databases, and Workers Scripts Read for the Cron Triggers and the names of the
+// Durable Objects. The names of the other resources need Workers KV Storage Read,
+// Queues Read, and Hyperdrive Read: without one of them, the dashboard of that product
+// shows the IDs of its resources.
 
-import type { QueryOrder, TopQuery } from "../shared/api.ts";
+import type { QueryOrder, TopQuery, WorkerHandler } from "../shared/api.ts";
 import { addDays, datesBetween, startOf } from "../shared/dates.ts";
 import type { MetricProduct, MetricRange, MetricsResponse } from "../shared/metrics.ts";
 import { productMetrics } from "./metrics.ts";
@@ -38,6 +39,13 @@ export interface UsageSource {
    * in the given databases, or in every database when none is given.
    */
   topQueries(from: string, to: string, order: QueryOrder, limit: number, databaseIds: readonly string[]): Promise<TopQuery[]>;
+  /**
+   * The handlers of the Workers with the most CPU time from `from` to `to`, both included,
+   * of the given Workers, or of every Worker when none is given.
+   */
+  workerHandlers(from: string, to: string, limit: number, scriptNames: readonly string[]): Promise<WorkerHandler[]>;
+  /** The Cron Triggers of all the Workers of the account now. */
+  cronTriggers(): Promise<number>;
   /** D1 database names by database ID. */
   databaseNames(): Promise<Record<string, string>>;
   /** The names of the resources of a product by their IDs, or none when the token may not read them. */
@@ -167,6 +175,25 @@ query PolarisTopQueries($accountTag: string!, $start: Time!, $end: Time!${byData
     }
   }
 }`;
+
+const WORKER_HANDLERS_QUERY = (limit: number, byScript: boolean): string => `
+query PolarisWorkerHandlers($accountTag: string!, $start: Time!, $end: Time!${byScript ? ", $scriptNames: [string!]" : ""}) {
+  viewer {
+    accounts(filter: { accountTag: $accountTag }) {
+      handlers: workersInvocationsAdaptive(limit: ${limit}, filter: { datetime_geq: $start, datetime_lt: $end${byScript ? ", scriptName_in: $scriptNames" : ""} }, orderBy: [sum_cpuTimeUs_DESC]) {
+        sum { requests cpuTimeUs }
+        quantiles { cpuTimeP50 cpuTimeP99 }
+        dimensions { scriptName eventType }
+      }
+    }
+  }
+}`;
+
+interface WorkerHandlerRow {
+  sum: { requests: number; cpuTimeUs: number };
+  quantiles: { cpuTimeP50: number; cpuTimeP99: number };
+  dimensions: { scriptName: string; eventType: string };
+}
 
 export interface WorkerRow {
   sum: { requests: number; cpuTimeUs: number };
@@ -306,6 +333,51 @@ export class CloudflareAnalytics implements UsageSource {
         rowsWritten: row.sum.rowsWritten,
         durationMs: row.sum.queryDurationMs,
       }));
+  }
+
+  async workerHandlers(from: string, to: string, limit: number, scriptNames: readonly string[]): Promise<WorkerHandler[]> {
+    const byScript = scriptNames.length > 0;
+    const account = await this.#graphql<{ handlers: WorkerHandlerRow[] }>(WORKER_HANDLERS_QUERY(limit, byScript), {
+      start: startOf(from),
+      end: startOf(addDays(to, 1)),
+      ...(byScript ? { scriptNames: [...scriptNames] } : {}),
+    });
+    // The analytics count CPU time in microseconds.
+    return account.handlers.map((row) => ({
+      scriptName: row.dimensions.scriptName,
+      handler: row.dimensions.eventType,
+      invocations: row.sum.requests,
+      cpuTimeMs: row.sum.cpuTimeUs / 1000,
+      cpuTimeP50Ms: row.quantiles.cpuTimeP50 / 1000,
+      cpuTimeP99Ms: row.quantiles.cpuTimeP99 / 1000,
+    }));
+  }
+
+  /**
+   * Counts the Cron Triggers of every Worker that has a scheduled handler, the handler that
+   * runs them. polaris is itself a Worker of the account, so a list without Workers means
+   * that the token may not read them.
+   */
+  async cronTriggers(): Promise<number> {
+    const body = await this.#request(`${API}/accounts/${this.#accountId}/workers/scripts`, { method: "GET" });
+    const result = (body as { result?: unknown }).result;
+    if (!Array.isArray(result) || result.length === 0) {
+      throw new AnalyticsError("The Cloudflare API listed no Workers: the token needs Workers Scripts Read to count the Cron Triggers.");
+    }
+    const scheduled = (result as { id?: unknown; handlers?: unknown }[]).filter(
+      (script): script is { id: string; handlers?: unknown } =>
+        // A list without the handlers of a Worker leaves its Cron Triggers to the question below.
+        typeof script.id === "string" && (!Array.isArray(script.handlers) || script.handlers.includes("scheduled")),
+    );
+    const counts = await Promise.all(
+      scheduled.map(async (script) => {
+        const url = `${API}/accounts/${this.#accountId}/workers/scripts/${encodeURIComponent(script.id)}/schedules`;
+        const answer = (await this.#request(url, { method: "GET" })) as { result?: { schedules?: unknown } };
+        const schedules = answer.result?.schedules;
+        return Array.isArray(schedules) ? schedules.length : 0;
+      }),
+    );
+    return counts.reduce((total, count) => total + count, 0);
   }
 
   async metrics(product: MetricProduct, range: MetricRange, picked: readonly string[], now: Date): Promise<Omit<MetricsResponse, "names">> {

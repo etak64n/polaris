@@ -10,6 +10,7 @@ import {
   type QueryOrder,
   type TopQueriesResponse,
   type UsageResponse,
+  type WorkerHandlersResponse,
 } from "../shared/api.ts";
 import { addDays, datesBetween, utcDate } from "../shared/dates.ts";
 import {
@@ -56,7 +57,9 @@ const USAGE_CACHE_SECONDS = 300;
 const USAGE_SHAPE = "v3";
 const NAMES_CACHE_SECONDS = 3600;
 const TOP_QUERY_COUNT = 20;
-const TOP_QUERY_DAYS = [1, 7];
+const WORKER_HANDLER_COUNT = 50;
+// The periods of the top queries and of the handlers of the Workers: today and the last 7 days.
+const RECENT_DAYS = [1, 7];
 // Access serves this path on every domain that it protects. It ends the session of the person.
 const ACCESS_LOGOUT_PATH = "/cdn-cgi/access/logout";
 
@@ -114,9 +117,10 @@ export function createApp(dependencies: AppDependencies) {
     const source = dependencies.usageSourceFor(config);
     const cache = dependencies.cacheFor();
 
-    const [days, databaseNames] = await Promise.all([
+    const [days, databaseNames, cronTriggers] = await Promise.all([
       cache.get(`usage/${USAGE_SHAPE}/${config.accountId}/${from}/${today}`, USAGE_CACHE_SECONDS, () => source.dailyUsage(from, today)),
       cache.get(`d1-names/${config.accountId}`, NAMES_CACHE_SECONDS, () => source.databaseNames()),
+      cache.get(`cron-triggers/${config.accountId}`, USAGE_CACHE_SECONDS, () => source.cronTriggers()),
     ]);
     const byDate = new Map(days.map((day) => [day.date, day]));
     const body: UsageResponse = {
@@ -126,6 +130,7 @@ export function createApp(dependencies: AppDependencies) {
       today,
       days: datesBetween(from, today).map((date) => byDate.get(date) ?? emptyDay(date)),
       databaseNames,
+      cronTriggers,
     };
     return c.json(body);
   });
@@ -158,7 +163,7 @@ export function createApp(dependencies: AppDependencies) {
   app.get("/api/d1/top-queries", async (c) => {
     const config = c.get("config");
     const dayCount = readWholeNumber(c.req.query("days"), "days", 1, 7);
-    if (!TOP_QUERY_DAYS.includes(dayCount)) throw badRequest(`days must be one of ${TOP_QUERY_DAYS.join(", ")}.`);
+    if (!RECENT_DAYS.includes(dayCount)) throw badRequest(`days must be one of ${RECENT_DAYS.join(", ")}.`);
     const order = readOrder(c.req.query("order"));
     const databaseIds = readDatabaseIds(c.req.queries("database"));
     const today = utcDate(dependencies.now());
@@ -169,6 +174,22 @@ export function createApp(dependencies: AppDependencies) {
       () => dependencies.usageSourceFor(config).topQueries(from, today, order, TOP_QUERY_COUNT, databaseIds),
     );
     const body: TopQueriesResponse = { from, to: today, order, queries };
+    return c.json(body);
+  });
+
+  app.get("/api/workers/handlers", async (c) => {
+    const config = c.get("config");
+    const dayCount = readWholeNumber(c.req.query("days"), "days", 1, 7);
+    if (!RECENT_DAYS.includes(dayCount)) throw badRequest(`days must be one of ${RECENT_DAYS.join(", ")}.`);
+    const scriptNames = readWorkerNames(c.req.queries("worker"));
+    const today = utcDate(dependencies.now());
+    const from = addDays(today, -(dayCount - 1));
+    const handlers = await dependencies.cacheFor().get(
+      `worker-handlers/${config.accountId}/${from}/${today}/${scriptNames.join(",")}`,
+      USAGE_CACHE_SECONDS,
+      () => dependencies.usageSourceFor(config).workerHandlers(from, today, WORKER_HANDLER_COUNT, scriptNames),
+    );
+    const body: WorkerHandlersResponse = { from, to: today, handlers };
     return c.json(body);
   });
 
@@ -221,6 +242,14 @@ function readDatabaseIds(values: string[] | undefined): string[] {
   if (ids.length > TOP_QUERY_DATABASES_MAX) throw badRequest(`database can be given at most ${TOP_QUERY_DATABASES_MAX} times.`);
   if (!ids.every((id) => DATABASE_ID.test(id))) throw badRequest("database must be the ID of a D1 database.");
   return ids;
+}
+
+/** The Workers that the handlers come from, sorted, or none for every Worker. */
+function readWorkerNames(values: string[] | undefined): string[] {
+  const names = [...new Set(values ?? [])].sort();
+  if (names.length > MAX_PICKED_RESOURCES) throw badRequest(`worker can be given at most ${MAX_PICKED_RESOURCES} times.`);
+  if (!names.every((name) => RESOURCE_KEY.workers.test(name))) throw badRequest("worker must be the name of a Worker.");
+  return names;
 }
 
 function readProduct(value: string | undefined): MetricProduct {

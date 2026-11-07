@@ -3,7 +3,16 @@
 // that the demo shows the real screens without a Worker, Cloudflare Access, or the
 // usage of a real account. Only the demo build imports this file (src/api.ts).
 
-import { USAGE_DAYS, type MeResponse, type QueryOrder, type TopQueriesResponse, type TopQuery, type UsageResponse } from "../../shared/api.ts";
+import {
+  USAGE_DAYS,
+  type MeResponse,
+  type QueryOrder,
+  type TopQueriesResponse,
+  type TopQuery,
+  type UsageResponse,
+  type WorkerHandler,
+  type WorkerHandlersResponse,
+} from "../../shared/api.ts";
 import { addDays, datesBetween, utcDate } from "../../shared/dates.ts";
 import {
   MAX_PICKED_RESOURCES,
@@ -148,6 +157,7 @@ function usage(now: Date): UsageResponse {
     today,
     days: datesBetween(addDays(today, -(USAGE_DAYS - 1)), today).map((date) => dayUsage(date, date === today ? todayShare : 1, today)),
     databaseNames: Object.fromEntries(DATABASES.map((database) => [database.id, database.name])),
+    cronTriggers: 2,
   };
 }
 
@@ -356,6 +366,43 @@ function topQueries(days: number, order: QueryOrder, databaseIds: readonly strin
   return { from: addDays(to, -(days - 1)), to, order, queries: queries.slice(0, 20) };
 }
 
+/**
+ * The invocations of each handler of the Workers per day, and their CPU time. They add up to
+ * the requests of WORKERS, and cron-jobs runs its Cron Triggers every 5 minutes.
+ */
+const HANDLERS = [
+  { worker: "web", handler: "fetch", invocations: 27_000, cpuMs: 4.2 },
+  { worker: "api", handler: "fetch", invocations: 18_000, cpuMs: 6.8 },
+  { worker: "image-resizer", handler: "fetch", invocations: 5_200, cpuMs: 38 },
+  { worker: "auth", handler: "fetch", invocations: 4_600, cpuMs: 3.1 },
+  { worker: "webhooks", handler: "fetch", invocations: 1_800, cpuMs: 4.1 },
+  { worker: "webhooks", handler: "queue", invocations: 500, cpuMs: 10.5 },
+  { worker: "cron-jobs", handler: "cron", invocations: 288, cpuMs: 520 },
+  { worker: "cron-jobs", handler: "fetch", invocations: 1_112, cpuMs: 16.5 },
+];
+
+function workerHandlers(days: number, scriptNames: readonly string[], now: Date): WorkerHandlersResponse {
+  const to = utcDate(now);
+  const handlers: WorkerHandler[] = HANDLERS.flatMap((item) => {
+    if (scriptNames.length > 0 && !scriptNames.includes(item.worker)) return [];
+    const seed = `${item.worker}/${item.handler}/${days}`;
+    const invocations = Math.round(item.invocations * days * jitter(seed, 0.1));
+    const p50 = item.cpuMs * 0.8 * jitter(`${seed}/p50`, 0.1);
+    return [
+      {
+        scriptName: item.worker,
+        handler: item.handler,
+        invocations,
+        cpuTimeMs: Math.round(invocations * item.cpuMs),
+        cpuTimeP50Ms: p50,
+        cpuTimeP99Ms: p50 * 3 * jitter(`${seed}/p99`, 0.2),
+      },
+    ];
+  });
+  handlers.sort((a, b) => b.cpuTimeMs - a.cpuTimeMs);
+  return { from: addDays(to, -(days - 1)), to, handlers };
+}
+
 function me(now: Date): MeResponse {
   return {
     me: {
@@ -390,6 +437,8 @@ export function demoResponse(path: string): unknown {
       const order = url.searchParams.get("order") === "rowsWritten" ? "rowsWritten" : "rowsRead";
       return topQueries(Number(url.searchParams.get("days") ?? "1"), order, url.searchParams.getAll("database"), now);
     }
+    case "/api/workers/handlers":
+      return workerHandlers(Number(url.searchParams.get("days") ?? "1"), url.searchParams.getAll("worker"), now);
     default:
       throw new Error(`The demo does not answer ${url.pathname}.`);
   }

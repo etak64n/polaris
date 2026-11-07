@@ -44,12 +44,12 @@ polaris requires no database or storage of its own. `pnpm stack:deploy` provisio
 
 ### 1. Create a Read-Only API Token
 
-Open the [Cloudflare Account API Tokens form](https://dash.cloudflare.com/?to=/:account/api-tokens&permissionGroupKeys=%5B%7B%22key%22%3A%22account_analytics%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22d1%22%2C%22type%22%3A%22read%22%7D%5D&name=polaris) to create an account token for `ANALYTICS_API_TOKEN`. The link pre-fills the required permissions below, and you can add the optional permissions before creating the token:
+Open the [Cloudflare Account API Tokens form](https://dash.cloudflare.com/?to=/:account/api-tokens&permissionGroupKeys=%5B%7B%22key%22%3A%22account_analytics%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22d1%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22workers_scripts%22%2C%22type%22%3A%22read%22%7D%5D&name=polaris) to create an account token for `ANALYTICS_API_TOKEN`. The link pre-fills the required permissions below, and you can add the optional permissions before creating the token:
 
 | Scope | Permissions | Purpose |
 | :--- | :--- | :--- |
-| **Required** | `Account Analytics Read`, `D1 Read` | Reads account usage, product metrics, and D1 database info. |
-| **Optional** | `Workers KV Storage Read`, `Workers Scripts Read`, `Queues Read`, `Hyperdrive Read` | Displays human-readable resource names instead of raw IDs for KV, Durable Objects, Queues, and Hyperdrive. |
+| **Required** | `Account Analytics Read`, `D1 Read`, `Workers Scripts Read` | Reads account usage, product metrics, D1 database info, and the Cron Triggers of your Workers. |
+| **Optional** | `Workers KV Storage Read`, `Queues Read`, `Hyperdrive Read` | Displays human-readable resource names instead of raw IDs for KV, Queues, and Hyperdrive. |
 
 ### 2. Configure and Deploy
 

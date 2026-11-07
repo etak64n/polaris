@@ -1,6 +1,6 @@
 // A stand-in for Cloudflare analytics.
 
-import type { QueryOrder, TopQuery } from "../../shared/api.ts";
+import type { QueryOrder, TopQuery, WorkerHandler } from "../../shared/api.ts";
 import type { MetricProduct, MetricRange, MetricsResponse } from "../../shared/metrics.ts";
 import { datesBetween } from "../../shared/dates.ts";
 import { emptyDay, type DailyUsage } from "../../shared/usage.ts";
@@ -21,8 +21,11 @@ export class FakeUsageSource implements UsageSource {
   readonly usageCalls: { from: string; to: string }[] = [];
   readonly queryCalls: { from: string; to: string; order: QueryOrder; limit: number; databaseIds: readonly string[] }[] = [];
   readonly metricCalls: { product: MetricProduct; range: MetricRange; picked: readonly string[]; now: Date }[] = [];
+  readonly handlerCalls: { from: string; to: string; limit: number; scriptNames: readonly string[] }[] = [];
   usage: (date: string) => DailyUsage = (date) => emptyDay(date);
   queries: TopQuery[] = [];
+  handlers: WorkerHandler[] = [];
+  cronTriggerCount = 0;
   names: Record<string, string> = {};
   failure: Error | null = null;
 
@@ -36,6 +39,17 @@ export class FakeUsageSource implements UsageSource {
     this.queryCalls.push({ from, to, order, limit, databaseIds });
     if (this.failure !== null) throw this.failure;
     return this.queries;
+  }
+
+  async workerHandlers(from: string, to: string, limit: number, scriptNames: readonly string[]): Promise<WorkerHandler[]> {
+    this.handlerCalls.push({ from, to, limit, scriptNames });
+    if (this.failure !== null) throw this.failure;
+    return this.handlers;
+  }
+
+  async cronTriggers(): Promise<number> {
+    if (this.failure !== null) throw this.failure;
+    return this.cronTriggerCount;
   }
 
   async metrics(product: MetricProduct, range: MetricRange, picked: readonly string[], now: Date): Promise<Omit<MetricsResponse, "names">> {

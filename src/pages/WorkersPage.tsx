@@ -1,6 +1,9 @@
-// Workers: the requests, errors, subrequests, and CPU time of every Worker over the range.
+// Workers: the requests, errors, subrequests, and CPU time of every Worker over the range,
+// and the handlers of the Workers with the most CPU time.
 
+import { Section } from "@/components/Layout.tsx";
 import { MetricsDashboard, type ChartDefinition, type ColumnDefinition, type DashboardProps } from "@/components/MetricsDashboard.tsx";
+import { WorkerHandlers } from "@/components/WorkerHandlers.tsx";
 import { formatCount, formatDuration } from "@/lib/format.ts";
 
 const CHARTS: ChartDefinition[] = [
@@ -34,6 +37,12 @@ export default function WorkersPage(props: DashboardProps) {
       charts={CHARTS}
       columns={COLUMNS}
       initialSort="requests"
-    />
+    >
+      {({ colors, picked, refreshCount }) => (
+        <Section title="CPU time by handler">
+          <WorkerHandlers colorOf={(name) => colors.seriesOf(name)?.color ?? null} scriptNames={picked} refreshCount={refreshCount} />
+        </Section>
+      )}
+    </MetricsDashboard>
   );
 }
