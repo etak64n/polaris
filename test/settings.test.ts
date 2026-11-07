@@ -49,7 +49,15 @@ describe("validateSettings", () => {
       "domain is missing.",
       "billing is missing.",
       "access is missing.",
+      "freeLimitLines is missing.",
     ]);
+  });
+
+  it("takes true or false for the lines of the Free plan", () => {
+    const input = settings();
+    input.freeLimitLines = false;
+    expect(validateSettings(input).freeLimitLines).toBe(false);
+    expect(problemsOf({ ...settings(), freeLimitLines: "yes" })).toEqual(["freeLimitLines must be true or false."]);
   });
 
   it("offers at least one login method", () => {

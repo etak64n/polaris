@@ -10,6 +10,8 @@ export interface UsageResponse {
   plan: PlanType;
   /** The day of the month on which the billing cycle starts. */
   cycleStartDay: number;
+  /** Whether the charts draw a line at the limits of the Free plan, from the settings. */
+  freeLimitLines: boolean;
   /** Today in UTC. Its usage is still growing. */
   today: string;
   /** The last USAGE_DAYS dates, oldest first. A day without usage has no resources. */

@@ -43,6 +43,7 @@ export default defineConfig(({ mode }) => {
             }),
         BILLING_PLAN: bindings.text(settings.billing.plan),
         BILLING_CYCLE_START_DAY: bindings.text(String(settings.billing.cycleStartDay)),
+        FREE_LIMIT_LINES: bindings.text(String(settings.freeLimitLines)),
         // From .env: `cf dev` reads them, and `pnpm stack:deploy` uploads them as secrets.
         CLOUDFLARE_ACCOUNT_ID: bindings.secret(),
         ANALYTICS_API_TOKEN: bindings.secret(),

@@ -144,6 +144,7 @@ function usage(now: Date): UsageResponse {
   return {
     plan: "free",
     cycleStartDay: 1,
+    freeLimitLines: true,
     today,
     days: datesBetween(addDays(today, -(USAGE_DAYS - 1)), today).map((date) => dayUsage(date, date === today ? todayShare : 1, today)),
     databaseNames: Object.fromEntries(DATABASES.map((database) => [database.id, database.name])),

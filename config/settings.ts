@@ -48,6 +48,8 @@ export interface PolarisSettings {
   domain: string;
   billing: BillingSettings;
   access: AccessSettings;
+  /** Whether the charts of the dashboards draw a line at the limits of the Free plan. */
+  freeLimitLines: boolean;
 }
 
 /** Declares the settings of a deployment with type checking. */
@@ -82,17 +84,30 @@ export function validateSettings(input: unknown): PolarisSettings {
   const problems: Problems = [];
   const root = readObject(input, "settings", problems);
   if (root === null) throw new SettingsError(problems);
-  checkKeys(root, "", ["workerName", "domain", "billing", "access"], problems);
+  checkKeys(root, "", ["workerName", "domain", "billing", "access", "freeLimitLines"], problems);
 
   const workerName = readPattern(root, "workerName", "", WORKER_NAME, "lowercase letters, digits, and hyphens (at most 63 characters)", problems);
   const domain = readPattern(root, "domain", "", HOSTNAME, "a lowercase hostname without a scheme or path", problems);
   const billing = readBilling(root["billing"], problems);
   const access = readAccess(root["access"], problems);
+  const freeLimitLines = readBoolean(root, "freeLimitLines", problems);
 
   if (problems.length > 0 || billing === null || access === null) {
     throw new SettingsError(problems);
   }
-  return { workerName, domain, billing, access };
+  return { workerName, domain, billing, access, freeLimitLines };
+}
+
+function readBoolean(fields: Fields, key: string, problems: Problems): boolean {
+  if (!(key in fields)) {
+    problems.push(`${key} is missing.`);
+    return false;
+  }
+  if (typeof fields[key] !== "boolean") {
+    problems.push(`${key} must be true or false.`);
+    return false;
+  }
+  return fields[key] as boolean;
 }
 
 function readBilling(input: unknown, problems: Problems): BillingSettings | null {

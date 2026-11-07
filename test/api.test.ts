@@ -39,6 +39,7 @@ function env(overrides: Partial<Env> = {}): Env {
     CLOUDFLARE_ACCOUNT_ID: ACCOUNT,
     BILLING_PLAN: "free",
     BILLING_CYCLE_START_DAY: "1",
+    FREE_LIMIT_LINES: "true",
     ANALYTICS_API_TOKEN: "token",
     ...overrides,
   };
@@ -134,6 +135,7 @@ describe("GET /api/usage", () => {
     const body = (await response.json()) as UsageResponse;
     expect(body.plan).toBe("free");
     expect(body.cycleStartDay).toBe(1);
+    expect(body.freeLimitLines).toBe(true);
     expect(body.today).toBe("2026-11-05");
     expect(body.days).toHaveLength(31);
     expect(body.days[0]?.date).toBe("2026-10-06");
