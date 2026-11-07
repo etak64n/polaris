@@ -34,7 +34,6 @@ async function main(args: string[]): Promise<void> {
     if (analyticsApiToken === "") throw new Error("ANALYTICS_API_TOKEN in .env is empty. .env.example tells how to issue the token.");
     console.log(`Deploying the stack ${settings.workerName}.`);
     deployStack({ settings, secrets: { accountId: accountIdOf(env), analyticsApiToken }, cf, log, writeSecretsFile });
-    console.log(`\npolaris runs at https://${settings.domain}/`);
     return;
   }
 

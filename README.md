@@ -38,8 +38,7 @@ polaris requires no database or storage of its own. `pnpm stack:deploy` provisio
 
 | Requirement | Details |
 | :--- | :--- |
-| **Custom Domain on Cloudflare** | An active domain in your Cloudflare account so polaris can be hosted on a subdomain such as `usage.example.com`. |
-| **Cloudflare Zero Trust** | A Zero Trust organization on the same account, which provides your `https://<team>.cloudflareaccess.com` team domain on the Free plan. |
+| **Cloudflare Account & Zero Trust** | A Cloudflare account with a Zero Trust organization, which provides your `https://<team>.cloudflareaccess.com` team domain on the Free plan. |
 | **Node.js** | `^22.23.0 \|\| ^24.22.0 \|\| ^26.12.0` |
 | **pnpm** | `12.16.1` |
 
@@ -62,14 +61,16 @@ cp polaris.config.example.ts polaris.config.ts
 cp .env.example .env
 ```
 
-Edit `polaris.config.ts` with your domain, billing plan, and Cloudflare Access settings:
+Edit `polaris.config.ts` with your billing plan and Cloudflare Access settings:
 
 ```typescript
 import { definePolarisConfig } from "./config/settings.ts";
 
 export default definePolarisConfig({
   workerName: "polaris",
-  domain: "usage.example.com",
+  // Optional custom domain in your Cloudflare account.
+  // When omitted, polaris runs on <workerName>.<subdomain>.workers.dev.
+  // domain: "usage.example.com",
   billing: {
     // "free" or "paid": the Workers plan of the account
     plan: "free",

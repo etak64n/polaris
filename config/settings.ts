@@ -44,8 +44,11 @@ export interface AccessSettings {
 export interface PolarisSettings {
   /** Name of the Worker. */
   workerName: string;
-  /** Hostname that serves polaris. Its zone must be in the same Cloudflare account. */
-  domain: string;
+  /**
+   * Custom domain that serves polaris, whose zone is in the same Cloudflare account.
+   * When omitted, polaris uses <workerName>.<subdomain>.workers.dev.
+   */
+  domain?: string;
   billing: BillingSettings;
   access: AccessSettings;
   /** Whether the charts of the dashboards draw a line at the limits of the Free plan. */
@@ -87,7 +90,10 @@ export function validateSettings(input: unknown): PolarisSettings {
   checkKeys(root, "", ["workerName", "domain", "billing", "access", "freeLimitLines"], problems);
 
   const workerName = readPattern(root, "workerName", "", WORKER_NAME, "lowercase letters, digits, and hyphens (at most 63 characters)", problems);
-  const domain = readPattern(root, "domain", "", HOSTNAME, "a lowercase hostname without a scheme or path", problems);
+  const domain =
+    root["domain"] === undefined
+      ? undefined
+      : readPattern(root, "domain", "", HOSTNAME, "a lowercase hostname without a scheme or path", problems);
   const billing = readBilling(root["billing"], problems);
   const access = readAccess(root["access"], problems);
   const freeLimitLines = readBoolean(root, "freeLimitLines", problems);
@@ -95,7 +101,7 @@ export function validateSettings(input: unknown): PolarisSettings {
   if (problems.length > 0 || billing === null || access === null) {
     throw new SettingsError(problems);
   }
-  return { workerName, domain, billing, access, freeLimitLines };
+  return { workerName, ...(domain === undefined ? {} : { domain }), billing, access, freeLimitLines };
 }
 
 function readBoolean(fields: Fields, key: string, problems: Problems): boolean {

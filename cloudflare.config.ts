@@ -17,13 +17,16 @@ export default defineConfig(({ mode }) => {
   }
   const isDevelopment = mode === "development";
 
+  const useWorkersDev = settings.domain === undefined || settings.domain.endsWith(".workers.dev");
+
   return {
     worker: {
       name: settings.workerName,
       entrypoint: "./worker/index.ts",
       compatibilityDate: "2026-11-01",
-      domains: [settings.domain],
-      workersDev: false,
+      ...(useWorkersDev
+        ? { workersDev: true }
+        : { domains: [settings.domain!], workersDev: false }),
       previewUrls: false,
       observability: { enabled: true },
       // The browser app is static assets. Only /api/* runs the Worker.

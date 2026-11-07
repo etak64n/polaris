@@ -47,8 +47,10 @@ export function deployStack({ settings, secrets, cf, log, writeSecretsFile }: De
   const stack = settings.workerName;
 
   // Find what exists, and stop before any change if part of it belongs to another stack.
-  const existingApp = accessApplications(cf).find((app) => app.domain === settings.domain) ?? null;
-  const existingWorker = findWorker(cf, stack);
+  let existingWorker = findWorker(cf, stack);
+  const hadWorker = existingWorker !== null;
+  let domain = settings.domain ?? existingWorker?.hostname ?? workersDevDomainFromList(cf, stack);
+  let existingApp = domain === undefined ? null : (accessApplications(cf).find((app) => app.domain === domain) ?? null);
   const tagsOf = new Map<string, Record<string, string>>();
   const claim = (resource: StackResource) => {
     const tags = readOwnTags(cf, resource);
@@ -63,6 +65,18 @@ export function deployStack({ settings, secrets, cf, log, writeSecretsFile }: De
   // A login method that the organization lacks stops the deploy here too.
   const loginMethods = loginMethodIds(settings.access.loginMethods, identityProviders(cf));
 
+  if (domain === undefined) {
+    // When the account has no Workers yet, deploy once so Cloudflare assigns the workers.dev URL.
+    deployWorker(cf, writeSecretsFile, secrets, "pending");
+    existingWorker = findWorker(cf, stack);
+    domain = existingWorker?.hostname;
+    if (domain === undefined) {
+      throw new Error(`Cloudflare did not return a workers.dev URL for the Worker ${stack}. Set domain in polaris.config.ts.`);
+    }
+    existingApp = accessApplications(cf).find((app) => app.domain === domain) ?? null;
+    if (existingApp !== null) claim({ type: "access_application", id: existingApp.id, name: settings.workerName });
+  }
+
   const resources: StackResource[] = [];
   const mark = (resource: StackResource) => {
     writeTags(cf, resource, { ...(tagsOf.get(key(resource)) ?? {}), [STACK_TAG]: stack });
@@ -71,7 +85,7 @@ export function deployStack({ settings, secrets, cf, log, writeSecretsFile }: De
 
   // The Access application of the domain, whose only policy allows the people in the
   // settings, and whose sign-in page offers the login methods in the settings.
-  const body = JSON.stringify(accessApplicationBody(settings, loginMethods));
+  const body = JSON.stringify(accessApplicationBody({ ...settings, domain }, loginMethods));
   const app = readAccessApplication(
     existingApp === null
       ? cf.json(["zero-trust", "access", "applications", "create", "--body", body])
@@ -82,21 +96,13 @@ export function deployStack({ settings, secrets, cf, log, writeSecretsFile }: De
   log(`${describe(appResource)}: ${existingApp === null ? "created" : "updated"}`);
 
   // The Worker, with the secrets of .env and the AUD tag of the Access application.
-  const file = writeSecretsFile({
-    CLOUDFLARE_ACCOUNT_ID: secrets.accountId,
-    ANALYTICS_API_TOKEN: secrets.analyticsApiToken,
-    ACCESS_AUD: app.aud,
-  });
-  try {
-    cf.run(["deploy", "--secrets-file", file.path]);
-  } finally {
-    file.remove();
-  }
+  deployWorker(cf, writeSecretsFile, secrets, app.aud);
   const worker = findWorker(cf, stack);
   if (worker === null) throw new Error(`cf deploy finished, but the Worker ${stack} does not exist.`);
   const workerResource: StackResource = { type: "worker", id: worker.id, name: stack };
   mark(workerResource);
-  log(`${describe(workerResource)}: ${existingWorker === null ? "created" : "updated"}`);
+  log(`${describe(workerResource)}: ${hadWorker ? "updated" : "created"}`);
+  log(`\npolaris runs at https://${domain}/`);
   return resources;
 }
 
@@ -175,7 +181,10 @@ export function describe(resource: StackResource): string {
  * through the login methods of these IDs. Cloudflare replaces the whole application on
  * an update, so the body holds every setting that polaris makes.
  */
-export function accessApplicationBody(settings: PolarisSettings, loginMethodIds: readonly string[]) {
+export function accessApplicationBody(
+  settings: PolarisSettings & { domain: string },
+  loginMethodIds: readonly string[],
+) {
   return {
     name: settings.workerName,
     domain: settings.domain,
@@ -189,6 +198,24 @@ export function accessApplicationBody(settings: PolarisSettings, loginMethodIds:
       },
     ],
   };
+}
+
+function deployWorker(
+  cf: Cf,
+  writeSecretsFile: (values: Record<string, string>) => SecretsFile,
+  secrets: StackSecrets,
+  accessAud: string,
+): void {
+  const file = writeSecretsFile({
+    CLOUDFLARE_ACCOUNT_ID: secrets.accountId,
+    ANALYTICS_API_TOKEN: secrets.analyticsApiToken,
+    ACCESS_AUD: accessAud,
+  });
+  try {
+    cf.run(["deploy", "--secrets-file", file.path]);
+  } finally {
+    file.remove();
+  }
 }
 
 /** A login method of the Zero Trust organization, which the Cloudflare API calls an identity provider. */
@@ -250,15 +277,37 @@ function readAccessApplication(raw: unknown): { id: string; aud: string } {
   return { id, aud };
 }
 
-function findWorker(cf: Cf, name: string): { id: string } | null {
+function findWorker(cf: Cf, name: string): { id: string; hostname?: string } | null {
   try {
-    const id = text(cf.json(["workers", "get", name]), "id");
+    const raw = cf.json(["workers", "get", name]);
+    const id = text(raw, "id");
     if (id === undefined) throw new Error(`Cloudflare answered the Worker ${name} without an ID.`);
-    return { id };
+    const hostname = workerHostname(raw);
+    return hostname === undefined ? { id } : { id, hostname };
   } catch (error) {
     if (error instanceof CfError && error.status === 404) return null;
     throw error;
   }
+}
+
+function workerHostname(raw: unknown): string | undefined {
+  if (!isRecord(raw) || !isRecord(raw["subdomain"])) return undefined;
+  const url = text(raw["subdomain"], "url");
+  if (url !== undefined && URL.canParse(url)) return new URL(url).hostname;
+  return undefined;
+}
+
+/** Derives <stack>.<account-subdomain>.workers.dev from another Worker in the account when possible. */
+function workersDevDomainFromList(cf: Cf, stack: string): string | undefined {
+  const items = list(cf.json(["workers", "list", "--per-page", "1"]));
+  for (const item of items) {
+    const name = text(item, "name");
+    const hostname = workerHostname(item);
+    if (name !== undefined && hostname !== undefined && hostname.startsWith(`${name}.`)) {
+      return `${stack}.${hostname.slice(name.length + 1)}`;
+    }
+  }
+  return undefined;
 }
 
 /** The tags that a resource has now. A resource that never had tags answers 500 during the beta of Resource Tagging. */
