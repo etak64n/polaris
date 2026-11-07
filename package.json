@@ -1,6 +1,6 @@
 {
   "name": "polaris",
-  "version": "0.3.5",
+  "version": "0.4.0",
   "private": true,
   "description": "A dashboard on Cloudflare Workers that shows how much of the Cloudflare Free plan your account uses, with the estimated cost.",
   "license": "MIT",
