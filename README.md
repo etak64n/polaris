@@ -48,10 +48,15 @@ polaris is stateless and requires no database or storage. `pnpm stack:deploy` cr
 
 Create a read-only Cloudflare Account API Token for `ANALYTICS_API_TOKEN` with the following permissions:
 
-| Scope | Permissions | Purpose |
+| Permission | Required | Purpose |
 | :--- | :--- | :--- |
-| **Required** | `Account Analytics Read`, `D1 Read`, `Workers Metadata Read-Only`, `Billing Read` | Reads account usage, product metrics, D1 database info, the Cron Triggers of your Workers, and the subscriptions of the account. |
-| **Optional** | `Workers KV Storage Read`, `Queues Read`, `Hyperdrive Read` | Displays human-readable resource names instead of raw IDs for KV, Queues, and Hyperdrive. |
+| `Account Analytics Read` | Yes | Reads account usage and product metrics. |
+| `D1 Read` | Yes | Reads D1 database names. |
+| `Workers Metadata Read-Only` | Yes | Reads Worker Cron Triggers and Durable Object names. |
+| `Billing Read` | Yes | Reads account subscriptions. |
+| `Workers KV Storage Read` | Optional | Displays KV namespace names instead of raw IDs. |
+| `Queues Read` | Optional | Displays Queue names instead of raw IDs. |
+| `Hyperdrive Read` | Optional | Displays Hyperdrive config names instead of raw IDs. |
 
 > [!TIP]
 > **Quick link:** Open the [pre-filled Cloudflare Account API Tokens form](https://dash.cloudflare.com/?to=/:account/api-tokens&permissionGroupKeys=%5B%7B%22key%22%3A%22account_analytics%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22d1%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22da1261c3d38544a4bba805b22566f8b6%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%227cf72faf220841aabcfdfab81c43c4f6%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22workers_kv_storage%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22queues%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22query_cache%22%2C%22type%22%3A%22read%22%7D%5D&name=polaris) to create the token with all seven permissions already selected.
