@@ -6,6 +6,7 @@ import {
   TOP_QUERY_DATABASES_MAX,
   USAGE_DAYS,
   type ApiErrorBody,
+  type MeResponse,
   type QueryOrder,
   type TopQueriesResponse,
   type UsageResponse,
@@ -21,7 +22,15 @@ import {
   type MetricsResponse,
 } from "../shared/metrics.ts";
 import { emptyDay } from "../shared/usage.ts";
-import { AccessDeniedError, isLocalhost, verifyAccessToken, type KeySetProvider } from "./access.ts";
+import {
+  AccessDeniedError,
+  AccessIdentityError,
+  isLocalhost,
+  readSignIn,
+  verifyAccessToken,
+  type IdentityFetcher,
+  type KeySetProvider,
+} from "./access.ts";
 import { AnalyticsError, isNamedProduct, type UsageSource } from "./analytics.ts";
 import type { JsonCache } from "./cache.ts";
 import type { Env } from "./env.ts";
@@ -31,6 +40,8 @@ import { ConfigurationError, readRuntimeConfig, type RuntimeConfig } from "./run
 
 export interface AppDependencies {
   keySetFor: KeySetProvider;
+  /** Asks Access for the full identity of the session behind a token. */
+  fetchIdentity: IdentityFetcher;
   usageSourceFor: (config: RuntimeConfig) => UsageSource;
   /** The cache for one request. */
   cacheFor: () => JsonCache;
@@ -46,8 +57,11 @@ const USAGE_SHAPE = "v3";
 const NAMES_CACHE_SECONDS = 3600;
 const TOP_QUERY_COUNT = 20;
 const TOP_QUERY_DAYS = [1, 7];
+// Access serves this path on every domain that it protects. It ends the session of the person.
+const ACCESS_LOGOUT_PATH = "/cdn-cgi/access/logout";
 
-type AppEnv = { Bindings: Env; Variables: { config: RuntimeConfig; requestId: string } };
+/** email is the email in the Access token, and null under `cf dev` or for a service token. */
+type AppEnv = { Bindings: Env; Variables: { config: RuntimeConfig; requestId: string; email: string | null } };
 
 export function createApp(dependencies: AppDependencies) {
   const app = new Hono<AppEnv>();
@@ -60,10 +74,37 @@ export function createApp(dependencies: AppDependencies) {
       if (!isLocalhost(new URL(c.req.url))) {
         throw new AccessDeniedError("The local development mode answers only requests to localhost.");
       }
+      c.set("email", null);
     } else {
-      await verifyAccessToken(c.req.header("Cf-Access-Jwt-Assertion"), config.auth, dependencies.keySetFor(config.auth.teamDomain));
+      const identity = await verifyAccessToken(c.req.header("Cf-Access-Jwt-Assertion"), config.auth, dependencies.keySetFor(config.auth.teamDomain));
+      c.set("email", identity.email);
     }
     await next();
+  });
+
+  // Who signed in, how, and when, for the account menu. The token holds the email but not
+  // the login method, so the Worker asks Access for the identity of the session.
+  app.get("/api/me", async (c) => {
+    const config = c.get("config");
+    if (config.auth.mode === "local-development") {
+      const body: MeResponse = { me: null };
+      return c.json(body);
+    }
+    const email = c.get("email");
+    if (email === null) throw new AccessDeniedError("The Cloudflare Access token names no person, as the token of a service does.");
+    let identity: unknown;
+    try {
+      identity = await dependencies.fetchIdentity(config.auth.teamDomain, c.req.header("Cf-Access-Jwt-Assertion") ?? "");
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      throw new AccessIdentityError(`polaris could not read the identity of the session from Cloudflare Access: ${reason}`);
+    }
+    const signIn = readSignIn(identity);
+    if (signIn === null) {
+      throw new AccessIdentityError("Cloudflare Access answered an identity without the login method or the time of the sign-in.");
+    }
+    const body: MeResponse = { me: { email, ...signIn, logoutUrl: ACCESS_LOGOUT_PATH } };
+    return c.json(body);
   });
 
   app.get("/api/usage", async (c) => {
@@ -155,6 +196,7 @@ export function createApp(dependencies: AppDependencies) {
 function statusOf(error: Error): { status: 400 | 403 | 404 | 500 | 502; code: string } {
   if (error instanceof HttpError) return { status: error.status as 400 | 404, code: error.code };
   if (error instanceof AccessDeniedError) return { status: 403, code: "access_denied" };
+  if (error instanceof AccessIdentityError) return { status: 502, code: "access_unavailable" };
   if (error instanceof AnalyticsError) return { status: 502, code: "analytics_unavailable" };
   if (error instanceof ConfigurationError) return { status: 500, code: "configuration" };
   return { status: 500, code: "internal" };

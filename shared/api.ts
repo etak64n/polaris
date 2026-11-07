@@ -42,6 +42,22 @@ export interface TopQueriesResponse {
   queries: TopQuery[];
 }
 
+/** The person who signed in through Cloudflare Access, and how and when they signed in. */
+export interface Me {
+  email: string;
+  /** The type of the login method, such as passkeys, onetimepin, or github. */
+  method: string;
+  /** When the person signed in. */
+  signedInAt: string;
+  /** Where to send the browser to sign out. */
+  logoutUrl: string;
+}
+
+export interface MeResponse {
+  /** null under `cf dev`, where Access does not run and nobody signs in. */
+  me: Me | null;
+}
+
 export interface ApiErrorBody {
   error: { code: string; message: string };
 }
