@@ -13,7 +13,7 @@ WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING O
 CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 -->
 <title id="title">Architecture of polaris</title>
-<desc id="desc">A browser signs in through Cloudflare Access to the polaris Worker in your Cloudflare account. The Worker serves the dashboard app, keeps answers in the Cache API, and reads usage from the GraphQL Analytics API, and the Cron Triggers, the subscriptions, and the names of resources from the Cloudflare API, with a read-only API token. pnpm stack:deploy on your machine creates the Access application and the Worker.</desc>
+<desc id="desc">A browser signs in through Cloudflare Access to the polaris Worker in your Cloudflare account. The Worker serves the dashboard app, keeps answers in the Cache API, and reads usage from the GraphQL Analytics API, and the names of resources, the Cron Triggers, and the subscriptions from the Cloudflare API, with a read-only API token. pnpm stack:deploy on your machine creates the Access application and the Worker.</desc>
 <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#667691"/></marker></defs>
 <rect x="0" y="0" width="960" height="560" rx="12" fill="#ffffff" stroke="none" />
 <rect x="220" y="40" width="548" height="420" rx="16" fill="#f4f7fa" stroke="#d4dee9" stroke-dasharray="6 4"/>
@@ -52,14 +52,15 @@ CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 <text x="870" y="198" font-size="14" fill="#1a2c44" font-weight="600" text-anchor="middle">GraphQL</text>
 <text x="870" y="215" font-size="14" fill="#1a2c44" font-weight="600" text-anchor="middle">Analytics API</text>
 <text x="870" y="235" font-size="12" fill="#3c4f69" text-anchor="middle">usage and metrics</text>
-<rect x="800" y="262" width="140" height="108" rx="8" fill="#ffffff" stroke="#d4dee9" />
+<rect x="800" y="262" width="140" height="124" rx="8" fill="#ffffff" stroke="#d4dee9" />
 <g transform="translate(858 274) scale(1.0000)" color="#3c4f69" fill="none" stroke="#3c4f69" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 19A3.5 3.5 0 1 1 6.6 12A5 5 0 1 1 16.5 11.03A4 4 0 1 1 17 19Z"/></g>
 <text x="870" y="320" font-size="14" fill="#1a2c44" font-weight="600" text-anchor="middle">Cloudflare API</text>
-<text x="870" y="340" font-size="12" fill="#3c4f69" text-anchor="middle">Cron Triggers,</text>
-<text x="870" y="356" font-size="12" fill="#3c4f69" text-anchor="middle">subscriptions, names</text>
-<g transform="translate(806 386) scale(0.6667)" color="#667691" fill="none" stroke="#667691" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/></g>
-<text x="828" y="398" font-size="12" fill="#667691">read with a</text>
-<text x="828" y="414" font-size="12" fill="#667691">read-only API token</text>
+<text x="870" y="340" font-size="12" fill="#3c4f69" text-anchor="middle">resource names,</text>
+<text x="870" y="356" font-size="12" fill="#3c4f69" text-anchor="middle">Cron Triggers, and</text>
+<text x="870" y="372" font-size="12" fill="#3c4f69" text-anchor="middle">subscriptions</text>
+<g transform="translate(806 400) scale(0.6667)" color="#667691" fill="none" stroke="#667691" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/></g>
+<text x="828" y="412" font-size="12" fill="#667691">read with a</text>
+<text x="828" y="428" font-size="12" fill="#667691">read-only API token</text>
 <path d="M192 202 H236" fill="none" stroke="#667691" stroke-width="1.5" marker-end="url(#arrow)"/>
 <path d="M418 202 H446" fill="none" stroke="#667691" stroke-width="1.5" marker-end="url(#arrow)"/>
 <path d="M600 298 V352" fill="none" stroke="#667691" stroke-width="1.5" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
