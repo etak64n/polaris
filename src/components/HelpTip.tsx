@@ -41,7 +41,10 @@ export function HelpTip({ title, children }: { title: string; children: ReactNod
             setOpen(true);
           }}
           onPointerLeave={(event) => {
-            if (event.pointerType === "mouse" && openedByHover.current) setOpen(false);
+            if (event.pointerType !== "mouse" || !openedByHover.current) return;
+            // The next click or key press toggles the frame again, rather than keep it.
+            openedByHover.current = false;
+            setOpen(false);
           }}
           onClick={(event) => {
             if (!openedByHover.current) return;
