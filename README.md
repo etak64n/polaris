@@ -5,7 +5,7 @@
   </picture>
 </h1>
 
-<p align="center">A Cloudflare Workers dashboard that tracks your Free plan limits, estimated billing-cycle cost, and product metrics.</p>
+<p align="center">polaris is a Cloudflare usage, limit, and cost dashboard built on Cloudflare Workers.</p>
 
 <p align="center">
   <a href="https://github.com/etak64n/polaris/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/etak64n/polaris/actions/workflows/ci.yml/badge.svg" /></a>
@@ -21,9 +21,7 @@
   · <a href="https://github.com/etak64n/polaris/issues">Issues</a>
 </p>
 
-polaris shows how much of each Cloudflare Free plan limit remains in your account today and in the current billing cycle. On the Free plan, it tells you when to upgrade to Workers Paid; on Workers Paid, it tells you whether your usage would fit the Free plan again.
-
-Alongside Free plan limits, polaris estimates your current billing-cycle cost from published Cloudflare pricing and charts usage across Workers, D1, R2, KV, Durable Objects, Queues, Workflows, Hyperdrive, Browser Run, and Workers AI. You deploy it as a single Worker in your own Cloudflare account without a database, protected by Cloudflare Access.
+polaris tracks how much of each Cloudflare Free plan limit remains in your account—showing when to upgrade to Workers Paid, or whether a Workers Paid account fits the Free plan again. It also estimates your current billing-cycle cost and charts metrics across Workers, D1, R2, KV, Durable Objects, Queues, Workflows, Hyperdrive, Browser Run, and Workers AI, running as a single database-free Worker in your account behind Cloudflare Access.
 
 ## Architecture
 
