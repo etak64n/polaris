@@ -40,7 +40,8 @@ polaris requires no database or storage of its own. `pnpm stack:deploy` provisio
 | :--- | :--- |
 | **Custom Domain on Cloudflare** | A domain active in your Cloudflare account (e.g., `example.com`) so polaris can be hosted on a subdomain such as `usage.example.com`. |
 | **Cloudflare Zero Trust** | Enabled on the same account (the Free plan works) to provide your team domain (`https://<team>.cloudflareaccess.com`). |
-| **Node.js & pnpm** | Node.js 22+ and `pnpm` installed on your machine. |
+| **Node.js** | `^22.23.0 \|\| ^24.22.0 \|\| ^26.12.0` |
+| **pnpm** | `12.16.1` (`corepack enable` or `pnpm@12.16.1`) |
 
 ### 1. Create a Read-Only API Token
 
