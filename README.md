@@ -117,6 +117,19 @@ export default definePolarisConfig({
 });
 ```
 
+Each version of polaris is a [release](https://github.com/etak64n/polaris/releases), and its notes say what a deployment must change.
+To update polaris, check out the tag of a newer release and deploy again:
+
+```bash
+# Switch to the release to deploy, such as v0.2.0
+git fetch --tags
+git checkout v0.2.0
+
+# Install the dependency versions of that release, and deploy it
+pnpm install --frozen-lockfile
+pnpm stack:deploy
+```
+
 To delete polaris from your Cloudflare account, run `pnpm stack:delete`:
 
 ```bash
