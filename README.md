@@ -140,7 +140,3 @@ To remove polaris from your Cloudflare account:
 # Delete the Cloudflare Access application and the Worker after typing the stack name to confirm
 pnpm stack:delete
 ```
-
-## License
-
-polaris is licensed under the MIT License (`LICENSE`).
