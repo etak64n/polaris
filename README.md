@@ -41,8 +41,8 @@ polaris is stateless and requires no database or storage. `pnpm stack:deploy` cr
 | Requirement | Details |
 | :--- | :--- |
 | **Cloudflare Account & Zero Trust** | A Cloudflare account with a Zero Trust organization, which provides your `https://<team>.cloudflareaccess.com` team domain on the Free plan. |
-| **Node.js** | `^22.23.0 \|\| ^24.22.0 \|\| ^26.12.0` |
-| **pnpm** | `12.16.1` |
+| **Node.js** | `22.23+`, `24.22+`, or `26.12+` |
+| **pnpm** | `12.16+` |
 
 ### 1. Create a Read-Only API Token
 
