@@ -2,6 +2,7 @@
 
 import type { ApiErrorBody, MeResponse, QueryOrder, SettingsResponse, TopQueriesResponse, UsageResponse, WorkerHandlersResponse } from "../shared/api.ts";
 import type { MetricProduct, MetricRange, MetricsResponse } from "../shared/metrics.ts";
+import { isPassingStatus, retry } from "../shared/retry.ts";
 
 export class ApiError extends Error {
   readonly status: number;
@@ -13,6 +14,11 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Reads the API, and again after a lost connection or a busy server, twice at most. Every
+ * request of the browser reads, so running one again does no harm. A request that the page
+ * canceled does not run again.
+ */
 async function getJson<T>(path: string, signal: AbortSignal): Promise<T> {
   // The demo on GitHub Pages answers from sample data in the browser. The production
   // build drops this branch, and with it the module of the demo.
@@ -20,6 +26,14 @@ async function getJson<T>(path: string, signal: AbortSignal): Promise<T> {
     const { demoResponse } = await import("./demo/api.ts");
     return demoResponse(path) as T;
   }
+  return retry(() => getJsonOnce<T>(path, signal), {
+    attempts: 3,
+    firstDelayMs: 500,
+    retryable: (error) => !signal.aborted && (error instanceof TypeError || (error instanceof ApiError && isPassingStatus(error.status))),
+  });
+}
+
+async function getJsonOnce<T>(path: string, signal: AbortSignal): Promise<T> {
   const response = await fetch(path, { signal, headers: { Accept: "application/json" } });
   if (!response.ok) {
     let message = `The request failed with status ${response.status}.`;

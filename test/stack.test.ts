@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { validateSettings } from "../config/settings.ts";
 import example from "../polaris.config.example.ts";
-import { CfError, type Cf } from "../stack/cf.ts";
+import { CF_ATTEMPTS, CfError, withRetries, type Cf } from "../stack/cf.ts";
 import { parseEnvFile } from "../stack/env-file.ts";
 import { deleteStack, deployStack, STACK_TAG, stackResources, type StackResource } from "../stack/stack.ts";
 
@@ -12,6 +12,7 @@ const SECRETS = { accountId: "0123456789abcdef0123456789abcdef", analyticsApiTok
 /** Answers cf commands from a function, and records every command. */
 class FakeCf implements Cf {
   readonly calls: string[][] = [];
+  readonly pauses: number[] = [];
   readonly answer: (args: string[]) => unknown;
 
   constructor(answer: (args: string[]) => unknown) {
@@ -27,6 +28,10 @@ class FakeCf implements Cf {
 
   run(args: readonly string[]): void {
     this.calls.push([...args]);
+  }
+
+  pause(ms: number): void {
+    this.pauses.push(ms);
   }
 
   /** The commands that start with these words. */
@@ -49,7 +54,70 @@ function writeSecretsFile(written: Record<string, string>[], removed: string[]) 
   };
 }
 
+const busy = (args: string[]) => new CfError(args, "[777] internal service error\n500 Internal Server Error · HTTP /accounts/x/tags");
+
+describe("withRetries", () => {
+  it("runs a command again after a failure that may pass, waiting twice as long each time", () => {
+    const pauses: number[] = [];
+    const lines: string[] = [];
+    let attempts = 0;
+    const result = withRetries(["tags", "account-resources", "update", "--body", "{}"], () => {
+      attempts += 1;
+      if (attempts < 3) throw busy(["tags"]);
+      return "done";
+    }, (ms) => pauses.push(ms), (line) => lines.push(line));
+    expect(result).toBe("done");
+    expect(pauses).toEqual([2000, 4000]);
+    expect(lines[0]).toBe("cf tags account-resources update failed with 500. Trying again in 2 seconds (attempt 2 of 4).");
+  });
+
+  it("stops after the last attempt, and at once for a failure that cannot pass", () => {
+    let attempts = 0;
+    expect(() => withRetries(["workers", "list"], () => {
+      attempts += 1;
+      throw busy(["workers", "list"]);
+    }, () => undefined, () => undefined)).toThrow(CfError);
+    expect(attempts).toBe(CF_ATTEMPTS);
+
+    attempts = 0;
+    expect(() => withRetries(["workers", "get", "polaris"], () => {
+      attempts += 1;
+      throw notFound(["workers", "get", "polaris"]);
+    }, () => undefined, () => undefined)).toThrow(CfError);
+    expect(attempts).toBe(1);
+  });
+});
+
 describe("deployStack", () => {
+  it("makes the Access application once when Cloudflare fails after it made the application", () => {
+    let created = false;
+    let deployed = false;
+    const cf = new FakeCf((args) => {
+      const command = args.slice(0, 3).join(" ");
+      if (command === "zero-trust organization get") return ORGANIZATION;
+      if (command === "zero-trust access applications") {
+        if (args[3] === "list") return created ? [{ id: "app-1", aud: "aud-1", domain: settings.domain }] : [];
+        if (args[3] === "create") {
+          created = true;
+          return busy(args);
+        }
+      }
+      if (command === "workers get polaris") return deployed ? { id: "worker-1", name: "polaris" } : notFound(args);
+      if (command === "tags account-resources get") return untagged(args);
+      return {};
+    });
+    const run = cf.run.bind(cf);
+    cf.run = (args) => {
+      run(args);
+      deployed = true;
+    };
+    const written: Record<string, string>[] = [];
+    deployStack({ settings, secrets: SECRETS, cf, log: () => {}, writeSecretsFile: writeSecretsFile(written, []) });
+    expect(cf.callsOf("zero-trust", "access", "applications", "create")).toHaveLength(1);
+    expect(cf.pauses).toEqual([2000]);
+    expect(written[0]?.["ACCESS_AUD"]).toBe("aud-1");
+  });
+
   it("creates the Access application, deploys with the AUD tag, and tags each resource", () => {
     let deployed = false;
     const cf = new FakeCf((args) => {

@@ -5,7 +5,8 @@
 // so a deployment that forgot to set up Access returns nothing instead of
 // exposing the usage of the account.
 
-import { createRemoteJWKSet, jwtVerify, type JWTVerifyGetKey } from "jose";
+import { createRemoteJWKSet, errors, jwtVerify, type JWTVerifyGetKey } from "jose";
+import { isPassingStatus, retry } from "../shared/retry.ts";
 import type { AccessConfig } from "./runtime-config.ts";
 
 export type KeySetProvider = (teamDomain: string) => JWTVerifyGetKey;
@@ -27,11 +28,20 @@ const keySets = new Map<string, JWTVerifyGetKey>();
 export const remoteKeySet: KeySetProvider = (teamDomain) => {
   let keySet = keySets.get(teamDomain);
   if (keySet === undefined) {
-    keySet = createRemoteJWKSet(new URL("/cdn-cgi/access/certs", teamDomain));
+    // A load of the keys that failed in a way that may pass runs again, twice at most.
+    const remote = createRemoteJWKSet(new URL("/cdn-cgi/access/certs", teamDomain));
+    keySet = (header, token) => retry(() => remote(header, token), { attempts: 3, firstDelayMs: 200, retryable: isKeyLoadFailure });
     keySets.set(teamDomain, keySet);
   }
   return keySet;
 };
+
+// The keys did not arrive: a lost connection, no answer in time, or an answer other than 200.
+function isKeyLoadFailure(error: unknown): boolean {
+  return error instanceof TypeError
+    || error instanceof errors.JWKSTimeout
+    || (error instanceof errors.JOSEError && error.message.startsWith("Expected 200 OK"));
+}
 
 export async function verifyAccessToken(
   token: string | undefined,
@@ -64,13 +74,30 @@ export type IdentityFetcher = (teamDomain: string, token: string) => Promise<unk
  * Asks Access for the identity of the session behind a token. The token holds only part
  * of the identity: the login method and the time of the sign-in are in the rest.
  */
-export const fetchAccessIdentity: IdentityFetcher = async (teamDomain, token) => {
-  const response = await fetch(new URL("/cdn-cgi/access/get-identity", teamDomain), {
-    headers: { cookie: `CF_Authorization=${token}` },
+/** Asks Access for the identity of a session, and again after a lost connection or a busy Access, twice at most. */
+export const fetchAccessIdentity: IdentityFetcher = (teamDomain, token) =>
+  retry(
+    async () => {
+      const response = await fetch(new URL("/cdn-cgi/access/get-identity", teamDomain), {
+        headers: { cookie: `CF_Authorization=${token}` },
+      });
+      if (!response.ok) throw new IdentityAnswer(response.status);
+      return (await response.json()) as unknown;
+    },
+    { attempts: 3, firstDelayMs: 200, retryable: (error) => error instanceof TypeError || (error instanceof IdentityAnswer && isPassingStatus(error.status)) },
+  ).catch((error: unknown) => {
+    if (error instanceof IdentityAnswer) throw new AccessIdentityError(`Cloudflare Access answered ${error.status} for the identity of the session.`);
+    throw error;
   });
-  if (!response.ok) throw new AccessIdentityError(`Cloudflare Access answered ${response.status} for the identity of the session.`);
-  return response.json();
-};
+
+/** An answer of Access other than 200, kept with its status to tell a passing one. */
+class IdentityAnswer extends Error {
+  readonly status: number;
+  constructor(status: number) {
+    super(`Cloudflare Access answered ${status}.`);
+    this.status = status;
+  }
+}
 
 /**
  * Reads the login method and the time of the sign-in from an identity of Access, or

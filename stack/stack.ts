@@ -7,7 +7,7 @@
 // A resource that already carries the tag of another stack is never taken over.
 
 import type { PolarisSettings } from "../config/settings.ts";
-import { CfError, type Cf } from "./cf.ts";
+import { CF_ATTEMPTS, CF_FIRST_DELAY_MS, CfError, isPassingCfError, type Cf } from "./cf.ts";
 
 /** The tag that marks the resources of a stack. Its value is the name of the stack, the Worker name. */
 export const STACK_TAG = "polaris.stack";
@@ -89,7 +89,9 @@ export function deployStack({ settings, secrets, cf, log, writeSecretsFile }: De
   const body = JSON.stringify(accessApplicationBody({ ...settings, domain }));
   const app = readAccessApplication(
     existingApp === null
-      ? cf.json(["zero-trust", "access", "applications", "create", "--body", body])
+      ? createOnce(cf, ["zero-trust", "access", "applications", "create", "--body", body], () =>
+          list(cf.json(["zero-trust", "access", "applications", "list"])).find((item) => text(item, "domain") === domain),
+        )
       : cf.json(["zero-trust", "access", "applications", "update", existingApp.id, "--body", body]),
   );
   const appResource: StackResource = { type: "access_application", id: app.id, name: settings.workerName };
@@ -234,6 +236,24 @@ function accessTeamDomain(cf: Cf): string {
   return `https://${domain}`;
 }
 
+/**
+ * Runs a cf command that creates a resource, and returns what Cloudflare answered. A failure that
+ * may pass can come after Cloudflare made the resource, so before the command runs again, the
+ * stack waits and looks for the resource, and takes it when it is there: it never makes two.
+ */
+function createOnce(cf: Cf, args: readonly string[], find: () => unknown): unknown {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return cf.json(args, { retry: false });
+    } catch (error) {
+      if (attempt >= CF_ATTEMPTS || !isPassingCfError(error)) throw error;
+      cf.pause(CF_FIRST_DELAY_MS * 2 ** (attempt - 1));
+      const found = find();
+      if (found !== undefined && found !== null) return found;
+    }
+  }
+}
+
 function accessApplications(cf: Cf): { id: string; domain: string }[] {
   return list(cf.json(["zero-trust", "access", "applications", "list"])).flatMap((item) => {
     const id = text(item, "id");
@@ -285,7 +305,8 @@ function workersDevDomainFromList(cf: Cf, stack: string): string | undefined {
 /** The tags that a resource has now. A resource that never had tags answers 500 during the beta of Resource Tagging. */
 function readOwnTags(cf: Cf, resource: StackResource): Record<string, string> {
   try {
-    const raw = cf.json(["tags", "account-resources", "get", "--resource-type", resource.type, "--resource-id", resource.id]);
+    // No retry: a 500 here is the answer for a resource without tags, which runs again in vain.
+    const raw = cf.json(["tags", "account-resources", "get", "--resource-type", resource.type, "--resource-id", resource.id], { retry: false });
     const tags = isRecord(raw) ? raw["tags"] : undefined;
     if (!isRecord(tags)) return {};
     return Object.fromEntries(Object.entries(tags).filter((entry): entry is [string, string] => typeof entry[1] === "string"));

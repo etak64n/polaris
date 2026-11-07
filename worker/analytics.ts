@@ -12,6 +12,7 @@ import { addDays, datesBetween, startOf } from "../shared/dates.ts";
 import type { MetricProduct, MetricRange, MetricsResponse } from "../shared/metrics.ts";
 import { productMetrics } from "./metrics.ts";
 import { emptyDay, type D1Usage, type DailyUsage, type KvUsage, type R2Usage, type WorkerUsage } from "../shared/usage.ts";
+import { isPassingStatus, retry } from "../shared/retry.ts";
 
 const API = "https://api.cloudflare.com/client/v4";
 
@@ -25,9 +26,12 @@ export type FetchFn = (input: string, init: RequestInit) => Promise<Response>;
 
 /** Thrown when Cloudflare does not return the usage, with the reason that it gave. */
 export class AnalyticsError extends Error {
-  constructor(message: string) {
+  /** Whether the same request may succeed later: a lost connection, or an answer of 429 or 5xx. */
+  readonly passing: boolean;
+  constructor(message: string, passing = false) {
     super(message);
     this.name = "AnalyticsError";
+    this.passing = passing;
   }
 }
 
@@ -301,11 +305,14 @@ export class CloudflareAnalytics implements UsageSource {
   readonly #accountId: string;
   readonly #token: string;
   readonly #fetch: FetchFn;
+  readonly #wait: ((ms: number) => Promise<void>) | undefined;
 
-  constructor(accountId: string, token: string, fetchFn: FetchFn = (input, init) => fetch(input, init)) {
+  /** wait: the pause before a request runs again, which tests replace. */
+  constructor(accountId: string, token: string, fetchFn: FetchFn = (input, init) => fetch(input, init), wait?: (ms: number) => Promise<void>) {
     this.#accountId = accountId;
     this.#token = token;
     this.#fetch = fetchFn;
+    this.#wait = wait;
   }
 
   async dailyUsage(from: string, to: string): Promise<DailyUsage[]> {
@@ -492,19 +499,32 @@ export class CloudflareAnalytics implements UsageSource {
     return account;
   }
 
+  // Every request reads, so one that failed in a way that may pass, a lost connection or an
+  // answer of 429 or 5xx, runs again after 0.5 and 1 second.
   async #request(url: string, init: RequestInit): Promise<unknown> {
     const headers = new Headers(init.headers);
     headers.set("Authorization", `Bearer ${this.#token}`);
-    let response: Response;
-    try {
-      response = await this.#fetch(url, { ...init, headers });
-    } catch (error) {
-      throw new AnalyticsError(`Could not reach the Cloudflare API: ${error instanceof Error ? error.message : String(error)}`);
-    }
-    const text = await response.text();
-    if (!response.ok) {
-      throw new AnalyticsError(`The Cloudflare API answered ${response.status}: ${text.slice(0, 300)}`);
-    }
+    const text = await retry(
+      async () => {
+        let response: Response;
+        try {
+          response = await this.#fetch(url, { ...init, headers });
+        } catch (error) {
+          throw new AnalyticsError(`Could not reach the Cloudflare API: ${error instanceof Error ? error.message : String(error)}`, true);
+        }
+        const text = await response.text();
+        if (!response.ok) {
+          throw new AnalyticsError(`The Cloudflare API answered ${response.status}: ${text.slice(0, 300)}`, isPassingStatus(response.status));
+        }
+        return text;
+      },
+      {
+        attempts: 3,
+        firstDelayMs: 500,
+        retryable: (error) => error instanceof AnalyticsError && error.passing,
+        ...(this.#wait === undefined ? {} : { wait: this.#wait }),
+      },
+    );
     try {
       return JSON.parse(text) as unknown;
     } catch {

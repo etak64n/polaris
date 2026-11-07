@@ -32,7 +32,8 @@ function analyticsAnswering(answer: (url: string, init: RequestInit) => Response
     calls.push({ url, init });
     return answer(url, init);
   };
-  return { analytics: new CloudflareAnalytics(ACCOUNT, "token-1", fetchFn), calls };
+  // A request that runs again does not wait in the tests.
+  return { analytics: new CloudflareAnalytics(ACCOUNT, "token-1", fetchFn, async () => undefined), calls };
 }
 
 describe("CloudflareAnalytics.dailyUsage", () => {
@@ -171,9 +172,26 @@ describe("CloudflareAnalytics.dailyUsage", () => {
     );
   });
 
-  it("passes on an HTTP error with its status", async () => {
-    const { analytics } = analyticsAnswering(() => new Response("Forbidden", { status: 403 }));
+  it("passes on an HTTP error with its status, without asking again", async () => {
+    const { analytics, calls } = analyticsAnswering(() => new Response("Forbidden", { status: 403 }));
     await expect(analytics.dailyUsage("2026-11-01", "2026-11-01")).rejects.toThrow(/answered 403: Forbidden/);
+    expect(calls).toHaveLength(1);
+  });
+
+  it("asks again after a busy answer or a lost connection, three times in all", async () => {
+    let attempts = 0;
+    const { analytics, calls } = analyticsAnswering(() => {
+      attempts += 1;
+      if (attempts === 1) return new Response("Service Unavailable", { status: 503 });
+      if (attempts === 2) throw new TypeError("fetch failed");
+      return graphql(EMPTY);
+    });
+    await expect(analytics.dailyUsage("2026-11-01", "2026-11-01")).resolves.toHaveLength(1);
+    expect(calls).toHaveLength(3);
+
+    const { analytics: down, calls: downCalls } = analyticsAnswering(() => new Response("Bad Gateway", { status: 502 }));
+    await expect(down.dailyUsage("2026-11-01", "2026-11-01")).rejects.toThrow(/answered 502/);
+    expect(downCalls).toHaveLength(3);
   });
 
   it("reports an answer without the account", async () => {
