@@ -1,16 +1,20 @@
-# polaris
+<h1 align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="images/polaris-wordmark-dark.png">
+    <img src="images/polaris-wordmark.png" alt="polaris" width="400">
+  </picture>
+</h1>
 
 polaris is a dashboard that shows the usage and the estimated cost of your Cloudflare account.
 You deploy polaris as a single Worker in your own account without a database of its own, and Cloudflare Access protects it.
 
 ## Contents
 
-- [polaris](#polaris)
-  - [Features](#features)
-  - [Architecture](#architecture)
-  - [Cloudflare services](#cloudflare-services)
-  - [Quick start](#quick-start)
-  - [License](#license)
+- [Features](#features)
+- [Architecture](#architecture)
+- [Cloudflare services](#cloudflare-services)
+- [Quick start](#quick-start)
+- [License](#license)
 
 ## Features
 
