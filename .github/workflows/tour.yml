@@ -80,19 +80,32 @@ jobs:
             const bottom = Math.max(...boxes.map((box) => box.y + box.height));
             return { x: left, y: top, width: right - left, height: bottom - top };
           };
-          // Zooms in on a box of the viewport while the steps run, and out again after them.
+          // Zooms in on a box of the viewport while the steps run, and out again after them. The
+          // center is a share of the width and the height, whatever the size of the frames.
           const zooms = [];
           const zoom = async (box, factor, steps) => {
             const from = seconds();
             await steps();
             const { x, y } = center(box);
-            zooms.push({ from, to: seconds(), x: x * SCALE, y: y * SCALE, factor });
+            zooms.push({ from, to: seconds(), x: x / VIEW.width, y: y / VIEW.height, factor });
+          };
+          // A frame that just opened moves to its place first, so measure it after that.
+          const settled = async (locator) => {
+            await locator.waitFor();
+            await pause(400);
+            return locator;
           };
 
           await page.goto(process.env.DEMO_URL);
           await page.getByRole("heading", { name: "Free plan limits" }).waitFor();
           await pause(1000);
-          await client.send("Page.startScreencast", { format: "jpeg", quality: 92, everyNthFrame: 1 });
+          await client.send("Page.startScreencast", {
+            format: "jpeg",
+            quality: 92,
+            maxWidth: VIEW.width * SCALE,
+            maxHeight: VIEW.height * SCALE,
+            everyNthFrame: 1,
+          });
           await page.mouse.move(760, 520);
           await pause(1500);
 
@@ -100,16 +113,14 @@ jobs:
           const left = page.getByRole("button", { name: "About Left" }).first();
           await pointAt(left);
           const frame = page.locator('[data-slot="popover-content"]');
-          await frame.waitFor();
-          await zoom(await around(left, frame), 2.2, () => pause(3200));
+          await zoom(await around(left, await settled(frame)), 2, () => pause(3200));
           await page.mouse.move(760, 640, { steps: 15 });
 
           // The cost, and the ⓘ of its projection.
           await scrollTo(page.getByRole("heading", { name: "Cost", exact: true }));
           const projected = page.locator('div > span > button[aria-label="About Projected"]');
           await pointAt(projected);
-          await frame.waitFor();
-          await zoom(await around(projected, frame), 2.2, () => pause(3200));
+          await zoom(await around(projected, await settled(frame)), 2, () => pause(3200));
           await page.mouse.move(760, 640, { steps: 15 });
           await pause(600);
 
@@ -154,24 +165,32 @@ jobs:
           writeFileSync("tour.ffconcat", lines.join("\n") + "\n");
 
           // zoompan reads the time from the number of the output frame, at FPS frames a second.
-          const FPS = 10;
+          const FPS = 8;
           const RAMP = 0.6;
           const t = `(on/${FPS})`;
           const windows = zooms.map((zoom) => ({ ...zoom, from: zoom.from - start, to: zoom.to - start }));
           const factor = windows
             .map((w) => `${w.factor - 1}*clip(min((${t}-${w.from.toFixed(2)})/${RAMP},(${w.to.toFixed(2)}-${t})/${RAMP}),0,1)`)
             .join("+");
-          const pick = (key, fallback) =>
-            windows.reduceRight((rest, w) => `if(between(${t},${w.from.toFixed(2)},${w.to.toFixed(2)}),${Math.round(w[key])},${rest})`, fallback);
+          const pick = (key, side) =>
+            windows.reduceRight((rest, w) => `if(between(${t},${w.from.toFixed(2)},${w.to.toFixed(2)}),${side}*${w[key].toFixed(4)},${rest})`, `${side}/2`);
+          // Fewer frames and colors keep the GIF small, at a quality that still reads well.
           const filter = [
             `fps=${FPS}`,
-            `zoompan=z='1+${factor}':x='clip(${pick("x", "iw/2")}-iw/zoom/2,0,iw-iw/zoom)':y='clip(${pick("y", "ih/2")}-ih/zoom/2,0,ih-ih/zoom)':d=1:s=1200x750:fps=${FPS}`,
-            "split[a][b];[a]palettegen=max_colors=128:stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=4:diff_mode=rectangle",
+            `zoompan=z='1+${factor}':x='clip(${pick("x", "iw")}-iw/zoom/2,0,iw-iw/zoom)':y='clip(${pick("y", "ih")}-ih/zoom/2,0,ih-ih/zoom)':d=1:s=1120x700:fps=${FPS}`,
+            "split[a][b];[a]palettegen=max_colors=96:stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle",
           ].join(",");
           writeFileSync("filter.txt", filter);
           writeFileSync("zoom.txt", filter.split(",split")[0]);
           writeFileSync("previews.txt", [1, ...windows.map((w) => (w.from + w.to) / 2)].map((time) => time.toFixed(2)).join("\n") + "\n");
-          console.log(`${frames.length} frames over ${(frames.at(-1).time - start).toFixed(1)} s, ${zooms.length} zooms`);
+          // The size of a JPEG frame, from its start-of-frame segment.
+          const sizeOf = (jpeg) => {
+            for (let at = 2; at < jpeg.length; at += 2 + jpeg.readUInt16BE(at + 2)) {
+              if (jpeg[at + 1] >= 0xc0 && jpeg[at + 1] <= 0xc2) return `${jpeg.readUInt16BE(at + 7)}x${jpeg.readUInt16BE(at + 5)}`;
+            }
+            return "unknown";
+          };
+          console.log(`${frames.length} frames of ${sizeOf(Buffer.from(frames[0].data, "base64"))} over ${(frames.at(-1).time - start).toFixed(1)} s, ${zooms.length} zooms`);
           SCRIPT
           node tour.mjs
 
@@ -186,7 +205,7 @@ jobs:
           number=0
           while read -r time; do
             number=$((number + 1))
-            ffmpeg -y -loglevel error -ss "$time" -i tour.gif -frames:v 1 "preview-$number.png"
+            ffmpeg -nostdin -y -loglevel error -ss "$time" -i tour.gif -frames:v 1 "preview-$number.png"
           done < previews.txt
           ls -la preview-*.png
 
