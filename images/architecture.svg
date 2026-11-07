@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540" role="img" aria-labelledby="title desc" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+  <title id="title">Architecture of polaris</title>
+  <desc id="desc">A browser signs in through Cloudflare Access to the polaris Worker in your Cloudflare account. The Worker serves the dashboard app, keeps answers in the Cache API, and reads usage from the GraphQL Analytics API and resource names from the Cloudflare API with a read-only API token. pnpm stack:deploy on your machine creates the Access application and the Worker.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#667691"/>
+    </marker>
+  </defs>
+
+  <!-- A white card, so that the diagram reads the same on light and dark pages. -->
+  <rect x="0" y="0" width="960" height="540" rx="12" fill="#ffffff"/>
+
+  <!-- Your Cloudflare account -->
+  <rect x="220" y="40" width="540" height="400" rx="16" fill="#f4f7fa" stroke="#d4dee9" stroke-dasharray="6 4"/>
+  <text x="240" y="66" font-size="13" font-weight="600" fill="#667691">Your Cloudflare account</text>
+
+  <!-- Browser -->
+  <rect x="40" y="166" width="140" height="64" rx="8" fill="#ffffff" stroke="#d4dee9"/>
+  <text x="110" y="193" font-size="15" font-weight="600" fill="#1a2c44" text-anchor="middle">Browser</text>
+  <text x="110" y="213" font-size="12" fill="#3c4f69" text-anchor="middle">the people you allow</text>
+
+  <!-- Cloudflare Access -->
+  <rect x="240" y="150" width="170" height="96" rx="8" fill="#ffffff" stroke="#d4dee9"/>
+  <text x="325" y="182" font-size="15" font-weight="600" fill="#1a2c44" text-anchor="middle">Cloudflare Access</text>
+  <text x="325" y="204" font-size="12" fill="#3c4f69" text-anchor="middle">sign-in on your domain,</text>
+  <text x="325" y="221" font-size="12" fill="#3c4f69" text-anchor="middle">only for the allowed emails</text>
+
+  <!-- The polaris Worker -->
+  <rect x="450" y="80" width="290" height="230" rx="12" fill="#ffffff" stroke="#533afd" stroke-width="1.5"/>
+  <text x="466" y="107" font-size="15" font-weight="700" fill="#1a2c44">polaris Worker</text>
+  <text x="466" y="126" font-size="12" fill="#3c4f69">on your custom domain</text>
+
+  <rect x="466" y="140" width="258" height="64" rx="8" fill="#f4f7fa" stroke="#d4dee9"/>
+  <text x="482" y="166" font-size="14" font-weight="600" fill="#1a2c44">Static assets</text>
+  <text x="482" y="186" font-size="12" fill="#3c4f69">the dashboard app</text>
+
+  <rect x="466" y="218" width="258" height="76" rx="8" fill="#f4f7fa" stroke="#d4dee9"/>
+  <text x="482" y="244" font-size="14" font-weight="600" fill="#1a2c44">API (/api/*)</text>
+  <text x="482" y="264" font-size="12" fill="#3c4f69">checks the token from Access,</text>
+  <text x="482" y="281" font-size="12" fill="#3c4f69">then reads usage when you open a page</text>
+
+  <!-- Cache API -->
+  <rect x="466" y="344" width="258" height="64" rx="8" fill="#ffffff" stroke="#d4dee9"/>
+  <text x="482" y="370" font-size="14" font-weight="600" fill="#1a2c44">Cache API</text>
+  <text x="482" y="390" font-size="12" fill="#3c4f69">keeps answers for a few minutes</text>
+
+  <!-- Cloudflare APIs -->
+  <text x="790" y="132" font-size="13" font-weight="600" fill="#667691">Cloudflare APIs</text>
+  <rect x="790" y="146" width="150" height="80" rx="8" fill="#ffffff" stroke="#d4dee9"/>
+  <text x="865" y="174" font-size="14" font-weight="600" fill="#1a2c44" text-anchor="middle">GraphQL</text>
+  <text x="865" y="192" font-size="14" font-weight="600" fill="#1a2c44" text-anchor="middle">Analytics API</text>
+  <text x="865" y="212" font-size="12" fill="#3c4f69" text-anchor="middle">usage and metrics</text>
+
+  <rect x="790" y="250" width="150" height="72" rx="8" fill="#ffffff" stroke="#d4dee9"/>
+  <text x="865" y="279" font-size="14" font-weight="600" fill="#1a2c44" text-anchor="middle">Cloudflare API</text>
+  <text x="865" y="299" font-size="12" fill="#3c4f69" text-anchor="middle">names of resources</text>
+  <text x="865" y="350" font-size="12" fill="#667691" text-anchor="middle">read with a read-only</text>
+  <text x="865" y="367" font-size="12" fill="#667691" text-anchor="middle">API token</text>
+
+  <!-- Requests -->
+  <line x1="180" y1="198" x2="236" y2="198" stroke="#667691" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="410" y1="198" x2="446" y2="198" stroke="#667691" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="595" y1="294" x2="595" y2="340" stroke="#667691" stroke-width="1.5" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <path d="M724 246 H750 V186 H786" fill="none" stroke="#667691" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <path d="M724 266 H772 V286 H786" fill="none" stroke="#667691" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Deployment -->
+  <rect x="40" y="460" width="210" height="60" rx="8" fill="#ffffff" stroke="#d4dee9"/>
+  <text x="56" y="485" font-size="14" font-weight="600" fill="#1a2c44">Your machine</text>
+  <text x="56" y="506" font-size="12" fill="#3c4f69" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">pnpm stack:deploy</text>
+  <path d="M250 490 H300 V444" fill="none" stroke="#667691" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
+  <text x="316" y="478" font-size="12" fill="#3c4f69">creates or updates the Access application and the Worker,</text>
+  <text x="316" y="496" font-size="12" fill="#3c4f69">and tags them as one stack (Resource Tagging)</text>
+</svg>
