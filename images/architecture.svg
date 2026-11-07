@@ -1,74 +1,76 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540" role="img" aria-labelledby="title desc" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
-  <title id="title">Architecture of polaris</title>
-  <desc id="desc">A browser signs in through Cloudflare Access to the polaris Worker in your Cloudflare account. The Worker serves the dashboard app, keeps answers in the Cache API, and reads usage from the GraphQL Analytics API and resource names from the Cloudflare API with a read-only API token. pnpm stack:deploy on your machine creates the Access application and the Worker.</desc>
-  <defs>
-    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M0 0 L10 5 L0 10 z" fill="#667691"/>
-    </marker>
-  </defs>
-
-  <!-- A white card, so that the diagram reads the same on light and dark pages. -->
-  <rect x="0" y="0" width="960" height="540" rx="12" fill="#ffffff"/>
-
-  <!-- Your Cloudflare account -->
-  <rect x="220" y="40" width="540" height="400" rx="16" fill="#f4f7fa" stroke="#d4dee9" stroke-dasharray="6 4"/>
-  <text x="240" y="66" font-size="13" font-weight="600" fill="#667691">Your Cloudflare account</text>
-
-  <!-- Browser -->
-  <rect x="40" y="166" width="140" height="64" rx="8" fill="#ffffff" stroke="#d4dee9"/>
-  <text x="110" y="193" font-size="15" font-weight="600" fill="#1a2c44" text-anchor="middle">Browser</text>
-  <text x="110" y="213" font-size="12" fill="#3c4f69" text-anchor="middle">the people you allow</text>
-
-  <!-- Cloudflare Access -->
-  <rect x="240" y="150" width="170" height="96" rx="8" fill="#ffffff" stroke="#d4dee9"/>
-  <text x="325" y="182" font-size="15" font-weight="600" fill="#1a2c44" text-anchor="middle">Cloudflare Access</text>
-  <text x="325" y="204" font-size="12" fill="#3c4f69" text-anchor="middle">sign-in on your domain,</text>
-  <text x="325" y="221" font-size="12" fill="#3c4f69" text-anchor="middle">only for the allowed emails</text>
-
-  <!-- The polaris Worker -->
-  <rect x="450" y="80" width="290" height="230" rx="12" fill="#ffffff" stroke="#533afd" stroke-width="1.5"/>
-  <text x="466" y="107" font-size="15" font-weight="700" fill="#1a2c44">polaris Worker</text>
-  <text x="466" y="126" font-size="12" fill="#3c4f69">on your custom domain</text>
-
-  <rect x="466" y="140" width="258" height="64" rx="8" fill="#f4f7fa" stroke="#d4dee9"/>
-  <text x="482" y="166" font-size="14" font-weight="600" fill="#1a2c44">Static assets</text>
-  <text x="482" y="186" font-size="12" fill="#3c4f69">the dashboard app</text>
-
-  <rect x="466" y="218" width="258" height="76" rx="8" fill="#f4f7fa" stroke="#d4dee9"/>
-  <text x="482" y="244" font-size="14" font-weight="600" fill="#1a2c44">API (/api/*)</text>
-  <text x="482" y="264" font-size="12" fill="#3c4f69">checks the token from Access,</text>
-  <text x="482" y="281" font-size="12" fill="#3c4f69">then reads usage when you open a page</text>
-
-  <!-- Cache API -->
-  <rect x="466" y="344" width="258" height="64" rx="8" fill="#ffffff" stroke="#d4dee9"/>
-  <text x="482" y="370" font-size="14" font-weight="600" fill="#1a2c44">Cache API</text>
-  <text x="482" y="390" font-size="12" fill="#3c4f69">keeps answers for a few minutes</text>
-
-  <!-- Cloudflare APIs -->
-  <text x="790" y="132" font-size="13" font-weight="600" fill="#667691">Cloudflare APIs</text>
-  <rect x="790" y="146" width="150" height="80" rx="8" fill="#ffffff" stroke="#d4dee9"/>
-  <text x="865" y="174" font-size="14" font-weight="600" fill="#1a2c44" text-anchor="middle">GraphQL</text>
-  <text x="865" y="192" font-size="14" font-weight="600" fill="#1a2c44" text-anchor="middle">Analytics API</text>
-  <text x="865" y="212" font-size="12" fill="#3c4f69" text-anchor="middle">usage and metrics</text>
-
-  <rect x="790" y="250" width="150" height="72" rx="8" fill="#ffffff" stroke="#d4dee9"/>
-  <text x="865" y="279" font-size="14" font-weight="600" fill="#1a2c44" text-anchor="middle">Cloudflare API</text>
-  <text x="865" y="299" font-size="12" fill="#3c4f69" text-anchor="middle">names of resources</text>
-  <text x="865" y="350" font-size="12" fill="#667691" text-anchor="middle">read with a read-only</text>
-  <text x="865" y="367" font-size="12" fill="#667691" text-anchor="middle">API token</text>
-
-  <!-- Requests -->
-  <line x1="180" y1="198" x2="236" y2="198" stroke="#667691" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <line x1="410" y1="198" x2="446" y2="198" stroke="#667691" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <line x1="595" y1="294" x2="595" y2="340" stroke="#667691" stroke-width="1.5" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
-  <path d="M724 246 H750 V186 H786" fill="none" stroke="#667691" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <path d="M724 266 H772 V286 H786" fill="none" stroke="#667691" stroke-width="1.5" marker-end="url(#arrow)"/>
-
-  <!-- Deployment -->
-  <rect x="40" y="460" width="210" height="60" rx="8" fill="#ffffff" stroke="#d4dee9"/>
-  <text x="56" y="485" font-size="14" font-weight="600" fill="#1a2c44">Your machine</text>
-  <text x="56" y="506" font-size="12" fill="#3c4f69" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">pnpm stack:deploy</text>
-  <path d="M250 490 H300 V444" fill="none" stroke="#667691" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
-  <text x="316" y="478" font-size="12" fill="#3c4f69">creates or updates the Access application and the Worker,</text>
-  <text x="316" y="496" font-size="12" fill="#3c4f69">and tags them as one stack (Resource Tagging)</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="560" viewBox="0 0 960 560" role="img" aria-labelledby="title desc" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+<!--
+Icons: Lucide (https://lucide.dev), user-round, app-window, shield-check, layout-dashboard,
+braces, database-zap, cloud, chart-line, list, key-round, laptop, and tag.
+ISC License. Copyright (c) 2026 Lucide Icons and Contributors.
+Permission to use, copy, modify, and/or distribute this software for any purpose with or
+without fee is hereby granted, provided that the above copyright notice and this permission
+notice appear in all copies. THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
+WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR
+CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
+CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+-->
+<title id="title">Architecture of polaris</title>
+<desc id="desc">A browser signs in through Cloudflare Access to the polaris Worker in your Cloudflare account. The Worker serves the dashboard app, keeps answers in the Cache API, and reads usage from the GraphQL Analytics API and resource names from the Cloudflare API with a read-only API token. pnpm stack:deploy on your machine creates the Access application and the Worker.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#667691"/></marker></defs>
+<rect x="0" y="0" width="960" height="560" rx="12" fill="#ffffff" stroke="none" />
+<rect x="220" y="40" width="548" height="420" rx="16" fill="#f4f7fa" stroke="#d4dee9" stroke-dasharray="6 4"/>
+<g transform="translate(238 52) scale(0.7500)" color="#667691" fill="none" stroke="#667691" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></g>
+<text x="262" y="66" font-size="13" fill="#667691" font-weight="600">Your Cloudflare account</text>
+<rect x="32" y="146" width="160" height="112" rx="8" fill="#ffffff" stroke="#d4dee9" />
+<g transform="translate(78 162) scale(1.0000)" color="#3c4f69" fill="none" stroke="#3c4f69" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></g>
+<g transform="translate(114 162) scale(1.0000)" color="#3c4f69" fill="none" stroke="#3c4f69" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M10 4v4"/><path d="M2 8h20"/><path d="M6 4v4"/></g>
+<text x="112" y="214" font-size="15" fill="#1a2c44" font-weight="600" text-anchor="middle">Browser</text>
+<text x="112" y="234" font-size="12" fill="#3c4f69" text-anchor="middle">the people you allow</text>
+<rect x="240" y="140" width="178" height="124" rx="8" fill="#ffffff" stroke="#d4dee9" />
+<g transform="translate(317 156) scale(1.0000)" color="#3c4f69" fill="none" stroke="#3c4f69" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></g>
+<text x="329" y="206" font-size="15" fill="#1a2c44" font-weight="600" text-anchor="middle">Cloudflare Access</text>
+<text x="329" y="228" font-size="12" fill="#3c4f69" text-anchor="middle">sign-in on your domain,</text>
+<text x="329" y="245" font-size="12" fill="#3c4f69" text-anchor="middle">only for the allowed emails</text>
+<rect x="450" y="80" width="300" height="234" rx="12" fill="#ffffff" stroke="#533afd" stroke-width="1.5"/>
+<g transform="translate(466 94) scale(0.8125)"><rect width="32" height="32" rx="7" fill="#18181b"/><path d="M16 4.5 18.6 13.4 27.5 16 18.6 18.6 16 27.5 13.4 18.6 4.5 16 13.4 13.4Z" fill="#ffffff"/></g>
+<text x="502" y="106" font-size="15" fill="#1a2c44" font-weight="700">polaris Worker</text>
+<text x="502" y="124" font-size="12" fill="#3c4f69">on your custom domain</text>
+<rect x="466" y="140" width="268" height="62" rx="8" fill="#f4f7fa" stroke="#d4dee9" />
+<g transform="translate(480 159) scale(1.0000)" color="#3c4f69" fill="none" stroke="#3c4f69" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></g>
+<text x="516" y="166" font-size="14" fill="#1a2c44" font-weight="600">Static assets</text>
+<text x="516" y="185" font-size="12" fill="#3c4f69">the dashboard app</text>
+<rect x="466" y="216" width="268" height="82" rx="8" fill="#f4f7fa" stroke="#d4dee9" />
+<g transform="translate(480 239) scale(1.0000)" color="#3c4f69" fill="none" stroke="#3c4f69" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5c0 1.1.9 2 2 2h1"/><path d="M16 21h1a2 2 0 0 0 2-2v-5c0-1.1.9-2 2-2a2 2 0 0 1-2-2V5a2 2 0 0 0-2-2h-1"/></g>
+<text x="516" y="242" font-size="14" fill="#1a2c44" font-weight="600">API (/api/*)</text>
+<text x="516" y="262" font-size="12" fill="#3c4f69">checks the token from Access,</text>
+<text x="516" y="279" font-size="12" fill="#3c4f69">then reads usage when a page opens</text>
+<rect x="466" y="356" width="268" height="66" rx="8" fill="#ffffff" stroke="#d4dee9" />
+<g transform="translate(480 377) scale(1.0000)" color="#3c4f69" fill="none" stroke="#3c4f69" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 15 21.84"/><path d="M21 5V8"/><path d="M21 12L18 17H22L19 22"/><path d="M3 12A9 3 0 0 0 14.59 14.87"/></g>
+<text x="516" y="383" font-size="14" fill="#1a2c44" font-weight="600">Cache API</text>
+<text x="516" y="402" font-size="12" fill="#3c4f69">keeps answers for a few minutes</text>
+<g transform="translate(800 113) scale(0.7500)" color="#667691" fill="none" stroke="#667691" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></g>
+<text x="824" y="127" font-size="13" fill="#667691" font-weight="600">Cloudflare APIs</text>
+<rect x="800" y="140" width="140" height="106" rx="8" fill="#ffffff" stroke="#d4dee9" />
+<g transform="translate(858 152) scale(1.0000)" color="#3c4f69" fill="none" stroke="#3c4f69" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="m19 9-5 5-4-4-3 3"/></g>
+<text x="870" y="198" font-size="14" fill="#1a2c44" font-weight="600" text-anchor="middle">GraphQL</text>
+<text x="870" y="215" font-size="14" fill="#1a2c44" font-weight="600" text-anchor="middle">Analytics API</text>
+<text x="870" y="235" font-size="12" fill="#3c4f69" text-anchor="middle">usage and metrics</text>
+<rect x="800" y="262" width="140" height="92" rx="8" fill="#ffffff" stroke="#d4dee9" />
+<g transform="translate(858 274) scale(1.0000)" color="#3c4f69" fill="none" stroke="#3c4f69" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h.01"/><path d="M3 12h.01"/><path d="M3 19h.01"/><path d="M8 5h13"/><path d="M8 12h13"/><path d="M8 19h13"/></g>
+<text x="870" y="320" font-size="14" fill="#1a2c44" font-weight="600" text-anchor="middle">Cloudflare API</text>
+<text x="870" y="340" font-size="12" fill="#3c4f69" text-anchor="middle">names of resources</text>
+<g transform="translate(806 370) scale(0.6667)" color="#667691" fill="none" stroke="#667691" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/></g>
+<text x="828" y="382" font-size="12" fill="#667691">read with a</text>
+<text x="828" y="398" font-size="12" fill="#667691">read-only API token</text>
+<path d="M192 202 H236" fill="none" stroke="#667691" stroke-width="1.5" marker-end="url(#arrow)"/>
+<path d="M418 202 H446" fill="none" stroke="#667691" stroke-width="1.5" marker-end="url(#arrow)"/>
+<path d="M600 298 V352" fill="none" stroke="#667691" stroke-width="1.5" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+<path d="M734 246 H759 V193 H796" fill="none" stroke="#667691" stroke-width="1.5" marker-end="url(#arrow)"/>
+<path d="M734 268 H780 V308 H796" fill="none" stroke="#667691" stroke-width="1.5" marker-end="url(#arrow)"/>
+<rect x="32" y="482" width="222" height="62" rx="8" fill="#ffffff" stroke="#d4dee9" />
+<g transform="translate(46 494) scale(0.8333)" color="#3c4f69" fill="none" stroke="#3c4f69" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 5a2 2 0 0 1 2 2v8.526a2 2 0 0 0 .212.897l1.068 2.127a1 1 0 0 1-.9 1.45H3.62a1 1 0 0 1-.9-1.45l1.068-2.127A2 2 0 0 0 4 15.526V7a2 2 0 0 1 2-2z"/><path d="M20.054 15.987H3.946"/></g>
+<text x="74" y="509" font-size="14" fill="#1a2c44" font-weight="600">Your machine</text>
+<text x="46" y="532" font-size="12" fill="#3c4f69" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">pnpm stack:deploy</text>
+<path d="M254 513 H300 V464" fill="none" stroke="#667691" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
+<g transform="translate(314 487) scale(0.6667)" color="#667691" fill="none" stroke="#667691" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/></g>
+<text x="336" y="499" font-size="12" fill="#3c4f69">creates or updates the Access application and the Worker,</text>
+<text x="336" y="517" font-size="12" fill="#3c4f69">and tags them as one stack (Resource Tagging)</text>
 </svg>
