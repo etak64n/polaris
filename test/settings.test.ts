@@ -63,34 +63,6 @@ describe("validateSettings", () => {
     expect(problemsOf({ ...settings(), freeLimitLines: "yes" })).toEqual(["freeLimitLines must be true or false."]);
   });
 
-  it("offers every login method of the organization for all, or the listed ones", () => {
-    expect(validateSettings(settings()).access.loginMethods).toBe("all");
-    const input = settings();
-    input.access.loginMethods = ["onetimepin", "github"];
-    expect(validateSettings(input).access.loginMethods).toEqual(["onetimepin", "github"]);
-    expect(problemsOf({ ...settings(), access: { ...settings().access, loginMethods: "every" } })).toEqual([
-      'access.loginMethods must be "all" or a list of login method types or IDs, such as ["onetimepin"].',
-    ]);
-  });
-
-  it("offers at least one login method", () => {
-    const input = settings();
-    input.access.loginMethods = [];
-    expect(problemsOf(input)).toEqual(["access.loginMethods must name at least one login method."]);
-  });
-
-  it("names each login method once", () => {
-    const input = settings();
-    input.access.loginMethods = ["onetimepin", "github", "onetimepin"];
-    expect(problemsOf(input)).toEqual(["access.loginMethods must name each login method once: onetimepin."]);
-  });
-
-  it("names login methods by a type or an ID without spaces", () => {
-    const input = settings();
-    input.access.loginMethods = ["one-time pin"];
-    expect(problemsOf(input)).toEqual(['access.loginMethods must be "all" or a list of login method types or IDs, such as ["onetimepin"].']);
-  });
-
   it("asks for at least one email address that may sign in", () => {
     const input = settings();
     input.access.allow = [];
@@ -99,8 +71,11 @@ describe("validateSettings", () => {
     expect(problemsOf(input)).toEqual(["access.allow must be a list of one or more email addresses."]);
   });
 
-  it("reads no team domain, which pnpm stack:deploy takes from the account", () => {
-    const input = { ...settings(), access: { ...settings().access, teamDomain: "https://example.cloudflareaccess.com" } };
-    expect(problemsOf(input)).toEqual(["access.teamDomain is not a setting that polaris reads."]);
+  it("reads no team domain and no login methods, which come from the Zero Trust organization", () => {
+    const input = { ...settings(), access: { ...settings().access, teamDomain: "https://example.cloudflareaccess.com", loginMethods: ["onetimepin"] } };
+    expect(problemsOf(input)).toEqual([
+      "access.teamDomain is not a setting that polaris reads.",
+      "access.loginMethods is not a setting that polaris reads.",
+    ]);
   });
 });

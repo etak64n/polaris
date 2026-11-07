@@ -102,7 +102,6 @@ export default definePolarisConfig({
   },
   access: {
     allow: ["you@example.com"], // Who may open polaris
-    loginMethods: "all", // Or a list, such as ["onetimepin", "github"]
   },
   freeLimitLines: true, // Draw the Free plan limits on the charts
 });
