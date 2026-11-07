@@ -82,7 +82,7 @@ export function Shell({ plan, children }: { plan: PlanType | null; children: Rea
             <Sidebar plan={plan} pathname={pathname} account={account} />
           </SheetContent>
         </Sheet>
-        <Brand plan={null} />
+        <Brand />
       </header>
       <div className="lg:pl-(--ds-sidebar-width)">
         <main
@@ -101,7 +101,7 @@ function Sidebar({ plan, pathname, account }: { plan: PlanType | null; pathname:
   return (
     <div className="flex h-full flex-col gap-4 overflow-y-auto px-5 pb-6">
       <div className="flex h-16 shrink-0 items-center">
-        <Brand plan={plan} />
+        <Brand />
       </div>
       <nav className="grid gap-6" aria-label="Pages">
         <div className="-mx-1 grid gap-0.5">
@@ -123,21 +123,18 @@ function Sidebar({ plan, pathname, account }: { plan: PlanType | null; pathname:
         ))}
       </nav>
       <div className="-mx-1 mt-auto pt-4">
-        <AccountMenu account={account} />
+        <AccountMenu account={account} plan={plan} />
       </div>
     </div>
   );
 }
 
-/** The name of the app, with the plan of the account under it, as the account at the top of the Stripe Dashboard. */
-function Brand({ plan }: { plan: PlanType | null }) {
+/** The name of the app, with its mark. */
+function Brand() {
   return (
     <Link to={ROUTE_PATHS.overview} className="flex min-w-0 items-center gap-2 rounded-md py-1">
       <img src={`${import.meta.env.BASE_URL}favicon.png`} alt="" className="size-6 shrink-0" />
-      <span className="grid min-w-0">
-        <span className="truncate text-sm font-semibold text-heading">polaris</span>
-        {plan !== null && <span className="truncate text-xs text-subdued">{plan === "paid" ? "Workers Paid" : "Workers Free"}</span>}
-      </span>
+      <span className="truncate text-sm font-semibold text-heading">polaris</span>
     </Link>
   );
 }
