@@ -21,33 +21,35 @@
   · <a href="https://github.com/etak64n/polaris/issues">Issues</a>
 </p>
 
-polaris tracks how much of each Cloudflare Free plan limit remains in your account—showing when to upgrade to Workers Paid, or whether a Workers Paid account fits the Free plan again. It also estimates your current billing-cycle cost and charts metrics across Workers, D1, R2, KV, Durable Objects, Queues, Workflows, Hyperdrive, Browser Run, and Workers AI, running as a single database-free Worker in your account behind Cloudflare Access.
+polaris tracks how much of each Cloudflare Free plan limit remains in your account—showing when to upgrade to Workers Paid, or whether a Workers Paid account fits the Free plan again. It also estimates your current billing-cycle cost and charts metrics across Workers, D1, R2, KV, Durable Objects, Queues, Workflows, Hyperdrive, Browser Run, and Workers AI.
 
 ## Architecture
 
 ![Architecture of polaris](images/architecture.svg)
 
-- **Cloudflare Access**: Authenticates your browser and restricts sign-in to your allowed email addresses and login methods.
-- **Cloudflare Workers**: Serves the static dashboard application and verifies the Access token on `/api/*` routes.
-- **GraphQL Analytics API**: Provides account usage and product metrics when you open a page.
-- **Cloudflare API**: Provides resource names for D1, KV, Durable Objects, Queues, and Hyperdrive using a read-only API token.
-- **Cache API**: Caches API responses for a few minutes so reloading a page does not query upstream APIs every time.
-- **Resource Tagging**: Tags the Access application and the Worker so they can be deployed and deleted as a single stack.
+polaris requires no database or storage of its own. `pnpm stack:deploy` provisions only two resources in your Cloudflare account:
+
+- **Cloudflare Access Application**: Puts a sign-in gate in front of your dashboard domain so only your allowed email addresses can open it.
+- **Cloudflare Worker**: Serves the static dashboard UI, verifies the Access token on `/api/*`, fetches metrics on demand from Cloudflare's GraphQL Analytics and REST APIs using a read-only token, and caches responses in the Cache API for a few minutes.
 
 ## Quickstart
 
 ### Prerequisites
 
-- **Cloudflare Account**: Manages the DNS zone for your deployment domain.
-- **Cloudflare Zero Trust**: Configured in the same account to provide your Cloudflare Access team domain.
-- **Node.js**: `^22.23.0 || ^24.22.0 || ^26.12.0`
-- **pnpm**: `pnpm@12.16.1`
+| Requirement | Details |
+| :--- | :--- |
+| **Custom Domain on Cloudflare** | A domain active in your Cloudflare account (e.g., `example.com`) so polaris can be hosted on a subdomain such as `usage.example.com`. |
+| **Cloudflare Zero Trust** | Enabled on the same account (the Free plan works) to provide your team domain (`https://<team>.cloudflareaccess.com`). |
+| **Node.js & pnpm** | Node.js 22+ and `pnpm` installed on your machine. |
 
-### 1. Create an API Token
+### 1. Create a Read-Only API Token
 
-1. **Open the token creation form**: Visit the [Cloudflare Account API Tokens page](https://dash.cloudflare.com/?to=/:account/api-tokens&permissionGroupKeys=%5B%7B%22key%22%3A%22account_analytics%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22d1%22%2C%22type%22%3A%22read%22%7D%5D&name=polaris), which pre-fills the token name `polaris` and the required `Account Analytics Read` and `D1 Read` permissions.
-2. **Add optional permissions**: Include `Workers KV Storage Read`, `Workers Scripts Read`, `Queues Read`, and `Hyperdrive Read` to display resource names instead of raw IDs.
-3. **Copy the token**: Create the token and save its value for `ANALYTICS_API_TOKEN` in `.env`.
+Open the [Cloudflare Account API Tokens form](https://dash.cloudflare.com/?to=/:account/api-tokens&permissionGroupKeys=%5B%7B%22key%22%3A%22account_analytics%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22d1%22%2C%22type%22%3A%22read%22%7D%5D&name=polaris) (pre-filled with the required permissions) and create an account token for `ANALYTICS_API_TOKEN`:
+
+| Scope | Permissions | Purpose |
+| :--- | :--- | :--- |
+| **Required** | `Account Analytics Read`, `D1 Read` | Reads account usage, product metrics, and D1 database info. |
+| **Optional** | `Workers KV Storage Read`, `Workers Scripts Read`, `Queues Read`, `Hyperdrive Read` | Displays human-readable resource names instead of raw IDs for KV, Durable Objects, Queues, and Hyperdrive. |
 
 ### 2. Configure and Deploy
 
