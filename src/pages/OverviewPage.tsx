@@ -9,6 +9,7 @@ import { estimateCost } from "../../shared/cost.ts";
 import { freeLimits } from "../../shared/limits.ts";
 import { CostSummary } from "@/components/CostSummary.tsx";
 import { FreeLimits } from "@/components/FreeLimits.tsx";
+import { Subscriptions } from "@/components/Subscriptions.tsx";
 import { Section } from "@/components/Layout.tsx";
 import { formatDate } from "@/lib/format.ts";
 
@@ -42,6 +43,9 @@ export function OverviewPage({ usage }: { usage: UsageResponse }) {
         }
       >
         <CostSummary estimate={estimate} paidEstimate={paidEstimate} />
+      </Section>
+      <Section large title="Subscriptions">
+        <Subscriptions subscriptions={usage.subscriptions} />
       </Section>
     </>
   );

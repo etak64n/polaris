@@ -131,6 +131,9 @@ describe("GET /api/usage", () => {
     source.usage = (date) => usageOf(date, 1);
     source.names = { "db-1": "blog" };
     source.cronTriggerCount = 2;
+    source.subscriptionList = [
+      { product: "R2 Paid", price: 0, currency: "USD", frequency: "monthly", state: "Paid", periodStart: "2026-10-13T00:00:00Z", periodEnd: "2026-11-13T00:00:00Z" },
+    ];
     const response = await get("/api/usage");
     expect(response.status).toBe(200);
     const body = (await response.json()) as UsageResponse;
@@ -143,6 +146,7 @@ describe("GET /api/usage", () => {
     expect(body.days.at(-1)).toEqual(usageOf("2026-11-05", 1));
     expect(body.databaseNames).toEqual({ "db-1": "blog" });
     expect(body.cronTriggers).toBe(2);
+    expect(body.subscriptions).toEqual(source.subscriptionList);
     expect(source.usageCalls).toEqual([{ from: "2026-10-06", to: "2026-11-05" }]);
   });
 

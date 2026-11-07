@@ -1,6 +1,6 @@
 // A stand-in for Cloudflare analytics.
 
-import type { QueryOrder, TopQuery, WorkerHandler } from "../../shared/api.ts";
+import type { QueryOrder, Subscription, TopQuery, WorkerHandler } from "../../shared/api.ts";
 import type { MetricProduct, MetricRange, MetricsResponse } from "../../shared/metrics.ts";
 import { datesBetween } from "../../shared/dates.ts";
 import { emptyDay, type DailyUsage } from "../../shared/usage.ts";
@@ -26,6 +26,7 @@ export class FakeUsageSource implements UsageSource {
   queries: TopQuery[] = [];
   handlers: WorkerHandler[] = [];
   cronTriggerCount = 0;
+  subscriptionList: Subscription[] = [];
   names: Record<string, string> = {};
   failure: Error | null = null;
 
@@ -50,6 +51,11 @@ export class FakeUsageSource implements UsageSource {
   async cronTriggers(): Promise<number> {
     if (this.failure !== null) throw this.failure;
     return this.cronTriggerCount;
+  }
+
+  async subscriptions(): Promise<Subscription[]> {
+    if (this.failure !== null) throw this.failure;
+    return this.subscriptionList;
   }
 
   async metrics(product: MetricProduct, range: MetricRange, picked: readonly string[], now: Date): Promise<Omit<MetricsResponse, "names">> {

@@ -117,10 +117,11 @@ export function createApp(dependencies: AppDependencies) {
     const source = dependencies.usageSourceFor(config);
     const cache = dependencies.cacheFor();
 
-    const [days, databaseNames, cronTriggers] = await Promise.all([
+    const [days, databaseNames, cronTriggers, subscriptions] = await Promise.all([
       cache.get(`usage/${USAGE_SHAPE}/${config.accountId}/${from}/${today}`, USAGE_CACHE_SECONDS, () => source.dailyUsage(from, today)),
       cache.get(`d1-names/${config.accountId}`, NAMES_CACHE_SECONDS, () => source.databaseNames()),
       cache.get(`cron-triggers/${config.accountId}`, USAGE_CACHE_SECONDS, () => source.cronTriggers()),
+      cache.get(`subscriptions/${config.accountId}`, USAGE_CACHE_SECONDS, () => source.subscriptions()),
     ]);
     const byDate = new Map(days.map((day) => [day.date, day]));
     const body: UsageResponse = {
@@ -131,6 +132,7 @@ export function createApp(dependencies: AppDependencies) {
       days: datesBetween(from, today).map((date) => byDate.get(date) ?? emptyDay(date)),
       databaseNames,
       cronTriggers,
+      subscriptions,
     };
     return c.json(body);
   });
