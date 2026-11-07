@@ -1,7 +1,7 @@
 # Records the tour of the demo that the README shows at its top, from the demo on GitHub
 # Pages: the Free plan limits with a help frame, the cost, and the dashboard of Workers,
-# zooming in on the details. Run it by hand after the screens change, then put the
-# artifact at images/tour.gif.
+# zooming in on the details, between a card that opens it and a card that closes it. Run
+# it by hand after the screens change, then put the artifact at images/tour.gif.
 name: Tour
 
 on:
@@ -15,6 +15,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
+      # The logo of the cards that open and close the tour.
+      - uses: actions/checkout@v7
+        with:
+          path: repo
+
       - uses: actions/setup-node@v7
         with:
           node-version: 24
@@ -33,7 +38,7 @@ jobs:
           DEMO_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
         run: |
           cat > tour.mjs <<'SCRIPT'
-          import { mkdirSync, writeFileSync } from "node:fs";
+          import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
           import { chromium } from "playwright";
 
           const VIEW = { width: 1440, height: 900 };
@@ -96,6 +101,26 @@ jobs:
             return locator;
           };
 
+          // The cards that open and close the tour, so that its start and its end show when the
+          // GIF plays again and again: the logo, and a line or two under it.
+          const logo = readFileSync("repo/images/polaris-wordmark.png").toString("base64");
+          mkdirSync("frames", { recursive: true });
+          const card = async (lines, file) => {
+            const sheet = await context.newPage();
+            const text = lines
+              .map(([size, color, line]) => `<p style="margin:0;font-size:${size}px;color:${color}">${line}</p>`)
+              .join("");
+            await sheet.setContent(
+              `<body style="margin:0;height:100vh;display:grid;place-items:center;background:#fff;font-family:system-ui,sans-serif">` +
+                `<div style="display:grid;justify-items:center;gap:22px"><img src="data:image/png;base64,${logo}" style="width:460px" alt="">${text}</div></body>`,
+            );
+            await sheet.screenshot({ path: file, scale: "css", type: "jpeg", quality: 92 });
+            await sheet.close();
+          };
+          const demo = process.env.DEMO_URL.replace(/^https:\/\//, "").replace(/\/$/, "");
+          await card([[30, "#3c4f69", "A tour of the demo"]], "frames/start.jpg");
+          await card([[30, "#3c4f69", "Try the live demo"], [24, "#a85800", demo]], "frames/end.jpg");
+
           await page.goto(process.env.DEMO_URL);
           await page.getByRole("heading", { name: "Free plan limits" }).waitFor();
           await pause(1000);
@@ -152,16 +177,20 @@ jobs:
           await context.close();
           await browser.close();
 
-          // The frames, each shown until the next one, and the zooms on the same clock.
-          mkdirSync("frames", { recursive: true });
-          const start = frames[0].time;
-          const lines = ["ffconcat version 1.0"];
+          // The frames, each shown until the next one, between the cards, and the zooms on the
+          // same clock. The concat demuxer keeps the duration of the last file only when the file
+          // comes again after it.
+          const OPENING = 2.2;
+          const CLOSING = 3;
+          const start = frames[0].time - OPENING;
+          const lines = ["ffconcat version 1.0", "file 'frames/start.jpg'", `duration ${OPENING}`];
           frames.forEach((frame, index) => {
             const file = `frames/${String(index).padStart(5, "0")}.jpg`;
             writeFileSync(file, Buffer.from(frame.data, "base64"));
             const next = frames[index + 1];
             lines.push(`file '${file}'`, `duration ${next === undefined ? 1 : Math.max(0.001, next.time - frame.time).toFixed(3)}`);
           });
+          lines.push("file 'frames/end.jpg'", `duration ${CLOSING}`, "file 'frames/end.jpg'");
           writeFileSync("tour.ffconcat", lines.join("\n") + "\n");
 
           // zoompan reads the time from the number of the output frame, at FPS frames a second.
@@ -181,7 +210,8 @@ jobs:
             "split[a][b];[a]palettegen=max_colors=96:stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle",
           ].join(",");
           writeFileSync("filter.txt", filter);
-          writeFileSync("previews.txt", [1, ...windows.map((w) => (w.from + w.to) / 2)].map((time) => time.toFixed(2)).join("\n") + "\n");
+          const total = frames.at(-1).time - start + 1 + CLOSING;
+          writeFileSync("previews.txt", [1, ...windows.map((w) => (w.from + w.to) / 2), total - 1].map((time) => time.toFixed(2)).join("\n") + "\n");
           // The size of a JPEG frame, from its start-of-frame segment.
           const sizeOf = (jpeg) => {
             for (let at = 2; at < jpeg.length; at += 2 + jpeg.readUInt16BE(at + 2)) {
