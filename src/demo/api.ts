@@ -158,7 +158,19 @@ function usage(now: Date): UsageResponse {
     days: datesBetween(addDays(today, -(USAGE_DAYS - 1)), today).map((date) => dayUsage(date, date === today ? todayShare : 1, today)),
     databaseNames: Object.fromEntries(DATABASES.map((database) => [database.id, database.name])),
     cronTriggers: 2,
+    subscriptions: demoSubscriptions(today),
   };
+}
+
+/** The plans that a small account on the Free plan has: Zero Trust for Access, and R2. */
+function demoSubscriptions(today: string): UsageResponse["subscriptions"] {
+  const start = `${today.slice(0, 8)}01`;
+  const next = addDays(start, 32).slice(0, 8);
+  const period = { periodStart: `${start}T00:00:00Z`, periodEnd: `${next}01T00:00:00Z` };
+  return [
+    { product: "Teams Free Base", price: 0, currency: "USD", frequency: "monthly", state: "Paid", ...period },
+    { product: "R2 Paid", price: 0, currency: "USD", frequency: "monthly", state: "Paid", ...period },
+  ];
 }
 
 /** A resource of a product: its key, its daily amount of each sum metric, its gauges, and its quantiles. */

@@ -2,12 +2,12 @@
 // the names of the resources from the Cloudflare API.
 //
 // The token needs Account Analytics Read for the usage, D1 Read for the names of the
-// databases, and Workers Scripts Read for the Cron Triggers and the names of the
-// Durable Objects. The names of the other resources need Workers KV Storage Read,
-// Queues Read, and Hyperdrive Read: without one of them, the dashboard of that product
-// shows the IDs of its resources.
+// databases, Workers Metadata Read-Only for the Cron Triggers and the names of the
+// Durable Objects, and Billing Read for the subscriptions. The names of the other
+// resources need Workers KV Storage Read, Queues Read, and Hyperdrive Read: without one
+// of them, the dashboard of that product shows the IDs of its resources.
 
-import type { QueryOrder, TopQuery, WorkerHandler } from "../shared/api.ts";
+import type { QueryOrder, Subscription, TopQuery, WorkerHandler } from "../shared/api.ts";
 import { addDays, datesBetween, startOf } from "../shared/dates.ts";
 import type { MetricProduct, MetricRange, MetricsResponse } from "../shared/metrics.ts";
 import { productMetrics } from "./metrics.ts";
@@ -46,6 +46,8 @@ export interface UsageSource {
   workerHandlers(from: string, to: string, limit: number, scriptNames: readonly string[]): Promise<WorkerHandler[]>;
   /** The Cron Triggers of all the Workers of the account now. */
   cronTriggers(): Promise<number>;
+  /** The subscriptions of the account, as Cloudflare bills them. */
+  subscriptions(): Promise<Subscription[]>;
   /** D1 database names by database ID. */
   databaseNames(): Promise<Record<string, string>>;
   /** The names of the resources of a product by their IDs, or none when the token may not read them. */
@@ -188,6 +190,19 @@ query PolarisWorkerHandlers($accountTag: string!, $start: Time!, $end: Time!${by
     }
   }
 }`;
+
+/** A subscription as the Cloudflare API lists it. Every field may be missing. */
+interface SubscriptionRow {
+  price?: unknown;
+  currency?: unknown;
+  frequency?: unknown;
+  state?: unknown;
+  current_period_start?: unknown;
+  current_period_end?: unknown;
+  rate_plan?: { id?: unknown; public_name?: unknown; currency?: unknown } | null;
+}
+
+const text = (value: unknown): string | null => (typeof value === "string" && value !== "" ? value : null);
 
 interface WorkerHandlerRow {
   sum: { requests: number; cpuTimeUs: number };
@@ -362,7 +377,7 @@ export class CloudflareAnalytics implements UsageSource {
     const body = await this.#request(`${API}/accounts/${this.#accountId}/workers/scripts`, { method: "GET" });
     const result = (body as { result?: unknown }).result;
     if (!Array.isArray(result) || result.length === 0) {
-      throw new AnalyticsError("The Cloudflare API listed no Workers: the token needs Workers Scripts Read to count the Cron Triggers.");
+      throw new AnalyticsError("The Cloudflare API listed no Workers: the token needs Workers Metadata Read-Only to count the Cron Triggers.");
     }
     const scheduled = (result as { id?: unknown; handlers?: unknown }[]).filter(
       (script): script is { id: string; handlers?: unknown } =>
@@ -378,6 +393,29 @@ export class CloudflareAnalytics implements UsageSource {
       }),
     );
     return counts.reduce((total, count) => total + count, 0);
+  }
+
+  async subscriptions(): Promise<Subscription[]> {
+    let body: unknown;
+    try {
+      body = await this.#request(`${API}/accounts/${this.#accountId}/subscriptions`, { method: "GET" });
+    } catch (error) {
+      if (error instanceof AnalyticsError && /answered (401|403)/.test(error.message)) {
+        throw new AnalyticsError("The Cloudflare API refused the subscriptions: the token needs Billing Read to list them.");
+      }
+      throw error;
+    }
+    const result = (body as { result?: unknown }).result;
+    if (!Array.isArray(result)) throw new AnalyticsError("The Cloudflare API returned no list of subscriptions.");
+    return (result as SubscriptionRow[]).map((row) => ({
+      product: text(row.rate_plan?.public_name) ?? text(row.rate_plan?.id) ?? "Unknown plan",
+      price: typeof row.price === "number" ? row.price : 0,
+      currency: text(row.currency) ?? text(row.rate_plan?.currency) ?? "USD",
+      frequency: text(row.frequency) ?? "",
+      state: text(row.state) ?? "",
+      periodStart: text(row.current_period_start),
+      periodEnd: text(row.current_period_end),
+    }));
   }
 
   async metrics(product: MetricProduct, range: MetricRange, picked: readonly string[], now: Date): Promise<Omit<MetricsResponse, "names">> {

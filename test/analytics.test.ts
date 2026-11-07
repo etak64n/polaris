@@ -276,7 +276,47 @@ describe("CloudflareAnalytics.cronTriggers", () => {
 
   it("reports a token that may not read the Workers, which lists none", async () => {
     const { analytics } = analyticsAnswering(() => Response.json({ success: true, result: [] }));
-    await expect(analytics.cronTriggers()).rejects.toThrow(/Workers Scripts Read/);
+    await expect(analytics.cronTriggers()).rejects.toThrow(/Workers Metadata Read-Only/);
+  });
+});
+
+describe("CloudflareAnalytics.subscriptions", () => {
+  it("lists the plans of the account with their price and billing period", async () => {
+    const { analytics, calls } = analyticsAnswering(() =>
+      Response.json({
+        success: true,
+        result: [
+          {
+            price: 5,
+            currency: "USD",
+            frequency: "monthly",
+            state: "Paid",
+            current_period_start: "2026-10-13T00:00:00Z",
+            current_period_end: "2026-11-13T00:00:00Z",
+            rate_plan: { id: "workers_paid", public_name: "Workers Paid" },
+          },
+          { rate_plan: { id: "teams_free" } },
+        ],
+      }),
+    );
+    expect(await analytics.subscriptions()).toEqual([
+      {
+        product: "Workers Paid",
+        price: 5,
+        currency: "USD",
+        frequency: "monthly",
+        state: "Paid",
+        periodStart: "2026-10-13T00:00:00Z",
+        periodEnd: "2026-11-13T00:00:00Z",
+      },
+      { product: "teams_free", price: 0, currency: "USD", frequency: "", state: "", periodStart: null, periodEnd: null },
+    ]);
+    expect(calls[0]?.url).toBe(`https://api.cloudflare.com/client/v4/accounts/${ACCOUNT}/subscriptions`);
+  });
+
+  it("names the permission that a token without it needs", async () => {
+    const { analytics } = analyticsAnswering(() => Response.json({ success: false, errors: [{ code: 10000 }] }, { status: 403 }));
+    await expect(analytics.subscriptions()).rejects.toThrow(/Billing Read/);
   });
 });
 

@@ -20,6 +20,23 @@ export interface UsageResponse {
   databaseNames: Record<string, string>;
   /** The Cron Triggers of all the Workers of the account now. */
   cronTriggers: number;
+  /** The subscriptions of the account, as Cloudflare bills them. */
+  subscriptions: Subscription[];
+}
+
+/** A plan that the account signed up for, such as Workers Paid or R2 Paid. */
+export interface Subscription {
+  /** The name of the plan. */
+  product: string;
+  price: number;
+  currency: string;
+  /** How often Cloudflare bills the plan, such as monthly or yearly. */
+  frequency: string;
+  /** The state that Cloudflare gives the subscription, such as Paid or Trial. */
+  state: string;
+  /** The current billing period: the moment that starts it and the moment that ends it, or null without one. */
+  periodStart: string | null;
+  periodEnd: string | null;
 }
 
 export type QueryOrder = "rowsRead" | "rowsWritten";
